@@ -1,0 +1,136 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "Master",
+  "instructions": ["./instructions.md"],
+  "provider": {
+    "openrouter": {
+      "options": {
+        "timeout": 36000000,
+        "setCacheKey": true
+      }
+    },
+    "opencode": {
+      "options": {
+        "timeout": 36000000,
+        "setCacheKey": true
+      }
+    },
+    "zai-coding-plan": {
+      "options": {
+        "timeout": 36000000,
+        "setCacheKey": true
+      }
+    }
+  },
+  "agent": {
+    "general": {
+      "model": "ollama-cloud/devstral-small-2:24b"
+    },
+
+    "Master": {
+      "model": "ollama-cloud/kimi-k2.6:cloud"
+    },
+
+    "Architect": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "SystemArchitect": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "ProductManager": {
+      "model": "ollama-cloud/kimi-k2.6:cloud"
+    },
+    "ProductOwner": {
+      "model": "ollama-cloud/kimi-k2.6:cloud"
+    },
+    "TechLead": {
+      "model": "ollama-cloud/kimi-k2.6:cloud"
+    },
+    "QAAnalyst": {
+      "model": "ollama-cloud/deepseek-v4-flash"
+    },
+    "MergeRequestCreator": {
+      "model": "ollama-cloud/devstral-small-2:24b"
+    },
+
+    "BackendDeveloper": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "BugFixerNodejs": {
+      "model": "ollama-cloud/devstral-2:123b"
+    },
+    "TestEngineer": {
+      "model": "ollama-cloud/devstral-2:123b"
+    },
+    "CodeReviewer": {
+      "model": "ollama-cloud/deepseek-v4-flash"
+    },
+    "BuildAgent": {
+      "model": "ollama-cloud/devstral-small-2:24b"
+    },
+
+    "FrontendDeveloper": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "FrontendDeveloperAngular": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "FrontendDeveloperReact": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "FrontendDeveloperVue": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "DevopsSpecialist": {
+      "model": "ollama-cloud/deepseek-v4-pro"
+    },
+    "ShellDeveloper": {
+      "model": "ollama-cloud/devstral-small-2:24b"
+    },
+    "UXDesigner": {
+      "model": "ollama-cloud/qwen3.5:397b"
+    },
+
+    "CodeAnalyzer": {
+      "model": "ollama-cloud/deepseek-v4-pro"
+    },
+    "ImplReviewerNodejs": {
+      "model": "ollama-cloud/devstral-2:123b"
+    },
+
+    "ContextScout": {
+      "model": "ollama-cloud/qwen3-coder-next"
+    },
+    "TaskManager": {
+      "model": "ollama-cloud/devstral-small-2:24b"
+    },
+    "DocWriter": {
+      "model": "ollama-cloud/qwen3.5:397b"
+    },
+    "ExternalScout": {
+      "model": "ollama-cloud/qwen3-coder-next"
+    },
+
+    "ContextOrganizer": {
+      "model": "ollama-cloud/deepseek-v4-pro"
+    }
+  },
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "rm *": "ask",
+      "rm -rf *": "deny",
+      "rmdir *": "ask",
+      "dd *": "deny",
+      "mkfs *": "deny",
+      "kill *": "deny",
+      "pkill *": "deny",
+      "killall *": "deny",
+      "sudo *": "deny",
+      "su *": "deny"
+    },
+    "edit": "allow",
+    "write": "allow",
+    "skill": "allow"
+  }
+}
