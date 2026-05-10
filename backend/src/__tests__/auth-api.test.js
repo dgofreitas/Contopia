@@ -6,20 +6,6 @@ vi.mock('pino', () => ({
   default: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
 }));
 
-vi.mock('mongoose', () => {
-  const Schema = vi.fn();
-  Schema.Types = { ObjectId: String };
-  return {
-    default: {
-      Schema,
-      Types: Schema.Types,
-      model: vi.fn().mockReturnValue({
-        findOne: vi.fn().mockReturnValue({ lean: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue(null) }) }),
-      }),
-    },
-  };
-});
-
 vi.mock('rate-limit-redis', () => ({}));
 
 vi.mock('../../config/redis.js', () => ({
@@ -31,10 +17,6 @@ vi.mock('../../config/redis.js', () => ({
 
 vi.mock('../app/auth/auth-manager.js');
 vi.mock('../app/common/email-service.js');
-vi.mock('../app/auth/auth-model.js', () => {
-  const findOne = vi.fn().mockReturnValue({ lean: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue(null) }) });
-  return { Parent: { findOne }, Child: { findOne } };
-});
 
 import request from 'supertest';
 import express from 'express';
@@ -54,7 +36,8 @@ describe('Auth API', () => {
   // ── POST /register ──────────────────────────────────────────────────────
   describe('POST /api/auth/register', () => {
     it('should return 201 with parentId and emailSent on success', async () => {
-      authManager.registerParentAndChild.mockResolvedValue({
+      authManager.registerParentAndChildIdempotent.mockResolvedValue({
+        resent: false,
         parent: { _id: 'parent123' },
         child: { _id: 'child123', firstName: 'João' },
         token: 'mock-token',
@@ -87,7 +70,7 @@ describe('Auth API', () => {
 
     it('should return 409 with ACCOUNT_EXISTS for duplicate active child', async () => {
       const err = new Error('dup'); err.code = 'ACCOUNT_EXISTS'; err.status = 409;
-      authManager.registerParentAndChild.mockRejectedValue(err);
+      authManager.registerParentAndChildIdempotent.mockRejectedValue(err);
       const res = await request(app)
         .post('/api/auth/register')
         .send({ parentEmail: 'e@ex.com', childFirstName: 'João' });

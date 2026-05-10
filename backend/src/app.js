@@ -15,6 +15,10 @@ const logger = pino({
 
 const app = express();
 
+// ── Trust Proxy ──────────────────────────────────────────────────────────
+// Ensures req.ip reflects the real client IP behind nginx/reverse proxy
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
+
 // ── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet());
 

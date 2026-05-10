@@ -84,6 +84,33 @@ export async function findActiveChildByParentAndName(parentId, firstName) {
 }
 
 /**
+ * Find a pending (inactive) child by parent ID and first name.
+ * Used for idempotent registration — resend instead of duplicate.
+ */
+export async function findPendingChildByParentAndName(parentId, firstName) {
+  return Child.findOne({
+    parentId,
+    firstName,
+    isActive: false,
+  })
+    .lean()
+    .exec();
+}
+
+/**
+ * Find a pending (inactive) child for a parent (any name).
+ * Used by resendVerification to locate the unverified child.
+ */
+export async function findPendingChildByParent(parentId) {
+  return Child.findOne({
+    parentId,
+    isActive: false,
+  })
+    .lean()
+    .exec();
+}
+
+/**
  * Create a new child document.
  */
 export async function createChild({ parentId, firstName }) {

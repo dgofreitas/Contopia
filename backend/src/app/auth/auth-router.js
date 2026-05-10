@@ -59,6 +59,12 @@ const resendLimiter = createLimiter({
   message: 'Too many resend attempts.',
 });
 
+const verifyLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 30,
+  message: 'Too many verification attempts.',
+});
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function buildVerificationLink(token) {
@@ -82,54 +88,36 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     const { parentEmail, childFirstName } = parsed.data;
 
-    // Check if there's already a PENDING (inactive) child with same name for same parent
-    // This enables idempotent registration — resend instead of duplicate
-    const { default: mongoose } = await import('mongoose');
-    const { Parent, Child } = await import('./auth-model.js');
-
-    let parent = await Parent.findOne({ email: parentEmail.toLowerCase() }).lean().exec();
-
-    if (parent) {
-      // Check for existing pending child with same name
-      const existingPending = await Child.findOne({
-        parentId: parent._id,
-        firstName: childFirstName,
-        isActive: false,
-      }).lean().exec();
-
-      if (existingPending) {
-        // Idempotent: resend verification instead of creating duplicate
-        const result = await authManager.resendVerification(parentEmail);
-        await sendVerificationEmail({
-          to: parentEmail,
-          childFirstName,
-          verificationLink: buildVerificationLink(result.token),
-        });
-        logger.info({ parentId: parent._id, requestId }, 'Verification resent (idempotent register)');
-        return res.status(200).json({
-          data: { parentId: parent._id.toString(), emailSent: true, resent: true },
-          meta: { requestId },
-        });
-      }
-    }
-
-    // Normal registration
-    const { parent: newParent, child, token } = await authManager.registerParentAndChild({
+    const result = await authManager.registerParentAndChildIdempotent({
       parentEmail,
       childFirstName,
     });
 
-    // Send verification email (fire-and-forget errors handled by email-service)
+    if (result.resent) {
+      // Idempotent: verification resent for existing pending child
+      await sendVerificationEmail({
+        to: parentEmail,
+        childFirstName,
+        verificationLink: buildVerificationLink(result.token),
+      });
+      logger.info({ parentId: result.parent._id, requestId }, 'Verification resent (idempotent register)');
+      return res.status(200).json({
+        data: { parentId: result.parent._id.toString(), emailSent: true, resent: true },
+        meta: { requestId },
+      });
+    }
+
+    // Normal registration
     await sendVerificationEmail({
       to: parentEmail,
       childFirstName,
-      verificationLink: buildVerificationLink(token),
+      verificationLink: buildVerificationLink(result.token),
     });
 
-    logger.info({ parentId: newParent._id, childId: child._id, requestId }, 'Parent+child registered');
+    logger.info({ parentId: result.parent._id, childId: result.child._id, requestId }, 'Parent+child registered');
 
     return res.status(201).json({
-      data: { parentId: newParent._id.toString(), emailSent: true },
+      data: { parentId: result.parent._id.toString(), emailSent: true },
       meta: { requestId },
     });
   } catch (err) {
@@ -138,7 +126,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 });
 
 // ── GET /verify/:token ──────────────────────────────────────────────────────
-router.get('/verify/:token', async (req, res) => {
+router.get('/verify/:token', verifyLimiter, async (req, res) => {
   const requestId = req.id;
 
   try {

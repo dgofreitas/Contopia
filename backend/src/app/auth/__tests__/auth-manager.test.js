@@ -27,27 +27,12 @@ vi.mock('pino', () => ({
   }),
 }));
 
-// Mock dynamic imports for resendVerification
-vi.mock('mongoose');
-vi.mock('../auth-model.js', () => ({
-  Child: {
-    findOne: vi.fn(),
-  },
-}));
-
 const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 
 // Now safe to import
 import * as authManager from '../auth-manager.js';
 import * as authDao from '../auth-dao.js';
 import redis from '../../../config/redis.js';
-
-// Helper: mongoose .lean().exec()
-function leanExec(val) {
-  const exec = vi.fn().mockResolvedValue(val);
-  const lean = vi.fn().mockReturnValue({ exec });
-  return { lean, exec };
-}
 
 describe('Auth Manager', () => {
   beforeEach(() => {
@@ -266,12 +251,9 @@ describe('Auth Manager', () => {
       const child = { _id: 'c1', firstName: 'João', isActive: false };
 
       authDao.findParentByEmail.mockResolvedValue(parent);
+      authDao.findPendingChildByParent.mockResolvedValue(child);
       jwt.sign.mockReturnValue('new-token');
       authDao.updateParentVerification.mockResolvedValue({});
-
-      const { default: mongoose } = await import('mongoose');
-      const { Child } = await import('../auth-model.js');
-      Child.findOne.mockReturnValue(leanExec(child));
 
       const result = await authManager.resendVerification('e@ex.com');
       expect(result.token).toBe('new-token');
@@ -292,11 +274,7 @@ describe('Auth Manager', () => {
 
     it('should throw NOT_FOUND when no pending child exists', async () => {
       authDao.findParentByEmail.mockResolvedValue({ _id: 'p1', email: 'e@ex.com', isVerified: false });
-      jwt.sign.mockReturnValue('nt');
-
-      const { default: mongoose } = await import('mongoose');
-      const { Child } = await import('../auth-model.js');
-      Child.findOne.mockReturnValue(leanExec(null));
+      authDao.findPendingChildByParent.mockResolvedValue(null);
 
       await expect(authManager.resendVerification('e@ex.com')).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
     });

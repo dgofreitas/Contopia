@@ -12,6 +12,12 @@ const logger = pino({
 const PORT = parseInt(process.env.PORT, 10) || 8000;
 
 async function start() {
+  // Fail fast if required env vars are missing
+  if (!process.env.JWT_SECRET) {
+    logger.fatal('JWT_SECRET env var is required — exiting');
+    process.exit(1);
+  }
+
   // Connect to MongoDB before accepting requests
   await connectDB();
   logger.info('MongoDB connection established');

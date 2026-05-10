@@ -28,6 +28,10 @@ import * as authManager from '../app/auth/auth-manager.js';
 import * as authDao from '../app/auth/auth-dao.js';
 import redis from '../config/redis.js';
 
+// Add mock for the new DAO function
+authDao.findPendingChildByParent = vi.fn();
+authDao.findPendingChildByParentAndName = vi.fn();
+
 describe('Auth Manager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -206,14 +210,9 @@ describe('Auth Manager', () => {
       const child = { _id: 'child123', firstName: 'João', isActive: false };
 
       authDao.findParentByEmail.mockResolvedValue(parent);
+      authDao.findPendingChildByParent.mockResolvedValue(child);
       jwt.sign.mockReturnValue('new-mock-token');
       authDao.updateParentVerification.mockResolvedValue({});
-
-      // Mock dynamic imports
-      vi.doMock('mongoose', () => ({ default: {} }));
-      vi.doMock('../app/auth/auth-model.js', () => ({
-        Child: { findOne: () => ({ lean: () => ({ exec: () => Promise.resolve(child) }) }) },
-      }));
 
       const result = await authManager.resendVerification('test@example.com');
       expect(result.token).toBe('new-mock-token');
@@ -279,6 +278,57 @@ describe('Auth Manager', () => {
       await expect(
         authManager.childLogin({ childId: 'child123', parentId: 'parent123' })
       ).rejects.toMatchObject({ code: 'NOT_VERIFIED', status: 403 });
+    });
+  });
+
+  describe('registerParentAndChildIdempotent', () => {
+    it('should return resent:true and resend when pending child exists', async () => {
+      const parent = { _id: 'parent123', email: 'test@example.com' };
+      authDao.findParentByEmail.mockResolvedValue(parent);
+      authDao.findPendingChildByParentAndName.mockResolvedValue({ _id: 'child123', firstName: 'João', isActive: false });
+      jwt.sign.mockReturnValue('resent-token');
+      authDao.updateParentVerification.mockResolvedValue({});
+
+      const result = await authManager.registerParentAndChildIdempotent({
+        parentEmail: 'test@example.com',
+        childFirstName: 'João',
+      });
+
+      expect(result.resent).toBe(true);
+      expect(result.token).toBe('resent-token');
+      expect(authDao.createChild).not.toHaveBeenCalled();
+    });
+
+    it('should return resent:false and register when no pending child exists', async () => {
+      authDao.findParentByEmail.mockResolvedValue(null);
+      authDao.createParent.mockResolvedValue({ _id: 'parent456', email: 'new@example.com' });
+      authDao.findActiveChildByParentAndName.mockResolvedValue(null);
+      authDao.createChild.mockResolvedValue({ _id: 'child456', firstName: 'João' });
+      authDao.updateParentVerification.mockResolvedValue({});
+      jwt.sign.mockReturnValue('new-token');
+
+      const result = await authManager.registerParentAndChildIdempotent({
+        parentEmail: 'new@example.com',
+        childFirstName: 'João',
+      });
+
+      expect(result.resent).toBe(false);
+      expect(result.parent._id).toBe('parent456');
+      expect(result.child._id).toBe('child456');
+    });
+
+    it('should throw ACCOUNT_EXISTS when duplicate active child exists', async () => {
+      const parent = { _id: 'parent123', email: 'existing@example.com' };
+      authDao.findParentByEmail.mockResolvedValue(parent);
+      authDao.findPendingChildByParentAndName.mockResolvedValue(null);
+      authDao.findActiveChildByParentAndName.mockResolvedValue({ _id: 'child123', firstName: 'João', isActive: true });
+
+      await expect(
+        authManager.registerParentAndChildIdempotent({
+          parentEmail: 'existing@example.com',
+          childFirstName: 'João',
+        })
+      ).rejects.toMatchObject({ code: 'ACCOUNT_EXISTS', status: 409 });
     });
   });
 });

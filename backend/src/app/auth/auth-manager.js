@@ -12,13 +12,16 @@ import {
   clearParentVerificationToken,
   findChildById,
   findActiveChildByParentAndName,
+  findPendingChildByParentAndName,
   createChild,
   activateChild,
+  findPendingChildByParent,
 } from './auth-dao.js';
 
 const logger = pino({ name: 'auth-manager', level: process.env.LOG_LEVEL || 'info' });
 
 const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET env var is required');
 const VERIFICATION_EXPIRY_HOURS = 72;
 const ACCESS_TOKEN_EXPIRY = '30m';
 const REFRESH_TOKEN_EXPIRY = '7d';
@@ -122,6 +125,33 @@ export async function registerParentAndChild({ parentEmail, childFirstName }) {
 }
 
 /**
+ * Idempotent registration: if a pending child already exists for the same
+ * parent + name, resend verification instead of creating a duplicate.
+ * Returns { resent: true, parent, token } on idempotent path,
+ * or { resent: false, parent, child, token } on normal registration.
+ */
+export async function registerParentAndChildIdempotent({ parentEmail, childFirstName }) {
+  const parent = await findParentByEmail(parentEmail);
+
+  if (parent) {
+    const pendingChild = await findPendingChildByParentAndName(parent._id, childFirstName);
+    if (pendingChild) {
+      // Idempotent: resend verification instead of creating duplicate
+      const { token } = await resendVerification(parentEmail);
+      return { resent: true, parent, token };
+    }
+  }
+
+  // Normal registration
+  const { parent: newParent, child, token } = await registerParentAndChild({
+    parentEmail,
+    childFirstName,
+  });
+
+  return { resent: false, parent: newParent, child, token };
+}
+
+/**
  * Verify an email verification token.
  * Returns { childId } on success.
  * Throws with appropriate code/status on failure.
@@ -204,12 +234,7 @@ export async function resendVerification(parentEmail) {
   }
 
   // Find a pending (inactive) child for this parent
-  const { default: mongoose } = await import('mongoose');
-  const { Child } = await import('./auth-model.js');
-  const pendingChild = await Child.findOne({
-    parentId: parent._id,
-    isActive: false,
-  }).lean().exec();
+  const pendingChild = await findPendingChildByParent(parent._id);
 
   if (!pendingChild) {
     const err = new Error('No pending child found for this parent');
