@@ -20,7 +20,14 @@ const app = express();
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
 
 // ── Security Middleware ────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
 
 // ── Body Parsing ──────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));

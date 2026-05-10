@@ -18,8 +18,7 @@ export default function useRegister() {
       return response.data;
     },
     onSuccess: (data) => {
-      if (data?.token) setToken(data.token);
-      if (data?.childId) setUser({ childId: data.childId, childFirstName: data.childFirstName });
+      // Register response only returns { parentId, emailSent } — no token until login
     },
     onError: (error) => {
       // Errors are mapped by consumers via getErrorMessage

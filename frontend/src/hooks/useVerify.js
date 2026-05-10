@@ -16,9 +16,9 @@ export default function useVerify() {
       return response.data;
     },
     onSuccess: (data) => {
-      if (data?.token) setToken(data.token);
+      // Verify response only returns { childId } — set user after login, not here
       if (data?.childId) {
-        setUser({ childId: data.childId, childFirstName: data.childFirstName });
+        setUser({ childId: data.childId });
         setOnboardingComplete(true);
       }
     },

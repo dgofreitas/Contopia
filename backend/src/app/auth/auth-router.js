@@ -23,13 +23,13 @@ try {
   RateLimitStore = undefined;
 }
 
-function createLimiter({ windowMs, max, message }) {
+function createLimiter({ windowMs, max, message, keyGenerator }) {
   const opts = {
     windowMs,
     max,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => req.ip,
+    keyGenerator: keyGenerator || ((req) => req.ip),
     handler: (req, res) => {
       res.status(429).json({
         error: { code: 'RATE_LIMITED', message: 'Too many attempts.' },
@@ -51,12 +51,20 @@ const registerLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   message: 'Too many registration attempts.',
+  keyGenerator: (req) => {
+    const email = req.body?.parentEmail || '';
+    return `${req.ip}:${email.slice(0, 3)}`;
+  },
 });
 
 const resendLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
   message: 'Too many resend attempts.',
+  keyGenerator: (req) => {
+    const email = req.body?.parentEmail || '';
+    return `${req.ip}:${email.slice(0, 3)}`;
+  },
 });
 
 const verifyLimiter = createLimiter({
@@ -162,11 +170,11 @@ router.post('/resend-verification', resendLimiter, async (req, res) => {
 
     await sendVerificationEmail({
       to: parentEmail,
-      childFirstName: result.child.firstName,
+      childFirstName: result.childFirstName,
       verificationLink: buildVerificationLink(result.token),
     });
 
-    logger.info({ parentId: result.parent._id, requestId }, 'Verification resent');
+    logger.info({ parentId: result.parentId, requestId }, 'Verification resent');
 
     return res.status(200).json({
       data: { emailSent: true },
@@ -199,6 +207,7 @@ router.post('/child-login', async (req, res) => {
         childId: result.childId,
         childFirstName: result.childFirstName,
         isOnboardingComplete: result.isOnboardingComplete,
+        refreshAvailable: result.refreshAvailable,
       },
       meta: { requestId },
     });

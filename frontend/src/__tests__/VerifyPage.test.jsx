@@ -1,5 +1,5 @@
 // Contopia — VerifyPage Component Tests
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -15,76 +15,81 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }) => children,
 }));
 
-// We'll use mutable state objects that the mock functions reference.
-// This allows tests to change the state before rendering.
-let verifyState = {
-  isPending: true,
-  isSuccess: false,
-  isError: false,
-  error: null,
-  data: null,
-};
-
-let registerState = {
-  isPending: false,
-  error: null,
-  data: null,
-};
-
-let storeState = {
-  user: null,
-  token: null,
-  onboardingComplete: false,
-};
-
 const mockVerifyMutate = vi.fn();
 const mockRegisterMutate = vi.fn();
 
+// Factory function that creates fresh state per mock invocation
+function createVerifyHookMock(initialState) {
+  const state = { ...initialState };
+  return {
+    hook: () => ({
+      mutate: mockVerifyMutate,
+      isPending: state.isPending,
+      isSuccess: state.isSuccess,
+      isError: state.isError,
+      error: state.error,
+      data: state.data,
+      getStatus: () => {
+        if (state.isPending) return 'verifying';
+        if (state.isSuccess) return 'success';
+        if (state.isError) {
+          const status = state.error?.response?.status;
+          if (status === 410) return 'expired';
+          if (status === 404) return 'invalid';
+          return 'error';
+        }
+        return 'verifying';
+      },
+      getErrorMessage: () => {
+        const errorStatus = state.error?.response?.status;
+        if (errorStatus === 410) return 'verify.expired';
+        if (errorStatus === 404) return 'verify.invalid';
+        return 'register.errorGeneric';
+      },
+    }),
+    state,
+  };
+}
+
+function createRegisterHookMock(initialState) {
+  const state = { ...initialState };
+  return {
+    hook: () => ({
+      mutate: mockRegisterMutate,
+      isPending: state.isPending,
+      error: state.error,
+      data: state.data,
+      getErrorMessage: (err) => {
+        const status = err?.response?.status;
+        if (status === 409) return 'register.errorAccountExists';
+        if (status === 422) return 'register.errorEmailInvalid';
+        return 'register.errorGeneric';
+      },
+    }),
+    state,
+  };
+}
+
+function createStoreMock(initialState) {
+  const state = { ...initialState };
+  return {
+    selector: (selector) => selector(state),
+    state,
+  };
+}
+
+let verifyMock, registerMock, storeMock;
+
 vi.mock('../hooks/useVerify', () => ({
-  default: () => ({
-    mutate: mockVerifyMutate,
-    isPending: verifyState.isPending,
-    isSuccess: verifyState.isSuccess,
-    isError: verifyState.isError,
-    error: verifyState.error,
-    data: verifyState.data,
-    getStatus: () => {
-      if (verifyState.isPending) return 'verifying';
-      if (verifyState.isSuccess) return 'success';
-      if (verifyState.isError) {
-        const status = verifyState.error?.response?.status;
-        if (status === 410) return 'expired';
-        if (status === 404) return 'invalid';
-        return 'error';
-      }
-      return 'verifying';
-    },
-    getErrorMessage: () => {
-      const errorStatus = verifyState.error?.response?.status;
-      if (errorStatus === 410) return 'verify.expired';
-      if (errorStatus === 404) return 'verify.invalid';
-      return 'register.errorGeneric';
-    },
-  }),
+  default: () => verifyMock.hook(),
 }));
 
 vi.mock('../hooks/useRegister', () => ({
-  default: () => ({
-    mutate: mockRegisterMutate,
-    isPending: registerState.isPending,
-    error: registerState.error,
-    data: registerState.data,
-    getErrorMessage: (err) => {
-      const status = err?.response?.status;
-      if (status === 409) return 'register.errorAccountExists';
-      if (status === 422) return 'register.errorEmailInvalid';
-      return 'register.errorGeneric';
-    },
-  }),
+  default: () => registerMock.hook(),
 }));
 
 vi.mock('../stores/auth-store', () => ({
-  default: (selector) => selector(storeState),
+  default: (selector) => storeMock.selector(selector),
 }));
 
 function renderVerifyPage(initialPath = '/verify/test-token') {
@@ -101,9 +106,15 @@ function renderVerifyPage(initialPath = '/verify/test-token') {
 describe('VerifyPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    verifyState = { isPending: true, isSuccess: false, isError: false, error: null, data: null };
-    registerState = { isPending: false, error: null, data: null };
-    storeState = { user: null, token: null, onboardingComplete: false };
+    verifyMock = createVerifyHookMock({
+      isPending: true, isSuccess: false, isError: false, error: null, data: null,
+    });
+    registerMock = createRegisterHookMock({
+      isPending: false, error: null, data: null,
+    });
+    storeMock = createStoreMock({
+      user: null, token: null, onboardingComplete: false,
+    });
   });
 
   it('renders verifying state initially (spinner + title)', () => {
@@ -114,13 +125,9 @@ describe('VerifyPage', () => {
   });
 
   it('shows success state when verification succeeds', () => {
-    verifyState = {
-      isPending: false,
-      isSuccess: true,
-      isError: false,
-      error: null,
-      data: { token: 'abc', childId: '1', childFirstName: 'João' },
-    };
+    verifyMock.state.isPending = false;
+    verifyMock.state.isSuccess = true;
+    verifyMock.state.data = { childId: '1' };
 
     renderVerifyPage();
 
@@ -128,13 +135,9 @@ describe('VerifyPage', () => {
   });
 
   it('shows expired state when verification returns 410', () => {
-    verifyState = {
-      isPending: false,
-      isSuccess: false,
-      isError: true,
-      error: { response: { status: 410 } },
-      data: null,
-    };
+    verifyMock.state.isPending = false;
+    verifyMock.state.isError = true;
+    verifyMock.state.error = { response: { status: 410 } };
 
     renderVerifyPage();
 
@@ -142,13 +145,9 @@ describe('VerifyPage', () => {
   });
 
   it('shows invalid state when verification returns 404', () => {
-    verifyState = {
-      isPending: false,
-      isSuccess: false,
-      isError: true,
-      error: { response: { status: 404 } },
-      data: null,
-    };
+    verifyMock.state.isPending = false;
+    verifyMock.state.isError = true;
+    verifyMock.state.error = { response: { status: 404 } };
 
     renderVerifyPage();
 
@@ -159,13 +158,9 @@ describe('VerifyPage', () => {
     const user = userEvent.setup();
 
     // Start in expired state so the resend button is visible
-    verifyState = {
-      isPending: false,
-      isSuccess: false,
-      isError: true,
-      error: { response: { status: 410 } },
-      data: null,
-    };
+    verifyMock.state.isPending = false;
+    verifyMock.state.isError = true;
+    verifyMock.state.error = { response: { status: 410 } };
 
     renderVerifyPage();
 
@@ -180,13 +175,9 @@ describe('VerifyPage', () => {
   it('success state navigates to /welcome after timeout', async () => {
     vi.useFakeTimers();
 
-    verifyState = {
-      isPending: false,
-      isSuccess: true,
-      isError: false,
-      error: null,
-      data: { token: 'abc', childId: '1', childFirstName: 'João' },
-    };
+    verifyMock.state.isPending = false;
+    verifyMock.state.isSuccess = true;
+    verifyMock.state.data = { childId: '1' };
 
     renderVerifyPage();
 

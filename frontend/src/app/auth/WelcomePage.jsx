@@ -10,7 +10,7 @@ export default function WelcomePage() {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const childName = user?.childFirstName || 'amigo';
+  const childName = user?.childFirstName || t('welcome.fallbackName', { defaultValue: 'amigo' });
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-teal-50 p-4">

@@ -1,5 +1,5 @@
 // Contopia — Auth Store (Zustand)
-// Memory-only: no localStorage for COPPA safety
+// NO PERSIST MIDDLEWARE — COPPA compliance requires memory-only storage
 import { create } from 'zustand';
 
 const useAuthStore = create((set) => ({

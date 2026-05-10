@@ -255,7 +255,7 @@ export async function resendVerification(parentEmail) {
 
   logger.info({ parentId: parent._id }, 'Verification email resent');
 
-  return { token, parent, child: pendingChild };
+  return { token, parentId: parent._id, childFirstName: pendingChild.firstName };
 }
 
 /**
@@ -293,11 +293,12 @@ export async function childLogin({ childId, parentId }) {
   const refreshTokenHash = hashToken(refreshToken);
 
   // Store refresh token hash in Redis with 7-day TTL
+  let refreshAvailable = true;
   try {
     await redis.set(`refresh:${child._id.toString()}`, refreshTokenHash, 'EX', REFRESH_TTL_SECONDS);
   } catch (redisErr) {
-    logger.error({ err: redisErr, childId: child._id }, 'Failed to store refresh token in Redis');
-    // Continue — don't block login on Redis failure
+    logger.warn({ err: redisErr, childId: child._id }, 'Redis unavailable — refresh token not stored, degraded session');
+    refreshAvailable = false;
   }
 
   logger.info({ childId: child._id }, 'Child login successful');
@@ -307,5 +308,6 @@ export async function childLogin({ childId, parentId }) {
     childId: child._id.toString(),
     childFirstName: child.firstName,
     isOnboardingComplete: child.onboardingCompleted,
+    refreshAvailable,
   };
 }

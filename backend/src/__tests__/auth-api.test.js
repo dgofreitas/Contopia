@@ -79,10 +79,14 @@ describe('Auth API', () => {
     });
 
     it('should return 429 with RATE_LIMITED after exceeding limit', async () => {
-      for (let i = 0; i < 5; i++) {
-        await request(app).post('/api/auth/register').send({ parentEmail: `t${i}@ex.com`, childFirstName: 'João' });
+      // Register limiter: max=5 per IP+email prefix. All requests share the same IP in test.
+      // We need 6 requests with same IP+emailPrefix key to exceed the 5-request limit.
+      // Since key is IP:emailPrefix, use same email prefix (first 3 chars) for all.
+      for (let i = 0; i < 6; i++) {
+        await request(app).post('/api/auth/register').send({ parentEmail: `tes${i}@ex.com`, childFirstName: 'João' });
       }
-      const res = await request(app).post('/api/auth/register').send({ parentEmail: 't6@ex.com', childFirstName: 'João' });
+      // The 7th request should be rate limited
+      const res = await request(app).post('/api/auth/register').send({ parentEmail: 'tes7@ex.com', childFirstName: 'João' });
       expect(res.status).toBe(429);
       expect(res.body.error.code).toBe('RATE_LIMITED');
     });
@@ -126,7 +130,7 @@ describe('Auth API', () => {
   describe('POST /api/auth/resend-verification', () => {
     it('should return 200 with emailSent:true on resend', async () => {
       authManager.resendVerification.mockResolvedValue({
-        token: 't', parent: { _id: 'p1' }, child: { _id: 'c1', firstName: 'João' },
+        token: 't', parentId: 'p1', childFirstName: 'João',
       });
       sendVerificationEmail.mockResolvedValue({ success: true });
       const res = await request(app).post('/api/auth/resend-verification').send({ parentEmail: 'e@ex.com' });
@@ -149,7 +153,9 @@ describe('Auth API', () => {
     });
 
     it('should return 429 with RATE_LIMITED after exceeding limit', async () => {
-      for (let i = 0; i < 10; i++) {
+      // Resend limiter: max=10 per IP:emailPrefix(3 chars).
+      // All requests share IP; emails 'e@ex.com' → prefix 'e@e'
+      for (let i = 0; i < 11; i++) {
         await request(app).post('/api/auth/resend-verification').send({ parentEmail: 'e@ex.com' });
       }
       const res = await request(app).post('/api/auth/resend-verification').send({ parentEmail: 'e@ex.com' });
@@ -162,23 +168,23 @@ describe('Auth API', () => {
   describe('POST /api/auth/child-login', () => {
     it('should return 200 with tokens and child info', async () => {
       authManager.childLogin.mockResolvedValue({
-        accessToken: 'access', childId: 'child123', childFirstName: 'João', isOnboardingComplete: false,
+        accessToken: 'access', childId: 'child123', childFirstName: 'João', isOnboardingComplete: false, refreshAvailable: true,
       });
-      const res = await request(app).post('/api/auth/child-login').send({ childId: 'child123', parentId: 'parent123' });
+      const res = await request(app).post('/api/auth/child-login').send({ childId: '507f1f77bcf86cd799439011', parentId: '507f1f77bcf86cd799439012' });
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({
-        accessToken: 'access', childId: 'child123', childFirstName: 'João', isOnboardingComplete: false,
+        accessToken: 'access', childId: 'child123', childFirstName: 'João', isOnboardingComplete: false, refreshAvailable: true,
       });
     });
 
-    it('should return 400 with VALIDATION_ERROR for empty childId', async () => {
-      const res = await request(app).post('/api/auth/child-login').send({ childId: '', parentId: 'p1' });
+    it('should return 400 with VALIDATION_ERROR for invalid childId format', async () => {
+      const res = await request(app).post('/api/auth/child-login').send({ childId: 'short', parentId: '507f1f77bcf86cd799439012' });
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
     });
 
-    it('should return 400 with VALIDATION_ERROR for empty parentId', async () => {
-      const res = await request(app).post('/api/auth/child-login').send({ childId: 'c1', parentId: '' });
+    it('should return 400 with VALIDATION_ERROR for invalid parentId format', async () => {
+      const res = await request(app).post('/api/auth/child-login').send({ childId: '507f1f77bcf86cd799439011', parentId: 'bad' });
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
     });
@@ -186,7 +192,7 @@ describe('Auth API', () => {
     it('should return 404 when child not found', async () => {
       const err = new Error('x'); err.code = 'NOT_FOUND'; err.status = 404;
       authManager.childLogin.mockRejectedValue(err);
-      const res = await request(app).post('/api/auth/child-login').send({ childId: 'x', parentId: 'p1' });
+      const res = await request(app).post('/api/auth/child-login').send({ childId: '507f1f77bcf86cd799439099', parentId: '507f1f77bcf86cd799439012' });
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
     });
@@ -194,7 +200,7 @@ describe('Auth API', () => {
     it('should return 403 with FORBIDDEN when parentId mismatch', async () => {
       const err = new Error('x'); err.code = 'FORBIDDEN'; err.status = 403;
       authManager.childLogin.mockRejectedValue(err);
-      const res = await request(app).post('/api/auth/child-login').send({ childId: 'c1', parentId: 'wrong' });
+      const res = await request(app).post('/api/auth/child-login').send({ childId: '507f1f77bcf86cd799439011', parentId: '507f1f77bcf86cd799439099' });
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
     });
@@ -202,7 +208,7 @@ describe('Auth API', () => {
     it('should return 403 with NOT_VERIFIED when child inactive', async () => {
       const err = new Error('x'); err.code = 'NOT_VERIFIED'; err.status = 403;
       authManager.childLogin.mockRejectedValue(err);
-      const res = await request(app).post('/api/auth/child-login').send({ childId: 'c1', parentId: 'p1' });
+      const res = await request(app).post('/api/auth/child-login').send({ childId: '507f1f77bcf86cd799439011', parentId: '507f1f77bcf86cd799439012' });
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('NOT_VERIFIED');
     });

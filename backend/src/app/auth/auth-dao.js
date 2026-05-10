@@ -5,7 +5,7 @@ import { Parent, Child } from './auth-model.js';
  * Find a parent by email (case-insensitive, normalized via schema).
  */
 export async function findParentByEmail(email) {
-  return Parent.findOne({ email: email.toLowerCase() }).lean().exec();
+  return Parent.findOne({ email }).lean().exec();
 }
 
 /**

@@ -25,6 +25,6 @@ export const resendSchema = z.object({
  * Child login schema — childId + parentId.
  */
 export const childLoginSchema = z.object({
-  childId: z.string().min(1),
-  parentId: z.string().min(1),
+  childId: z.string().min(1).regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
+  parentId: z.string().min(1).regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
 });
