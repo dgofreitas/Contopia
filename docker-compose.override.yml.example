@@ -1,0 +1,30 @@
+# Contopia — Dev Override
+# Copy to docker-compose.override.yml for local development
+# Docker Compose auto-loads this alongside docker-compose.yml
+
+services:
+  frontend:
+    build:
+      target: development
+    volumes:
+      - ./frontend/src:/app/src:delegated
+      - ./frontend/public:/app/public:delegated
+      - ./frontend/index.html:/app/index.html:delegated
+      - ./frontend/vite.config.js:/app/vite.config.js:delegated
+      - ./shared:/app/shared:delegated
+    environment:
+      - NODE_ENV=development
+    command: ["npm", "run", "dev", "--", "--host"]
+
+  backend:
+    build:
+      target: development
+    volumes:
+      - ./backend/src:/app/src:delegated
+      - ./shared:/app/shared:delegated
+    environment:
+      - NODE_ENV=development
+
+  mongodb:
+    ports:
+      - "27017:27017"   # Expose for local tools (MongoDB Compass, mongosh)

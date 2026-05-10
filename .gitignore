@@ -1,0 +1,41 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+*.tmp
+*.temp
+
+# Docker
+docker-data/
+docker-compose.override.yml.bak
+
+# OpenCode workflow
+.opencode/node_modules/
+
+# TypeScript
+*.tsbuildinfo
