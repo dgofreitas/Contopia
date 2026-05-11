@@ -1,5 +1,6 @@
 // Contopia — Auth Models (Parent & Child & SessionAuditLog)
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const { Schema } = mongoose;
 
@@ -66,6 +67,13 @@ const childSchema = new Schema(
     timestamps: true,
   }
 );
+
+childSchema.pre('save', async function(next) {
+  if (this.isModified('password') && this.password) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  next();
+});
 
 // Compound unique: only one active child per parent per name
 childSchema.index(

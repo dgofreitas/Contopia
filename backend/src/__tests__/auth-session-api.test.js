@@ -6,6 +6,11 @@ vi.mock('pino', () => ({
   default: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
 }));
 
+// Disable express-rate-limit in session API tests — rate-limiting tested in auth-rate-limit.test.js
+vi.mock('express-rate-limit', () => ({
+  default: () => (req, res, next) => next(),
+}));
+
 vi.mock('rate-limit-redis', () => ({}));
 
 vi.mock('../../config/redis.js', () => ({

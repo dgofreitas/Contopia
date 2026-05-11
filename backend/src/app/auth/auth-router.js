@@ -80,7 +80,29 @@ const loginLimiter = createLimiter({
   message: 'Too many login attempts.',
 });
 
+const childLoginLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: 'Too many child login attempts.',
+  keyGenerator: (req) => {
+    const childId = req.body?.childId || '';
+    return `${req.ip}:child:${childId.slice(0, 8)}`;
+  },
+});
+
+const refreshLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: 'Too many refresh attempts.',
+});
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+function sanitizeUserAgent(req) {
+  return req.headers['user-agent']
+    ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
+    : null;
+}
 
 function buildVerificationLink(token) {
   const base = process.env.APP_URL || 'http://localhost:8000';
@@ -193,7 +215,7 @@ router.post('/resend-verification', resendLimiter, async (req, res) => {
 });
 
 // ── POST /child-login ────────────────────────────────────────────────────────
-router.post('/child-login', async (req, res) => {
+router.post('/child-login', loginLimiter, childLoginLimiter, async (req, res) => {
   const requestId = req.id;
 
   try {
@@ -207,9 +229,7 @@ router.post('/child-login', async (req, res) => {
 
     const { childId, parentId } = parsed.data;
     const ip = req.ip;
-    const deviceHint = req.headers['user-agent']
-      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
-      : null;
+    const deviceHint = sanitizeUserAgent(req);
     const result = await authManager.childLogin({ childId, parentId, ip, deviceHint });
 
     return res.status(200).json({
@@ -245,9 +265,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     const { method } = parsed.data;
     const ip = req.ip;
-    const deviceHint = req.headers['user-agent']
-      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
-      : null;
+    const deviceHint = sanitizeUserAgent(req);
 
     if (method === 'password') {
       const { childId, password } = parsed.data;
@@ -335,7 +353,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
 });
 
 // ── POST /refresh ────────────────────────────────────────────────────────────
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', refreshLimiter, async (req, res) => {
   const requestId = req.id;
 
   try {

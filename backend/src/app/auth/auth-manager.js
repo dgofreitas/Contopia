@@ -31,7 +31,6 @@ const ACCESS_TOKEN_EXPIRY = '30m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days in seconds
 const SESSION_TTL_SECONDS = 30 * 60; // 30 minutes
-const BCRYPT_ROUNDS = 10;
 
 // ── Token Generation ────────────────────────────────────────────────────────
 
@@ -103,8 +102,7 @@ export async function createSession({ childId, parentId, accessToken, refreshTok
   // Single-session policy: scan and destroy any existing sessions for this child
   try {
     const pattern = `session:${childIdStr}:*`;
-    const keys = await redis.keys(pattern);
-    for (const key of keys) {
+    for await (const key of redis.scanIterator({ match: pattern })) {
       try {
         const sessionData = await redis.get(key);
         if (sessionData) {
@@ -457,18 +455,18 @@ export async function refreshSession({ refreshToken, ip, deviceHint }) {
   let sessionId = null;
   try {
     const pattern = `session:${childIdStr}:*`;
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
+    for await (const key of redis.scanIterator({ match: pattern })) {
       // Reset session TTL
-      await redis.expire(keys[0], SESSION_TTL_SECONDS);
-      const sessionRaw = await redis.get(keys[0]);
+      await redis.expire(key, SESSION_TTL_SECONDS);
+      const sessionRaw = await redis.get(key);
       if (sessionRaw) {
         const sessionObj = JSON.parse(sessionRaw);
         sessionId = sessionObj.sessionId;
         // Update lastActivity
         sessionObj.lastActivity = new Date().toISOString();
-        await redis.set(keys[0], JSON.stringify(sessionObj), 'EX', SESSION_TTL_SECONDS);
+        await redis.set(key, JSON.stringify(sessionObj), 'EX', SESSION_TTL_SECONDS);
       }
+      break; // only process first match
     }
   } catch (redisErr) {
     logger.warn({ err: redisErr, childId: childIdStr }, 'Redis unavailable — session lookup skipped');
@@ -528,10 +526,10 @@ export async function getCurrentUser(childId) {
   let sessionMeta = null;
   try {
     const pattern = `session:${childIdStr}:*`;
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      const raw = await redis.get(keys[0]);
+    for await (const key of redis.scanIterator({ match: pattern })) {
+      const raw = await redis.get(key);
       if (raw) sessionMeta = JSON.parse(raw);
+      break; // only need first match
     }
   } catch (redisErr) {
     logger.warn({ err: redisErr, childId: childIdStr }, 'Redis unavailable — session metadata not retrieved');

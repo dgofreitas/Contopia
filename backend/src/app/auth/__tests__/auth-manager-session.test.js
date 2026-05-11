@@ -400,6 +400,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
       redis.get.mockResolvedValueOnce('mocked-hash-value'); // stored refresh hash matches
       authDao.findChildById.mockResolvedValue({
         _id: 'child1',
+        parentId: 'parent1',
         firstName: 'João',
       });
       // Session lookup
@@ -500,6 +501,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
       redis.get.mockResolvedValueOnce('mocked-hash-value');
       authDao.findChildById.mockResolvedValue({
         _id: 'child1',
+        parentId: 'parent1',
         firstName: 'Ana',
       });
       // Session lookup fails
