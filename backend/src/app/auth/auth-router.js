@@ -3,7 +3,8 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import redis from '../../config/redis.js';
-import { registerSchema, resendSchema, childLoginSchema } from '../common/validation-schemas.js';
+import { registerSchema, resendSchema, childLoginSchema, loginSchema, logoutSchema, refreshSchema } from '../common/validation-schemas.js';
+import { authMiddleware } from '../common/auth-middleware.js';
 import * as authManager from './auth-manager.js';
 import { sendVerificationEmail } from '../common/email-service.js';
 
@@ -71,6 +72,12 @@ const verifyLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 30,
   message: 'Too many verification attempts.',
+});
+
+const loginLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: 'Too many login attempts.',
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -199,16 +206,178 @@ router.post('/child-login', async (req, res) => {
     }
 
     const { childId, parentId } = parsed.data;
-    const result = await authManager.childLogin({ childId, parentId });
+    const ip = req.ip;
+    const deviceHint = req.headers['user-agent']
+      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
+      : null;
+    const result = await authManager.childLogin({ childId, parentId, ip, deviceHint });
 
     return res.status(200).json({
       data: {
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken || undefined,
         childId: result.childId,
         childFirstName: result.childFirstName,
         isOnboardingComplete: result.isOnboardingComplete,
         refreshAvailable: result.refreshAvailable,
+        method: result.method,
+        sessionId: result.sessionId,
       },
+      meta: { requestId },
+    });
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /login ─────────────────────────────────────────────────────────────
+router.post('/login', loginLimiter, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
+        meta: { requestId },
+      });
+    }
+
+    const { method } = parsed.data;
+    const ip = req.ip;
+    const deviceHint = req.headers['user-agent']
+      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
+      : null;
+
+    if (method === 'password') {
+      const { childId, password } = parsed.data;
+
+      // Check login attempts before attempting auth
+      const attempts = await authManager.incrementLoginAttempts(ip);
+      if (attempts > 5) {
+        return res.status(429).json({
+          error: { code: 'RATE_LIMITED', message: 'Too many login attempts.' },
+          meta: { requestId },
+        });
+      }
+
+      try {
+        const result = await authManager.loginWithPassword({ childId, password, ip, deviceHint });
+        return res.status(200).json({
+          data: {
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+            childId: result.childId,
+            childFirstName: result.childFirstName,
+            isOnboardingComplete: result.isOnboardingComplete,
+            method: result.method,
+            sessionId: result.sessionId,
+          },
+          meta: { requestId },
+        });
+      } catch (loginErr) {
+        // Don't reset attempts on failure — let rate limiter handle it
+        throw loginErr;
+      }
+    }
+
+    if (method === 'magic-link') {
+      const { parentEmail, childFirstName } = parsed.data;
+      const result = await authManager.loginWithMagicLink({ parentEmail, childFirstName });
+      return res.status(200).json({
+        data: { magicLinkSent: result.magicLinkSent, parentEmail: result.parentEmail },
+        meta: { requestId },
+      });
+    }
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /logout ─────────────────────────────────────────────────────────────
+router.post('/logout', authMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = logoutSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
+        meta: { requestId },
+      });
+    }
+
+    const { childId, sessionId, token } = req;
+    const ip = req.ip;
+    const deviceHint = req.headers['user-agent']
+      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
+      : null;
+
+    // Extract refreshToken from body if provided (client may send it for explicit revocation)
+    const refreshToken = req.body.refreshToken || null;
+
+    const result = await authManager.logout({
+      childId,
+      sessionId: sessionId || parsed.data.sessionId,
+      accessToken: token,
+      refreshToken,
+      ip,
+      deviceHint,
+    });
+
+    return res.status(200).json({
+      data: { loggedOut: result.loggedOut },
+      meta: { requestId },
+    });
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /refresh ────────────────────────────────────────────────────────────
+router.post('/refresh', async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = refreshSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
+        meta: { requestId },
+      });
+    }
+
+    const { refreshToken } = parsed.data;
+    const ip = req.ip;
+    const deviceHint = req.headers['user-agent']
+      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
+      : null;
+
+    const result = await authManager.refreshSession({ refreshToken, ip, deviceHint });
+
+    return res.status(200).json({
+      data: {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        childId: result.childId,
+        childFirstName: result.childFirstName,
+      },
+      meta: { requestId },
+    });
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── GET /me ─────────────────────────────────────────────────────────────────
+router.get('/me', authMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const result = await authManager.getCurrentUser(req.childId);
+
+    return res.status(200).json({
+      data: result,
       meta: { requestId },
     });
   } catch (err) {

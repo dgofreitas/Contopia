@@ -1,4 +1,4 @@
-// Contopia — Auth Models (Parent & Child)
+// Contopia — Auth Models (Parent & Child & SessionAuditLog)
 import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
@@ -49,6 +49,10 @@ const childSchema = new Schema(
       trim: true,
       maxlength: 50,
     },
+    password: {
+      type: String,
+      select: false, // never included by default — only loaded for login
+    },
     isActive: {
       type: Boolean,
       default: false,
@@ -72,7 +76,42 @@ childSchema.index(
   }
 );
 
+// ── Session Audit Log Schema ────────────────────────────────────────────────
+const sessionAuditSchema = new Schema(
+  {
+    childId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Child',
+      required: true,
+      index: true,
+    },
+    sessionId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    event: {
+      type: String,
+      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED'],
+      required: true,
+    },
+    ip: {
+      type: String,
+    },
+    deviceHint: {
+      type: String,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// TTL index: auto-delete audit logs after 90 days
+sessionAuditSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+
 const Parent = mongoose.model('Parent', parentSchema);
 const Child = mongoose.model('Child', childSchema);
+const SessionAuditLog = mongoose.model('SessionAuditLog', sessionAuditSchema);
 
-export { Parent, Child };
+export { Parent, Child, SessionAuditLog };

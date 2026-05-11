@@ -1,5 +1,5 @@
 // Contopia — Auth Data Access Object
-import { Parent, Child } from './auth-model.js';
+import { Parent, Child, SessionAuditLog } from './auth-model.js';
 
 /**
  * Find a parent by email (case-insensitive, normalized via schema).
@@ -123,4 +123,26 @@ export async function createChild({ parentId, firstName }) {
  */
 export async function activateChild(childId) {
   return Child.findByIdAndUpdate(childId, { isActive: true }, { new: true }).lean().exec();
+}
+
+/**
+ * Find a child by ID, explicitly selecting the password field.
+ * Used for password validation during login.
+ */
+export async function findChildByIdWithPassword(childId) {
+  return Child.findById(childId).select('+password').lean().exec();
+}
+
+/**
+ * Update a child's password hash.
+ */
+export async function updateChildPassword(childId, passwordHash) {
+  return Child.findByIdAndUpdate(childId, { password: passwordHash }, { new: true }).lean().exec();
+}
+
+/**
+ * Create a session audit log entry (fire-and-forget style).
+ */
+export async function createAuditLog({ childId, sessionId, event, ip, deviceHint }) {
+  return SessionAuditLog.create({ childId, sessionId, event, ip, deviceHint });
 }

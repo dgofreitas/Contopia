@@ -24,7 +24,7 @@
   },
   "agent": {
     "general": {
-      "model": "ollama-cloud/devstral-small-2:24b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
 
     "Master": {
@@ -50,23 +50,23 @@
       "model": "ollama-cloud/deepseek-v4-flash"
     },
     "MergeRequestCreator": {
-      "model": "ollama-cloud/devstral-small-2:24b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
 
     "BackendDeveloper": {
       "model": "ollama-cloud/glm-5.1"
     },
     "BugFixerNodejs": {
-      "model": "ollama-cloud/devstral-2:123b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
     "TestEngineer": {
-      "model": "ollama-cloud/devstral-2:123b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
     "CodeReviewer": {
       "model": "ollama-cloud/deepseek-v4-flash"
     },
     "BuildAgent": {
-      "model": "ollama-cloud/devstral-small-2:24b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
 
     "FrontendDeveloper": {
@@ -85,7 +85,7 @@
       "model": "ollama-cloud/deepseek-v4-pro"
     },
     "ShellDeveloper": {
-      "model": "ollama-cloud/devstral-small-2:24b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
     "UXDesigner": {
       "model": "ollama-cloud/qwen3.5:397b"
@@ -95,14 +95,14 @@
       "model": "ollama-cloud/deepseek-v4-pro"
     },
     "ImplReviewerNodejs": {
-      "model": "ollama-cloud/devstral-2:123b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
 
     "ContextScout": {
       "model": "ollama-cloud/qwen3-coder-next"
     },
     "TaskManager": {
-      "model": "ollama-cloud/devstral-small-2:24b"
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
     "DocWriter": {
       "model": "ollama-cloud/qwen3.5:397b"
