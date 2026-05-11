@@ -17,7 +17,23 @@ vi.mock('node:crypto', async (importOriginal) => {
 });
 
 vi.mock('jsonwebtoken');
-vi.mock('../auth-dao.js');
+vi.mock('../auth-dao.js', () => ({
+  findParentByEmail: vi.fn(),
+  findParentByVerificationTokenHash: vi.fn(),
+  createParent: vi.fn(),
+  updateParentVerification: vi.fn(),
+  markParentVerified: vi.fn(),
+  clearParentVerificationToken: vi.fn(),
+  findChildById: vi.fn(),
+  findActiveChildByParentAndName: vi.fn(),
+  findPendingChildByParentAndName: vi.fn(),
+  createChild: vi.fn(),
+  activateChild: vi.fn(),
+  findPendingChildByParent: vi.fn(),
+  findChildByIdWithPassword: vi.fn(),
+  updateChildPassword: vi.fn(),
+  createAuditLog: vi.fn().mockReturnValue({ catch: vi.fn() }),
+}));
 vi.mock('../../../config/redis.js');
 vi.mock('pino', () => ({
   default: () => ({
@@ -257,8 +273,8 @@ describe('Auth Manager', () => {
 
       const result = await authManager.resendVerification('e@ex.com');
       expect(result.token).toBe('new-token');
-      expect(result.parent).toEqual(parent);
-      expect(result.child).toEqual(child);
+      expect(result.parentId).toBe('p1');
+      expect(result.childFirstName).toBe('João');
       expect(authDao.updateParentVerification).toHaveBeenCalled();
     });
 
@@ -288,13 +304,16 @@ describe('Auth Manager', () => {
         _id: 'c1', parentId: 'p1', firstName: 'João', isActive: true, onboardingCompleted: false,
       };
       authDao.findChildById.mockResolvedValue(child);
-      jwt.sign.mockReturnValueOnce('access').mockReturnValueOnce('refresh');
+      // childLogin calls: generateAccessToken(no sid), generateRefreshToken, generateAccessToken(with sid)
+      jwt.sign.mockReturnValueOnce('access').mockReturnValueOnce('refresh').mockReturnValueOnce('access');
       redis.set.mockResolvedValue('OK');
 
       const result = await authManager.childLogin({ childId: 'c1', parentId: 'p1' });
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         accessToken: 'access', childId: 'c1', childFirstName: 'João', isOnboardingComplete: false,
+        method: 'id', refreshAvailable: true, refreshToken: 'refresh',
       });
+      expect(result.sessionId).toMatch(/^sess_/);
       expect(redis.set).toHaveBeenCalledWith(
         'refresh:c1', 'mocked-hash-value', 'EX', 604800
       );
@@ -305,7 +324,8 @@ describe('Auth Manager', () => {
         _id: 'c1', parentId: 'p1', firstName: 'A', isActive: true, onboardingCompleted: true,
       };
       authDao.findChildById.mockResolvedValue(child);
-      jwt.sign.mockReturnValueOnce('access').mockReturnValueOnce('refresh');
+      // childLogin calls: generateAccessToken(no sid), generateRefreshToken, generateAccessToken(with sid)
+      jwt.sign.mockReturnValueOnce('access').mockReturnValueOnce('refresh').mockReturnValueOnce('access');
       redis.set.mockRejectedValue(new Error('Redis down'));
 
       const result = await authManager.childLogin({ childId: 'c1', parentId: 'p1' });

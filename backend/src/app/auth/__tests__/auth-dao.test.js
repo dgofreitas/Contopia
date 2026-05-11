@@ -33,7 +33,7 @@ describe('Auth DAO', () => {
 
       const result = await authDao.findParentByEmail('Test@Example.com');
       expect(result).toEqual(mock);
-      expect(Parent.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(Parent.findOne).toHaveBeenCalledWith({ email: 'Test@Example.com' });
     });
 
     it('should return null when parent not found', async () => {

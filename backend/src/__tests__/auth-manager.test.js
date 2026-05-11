@@ -28,9 +28,12 @@ import * as authManager from '../app/auth/auth-manager.js';
 import * as authDao from '../app/auth/auth-dao.js';
 import redis from '../config/redis.js';
 
-// Add mock for the new DAO function
+// Add mocks for newer DAO functions (auto-mock may not cover all)
 authDao.findPendingChildByParent = vi.fn();
 authDao.findPendingChildByParentAndName = vi.fn();
+authDao.findChildByIdWithPassword = vi.fn();
+authDao.updateChildPassword = vi.fn();
+authDao.createAuditLog = vi.fn().mockReturnValue({ catch: vi.fn() });
 
 describe('Auth Manager', () => {
   beforeEach(() => {
@@ -216,8 +219,8 @@ describe('Auth Manager', () => {
 
       const result = await authManager.resendVerification('test@example.com');
       expect(result.token).toBe('new-mock-token');
-      expect(result.parent).toEqual(parent);
-      expect(result.child).toEqual(child);
+      expect(result.parentId).toBe('parent123');
+      expect(result.childFirstName).toBe('João');
     });
 
     it('should throw NOT_FOUND when parent not found', async () => {
@@ -242,7 +245,8 @@ describe('Auth Manager', () => {
         isActive: true, onboardingCompleted: false,
       };
       authDao.findChildById.mockResolvedValue(child);
-      jwt.sign.mockReturnValueOnce('mock-access-token').mockReturnValueOnce('mock-refresh-token');
+      // childLogin calls: generateAccessToken (no sid), generateRefreshToken, generateAccessToken (with sid)
+      jwt.sign.mockReturnValueOnce('mock-access-token').mockReturnValueOnce('mock-refresh-token').mockReturnValueOnce('mock-access-token');
       redis.set.mockResolvedValue('OK');
 
       const result = await authManager.childLogin({ childId: 'child123', parentId: 'parent123' });
@@ -251,8 +255,27 @@ describe('Auth Manager', () => {
         childId: 'child123',
         childFirstName: 'João',
         isOnboardingComplete: false,
+        method: 'id',
+        refreshAvailable: true,
+        refreshToken: 'mock-refresh-token',
+        sessionId: result.sessionId, // dynamic — just check it exists
       });
+      expect(result.sessionId).toMatch(/^sess_/);
       expect(redis.set).toHaveBeenCalledWith('refresh:child123', TH, 'EX', 7 * 24 * 60 * 60);
+    });
+
+    it('should succeed when Redis set fails (non-blocking)', async () => {
+      const child = {
+        _id: 'child123', parentId: 'parent123', firstName: 'A',
+        isActive: true, onboardingCompleted: true,
+      };
+      authDao.findChildById.mockResolvedValue(child);
+      jwt.sign.mockReturnValueOnce('access').mockReturnValueOnce('refresh').mockReturnValueOnce('access');
+      redis.set.mockRejectedValue(new Error('Redis down'));
+
+      const result = await authManager.childLogin({ childId: 'child123', parentId: 'parent123' });
+      expect(result.accessToken).toBe('access');
+      expect(result.isOnboardingComplete).toBe(true);
     });
 
     it('should throw NOT_FOUND when child not found', async () => {

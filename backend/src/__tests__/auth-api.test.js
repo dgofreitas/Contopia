@@ -10,23 +10,47 @@ vi.mock('rate-limit-redis', () => ({}));
 
 vi.mock('../../config/redis.js', () => ({
   default: {
-    set: vi.fn(), get: vi.fn(), del: vi.fn(), call: vi.fn(),
+    set: vi.fn(), get: vi.fn(), del: vi.fn(), exists: vi.fn(),
+    incr: vi.fn(), expire: vi.fn(), keys: vi.fn(), call: vi.fn(),
     status: 'ready', on: vi.fn(),
   },
 }));
 
-vi.mock('../app/auth/auth-manager.js');
+vi.mock('../app/auth/auth-manager.js', () => ({
+  registerParentAndChildIdempotent: vi.fn(),
+  verifyEmail: vi.fn(),
+  resendVerification: vi.fn(),
+  childLogin: vi.fn(),
+  loginWithPassword: vi.fn(),
+  loginWithMagicLink: vi.fn(),
+  logout: vi.fn(),
+  refreshSession: vi.fn(),
+  getCurrentUser: vi.fn(),
+  incrementLoginAttempts: vi.fn(),
+  hashToken: vi.fn((t) => `hashed:${t}`),
+}));
 vi.mock('../app/common/email-service.js');
 
+import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import express from 'express';
 import authRouter from '../app/auth/auth-router.js';
 import * as authManager from '../app/auth/auth-manager.js';
 import { sendVerificationEmail } from '../app/common/email-service.js';
+import redis from '../../config/redis.js';
 
 const app = express();
 app.use(express.json());
 app.use('/api/auth', authRouter);
+
+// Helper: generate a valid access token for authMiddleware
+function makeAccessToken(payload = {}) {
+  return jwt.sign(
+    { sub: 'c1', parentId: 'p1', type: 'access', ...payload },
+    process.env.JWT_SECRET || 'test-secret',
+    { expiresIn: '30m' }
+  );
+}
 
 describe('Auth API', () => {
   beforeEach(() => {
@@ -211,6 +235,206 @@ describe('Auth API', () => {
       const res = await request(app).post('/api/auth/child-login').send({ childId: '507f1f77bcf86cd799439011', parentId: '507f1f77bcf86cd799439012' });
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('NOT_VERIFIED');
+    });
+  });
+
+  // ── POST /login (magic-link method) ────────────────────────────────────────
+  describe('POST /api/auth/login (magic-link)', () => {
+    it('should return 200 with magicLinkSent on success', async () => {
+      authManager.loginWithMagicLink.mockResolvedValue({
+        magicLinkSent: true, parentEmail: 'p@ex.com',
+      });
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ method: 'magic-link', parentEmail: 'p@ex.com', childFirstName: 'João' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ magicLinkSent: true, parentEmail: 'p@ex.com' });
+    });
+
+    it('should return 404 when parent not found or not verified', async () => {
+      const err = new Error('x'); err.code = 'NOT_FOUND'; err.status = 404;
+      authManager.loginWithMagicLink.mockRejectedValue(err);
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ method: 'magic-link', parentEmail: 'nx@ex.com', childFirstName: 'João' });
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+  });
+
+  // ── POST /login (password method) ──────────────────────────────────────────
+  describe('POST /api/auth/login (password)', () => {
+    const CID = '507f1f77bcf86cd799439011';
+
+    it('should return 200 with tokens on successful password login', async () => {
+      authManager.loginWithPassword.mockResolvedValue({
+        accessToken: 'at', refreshToken: 'rt', childId: CID,
+        childFirstName: 'João', isOnboardingComplete: false,
+        method: 'password', sessionId: 'sess_123',
+      });
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ method: 'password', childId: CID, password: 'pass1234' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({
+        accessToken: 'at', refreshToken: 'rt', childId: CID, childFirstName: 'João',
+        method: 'password',
+      });
+    });
+
+    it('should return 401 with INVALID_CREDENTIALS on bad password', async () => {
+      const err = new Error('x'); err.code = 'INVALID_CREDENTIALS'; err.status = 401;
+      authManager.loginWithPassword.mockRejectedValue(err);
+      authManager.incrementLoginAttempts.mockResolvedValue(1);
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ method: 'password', childId: CID, password: 'wrong' });
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_CREDENTIALS');
+    });
+
+    it('should return 404 with NOT_FOUND when child missing', async () => {
+      const err = new Error('x'); err.code = 'NOT_FOUND'; err.status = 404;
+      authManager.loginWithPassword.mockRejectedValue(err);
+      authManager.incrementLoginAttempts.mockResolvedValue(1);
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ method: 'password', childId: CID, password: 'pass1234' });
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+  });
+
+  // ── POST /logout ───────────────────────────────────────────────────────────
+  describe('POST /api/auth/logout', () => {
+    const validToken = makeAccessToken();
+
+    it('should return 200 with loggedOut:true on success', async () => {
+      redis.exists.mockResolvedValue(0); // not blacklisted
+      redis.get.mockResolvedValue(null); // no session (no sid in token)
+      authManager.logout.mockResolvedValue({ loggedOut: true });
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ sessionId: 'sess_123' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ loggedOut: true });
+    });
+
+    it('should return 400 with VALIDATION_ERROR without sessionId', async () => {
+      redis.exists.mockResolvedValue(0);
+      redis.get.mockResolvedValue(null);
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should return 401 without auth header', async () => {
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .send({ sessionId: 'sess_123' });
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // ── POST /refresh ──────────────────────────────────────────────────────────
+  describe('POST /api/auth/refresh', () => {
+    it('should return 200 with new tokens on success', async () => {
+      authManager.refreshSession.mockResolvedValue({
+        accessToken: 'new-at', refreshToken: 'new-rt', childId: 'c1', childFirstName: 'João',
+      });
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: 'valid-rt' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({
+        accessToken: 'new-at', refreshToken: 'new-rt', childId: 'c1', childFirstName: 'João',
+      });
+    });
+
+    it('should return 400 with VALIDATION_ERROR for empty refreshToken', async () => {
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: '' });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should return 401 with INVALID_REFRESH_TOKEN', async () => {
+      const err = new Error('x'); err.code = 'INVALID_REFRESH_TOKEN'; err.status = 401;
+      authManager.refreshSession.mockRejectedValue(err);
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: 'bad-rt' });
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_REFRESH_TOKEN');
+    });
+
+    it('should return 401 with TOKEN_REVOKED', async () => {
+      const err = new Error('x'); err.code = 'TOKEN_REVOKED'; err.status = 401;
+      authManager.refreshSession.mockRejectedValue(err);
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: 'revoked-rt' });
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('TOKEN_REVOKED');
+    });
+  });
+
+  // ── GET /me ────────────────────────────────────────────────────────────────
+  describe('GET /api/auth/me', () => {
+    const validToken = makeAccessToken();
+
+    it('should return 200 with child info', async () => {
+      redis.exists.mockResolvedValue(0); // not blacklisted
+      redis.get.mockResolvedValue(null); // no session (no sid in token)
+      authManager.getCurrentUser.mockResolvedValue({
+        childId: 'c1', childFirstName: 'João', isOnboardingComplete: false,
+        sessionCreatedAt: '2025-01-01T00:00:00Z', lastActivity: '2025-01-01T00:30:00Z',
+      });
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${validToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.data.childId).toBe('c1');
+      expect(res.body.data.childFirstName).toBe('João');
+    });
+
+    it('should return 401 without auth header', async () => {
+      const res = await request(app).get('/api/auth/me');
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 404 when child not found', async () => {
+      redis.exists.mockResolvedValue(0);
+      redis.get.mockResolvedValue(null);
+      const err = new Error('x'); err.code = 'NOT_FOUND'; err.status = 404;
+      authManager.getCurrentUser.mockRejectedValue(err);
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${validToken}`);
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+  });
+
+  // ── Rate limiting on /login ─────────────────────────────────────────────────
+  describe('Rate limiting on /login', () => {
+    it('should return 429 with RATE_LIMITED after exceeding login limiter', async () => {
+      // loginLimiter: max=5 per IP per 15min; login router also has app-level check
+      for (let i = 0; i < 6; i++) {
+        await request(app)
+          .post('/api/auth/login')
+          .send({ method: 'password', childId: '507f1f77bcf86cd799439011', password: 'pass1234' });
+      }
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ method: 'password', childId: '507f1f77bcf86cd799439011', password: 'pass1234' });
+      expect(res.status).toBe(429);
+      expect(res.body.error.code).toBe('RATE_LIMITED');
     });
   });
 });

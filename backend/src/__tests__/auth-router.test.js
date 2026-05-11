@@ -154,22 +154,27 @@ describe('Auth Router', () => {
   });
 
   describe('POST /api/auth/child-login', () => {
+    const VALID_CHILD_ID = '507f1f77bcf86cd799439011';
+    const VALID_PARENT_ID = '507f1f77bcf86cd799439012';
+    const VALID_CHILD_ID2 = '507f1f77bcf86cd799439013';
+    const VALID_PARENT_ID2 = '507f1f77bcf86cd799439014';
+
     it('should return 200 on successful login', async () => {
       authManager.childLogin.mockResolvedValue({
         accessToken: 'mock-access-token',
-        childId: 'child123',
+        childId: VALID_CHILD_ID,
         childFirstName: 'João',
         isOnboardingComplete: false,
       });
 
       const response = await request(app)
         .post('/api/auth/child-login')
-        .send({ childId: 'child123', parentId: 'parent123' });
+        .send({ childId: VALID_CHILD_ID, parentId: VALID_PARENT_ID });
 
       expect(response.status).toBe(200);
       expect(response.body.data).toEqual({
         accessToken: 'mock-access-token',
-        childId: 'child123',
+        childId: VALID_CHILD_ID,
         childFirstName: 'João',
         isOnboardingComplete: false,
       });
@@ -178,7 +183,7 @@ describe('Auth Router', () => {
     it('should return 400 on validation error', async () => {
       const response = await request(app)
         .post('/api/auth/child-login')
-        .send({ childId: '', parentId: 'parent123' });
+        .send({ childId: '', parentId: VALID_PARENT_ID });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -190,7 +195,7 @@ describe('Auth Router', () => {
 
       const response = await request(app)
         .post('/api/auth/child-login')
-        .send({ childId: 'nonexistent', parentId: 'parent123' });
+        .send({ childId: VALID_CHILD_ID2, parentId: VALID_PARENT_ID });
 
       expect(response.status).toBe(404);
       expect(response.body.error.code).toBe('NOT_FOUND');
@@ -202,7 +207,7 @@ describe('Auth Router', () => {
 
       const response = await request(app)
         .post('/api/auth/child-login')
-        .send({ childId: 'child123', parentId: 'wrong-parent' });
+        .send({ childId: VALID_CHILD_ID, parentId: VALID_PARENT_ID2 });
 
       expect(response.status).toBe(403);
       expect(response.body.error.code).toBe('FORBIDDEN');
@@ -214,7 +219,7 @@ describe('Auth Router', () => {
 
       const response = await request(app)
         .post('/api/auth/child-login')
-        .send({ childId: 'child123', parentId: 'parent123' });
+        .send({ childId: VALID_CHILD_ID, parentId: VALID_PARENT_ID });
 
       expect(response.status).toBe(403);
       expect(response.body.error.code).toBe('NOT_VERIFIED');
