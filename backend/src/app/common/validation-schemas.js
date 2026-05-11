@@ -1,4 +1,4 @@
-// Contopia — Auth Validation Schemas (Zod)
+// Contopia — Validation Schemas (Zod)
 import { z } from 'zod';
 
 /**
@@ -61,4 +61,44 @@ export const logoutSchema = z.object({
  */
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
+});
+
+// ── Book Validation Schemas ───────────────────────────────────────────────────
+
+const objectIdRegex = /^[a-f\d]{24}$/i;
+
+export const bookIdSchema = z.object({
+  bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
+});
+
+export const bookCreateSchema = z.object({
+  title: z.string().min(1).max(200).trim(),
+  description: z.string().max(2000).trim().optional().default(''),
+  language: z.string().max(5).optional().default('pt-BR'),
+});
+
+export const bookUpdateSchema = z.object({
+  title: z.string().min(1).max(200).trim().optional(),
+  description: z.string().max(2000).trim().optional(),
+  language: z.string().max(5).optional(),
+});
+
+export const chapterCreateSchema = z.object({
+  bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
+  order: z.number().int().min(0),
+  title: z.string().min(1).max(200).trim(),
+  content: z.string().optional().default(''),
+});
+
+export const chapterUpdateSchema = z.object({
+  title: z.string().min(1).max(200).trim().optional(),
+  content: z.string().optional(),
+  order: z.number().int().min(0).optional(),
+  wordCount: z.number().int().min(0).optional(),
+});
+
+export const progressUpdateSchema = z.object({
+  lastChapterId: z.string().regex(objectIdRegex, 'Invalid chapter ID format').optional().nullable(),
+  lastPosition: z.number().min(0).optional(),
+  percentage: z.number().min(0).max(100).optional(),
 });

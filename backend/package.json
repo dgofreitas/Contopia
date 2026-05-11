@@ -8,7 +8,16 @@
     "start": "node src/main.js",
     "dev": "nodemon src/main.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "migrate:up": "migrate-mongo up",
+    "migrate:down": "migrate-mongo down",
+    "migrate:status": "migrate-mongo status",
+    "seed:dev": "node scripts/seed-dev.js",
+    "migrate:up": "migrate-mongo up -f migrate-mongo-config.cjs",
+    "migrate:down": "migrate-mongo down -f migrate-mongo-config.cjs",
+    "migrate:create": "migrate-mongo create -f migrate-mongo-config.cjs",
+    "migrate:status": "migrate-mongo status -f migrate-mongo-config.cjs",
+    "seed": "node scripts/seed-dev.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

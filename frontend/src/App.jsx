@@ -1,17 +1,34 @@
 // Contopia — Root Application Component
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import RegisterPage from './app/auth/RegisterPage';
 import VerifyPage from './app/auth/VerifyPage';
 import WelcomePage from './app/auth/WelcomePage';
 import LoginPage from './app/auth/LoginPage';
+import ShelfPage from './app/shelf/ShelfPage';
+import EditorPage from './app/editor/EditorPage';
+import ReaderPage from './app/reader/ReaderPage';
 import SettingsPage from './app/settings/SettingsPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import Navbar from './components/common/Navbar';
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal';
 import useAuthStore from './stores/auth-store';
 
 function RootRedirect() {
   const token = useAuthStore((s) => s.token);
-  return <Navigate to={token ? '/welcome' : '/login'} replace />;
+  return <Navigate to={token ? '/shelf' : '/login'} replace />;
+}
+
+function ProtectedLayout() {
+  return (
+    <ProtectedRoute>
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+      </div>
+    </ProtectedRoute>
+  );
 }
 
 export default function App() {
@@ -23,22 +40,13 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify/:token" element={<VerifyPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/welcome"
-          element={
-            <ProtectedRoute>
-              <WelcomePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/shelf" element={<ShelfPage />} />
+          <Route path="/editor/:bookId" element={<EditorPage />} />
+          <Route path="/reader/:bookId" element={<ReaderPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/welcome" element={<WelcomePage />} />
+        </Route>
       </Routes>
     </>
   );

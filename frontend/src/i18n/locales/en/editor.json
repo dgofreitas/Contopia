@@ -1,0 +1,11 @@
+{
+  "title": "Write",
+  "subtitle": "Write your story here!",
+  "backToShelf": "Back to Bookshelf",
+  "autoSaveHint": "Your work is saved automatically.",
+  "chapterNav": "Chapters",
+  "addChapter": "Add chapter",
+  "saveDraft": "Save",
+  "preview": "Preview",
+  "lastSaved": "Saved at {{time}}"
+}
