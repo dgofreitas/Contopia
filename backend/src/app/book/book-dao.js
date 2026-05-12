@@ -150,7 +150,8 @@ export async function softDeleteReadingProgress(id) {
 // ── ActivityLog DAO (append-only, no updates or deletes) ──────────────────────
 
 export async function createActivityLog(data) {
-  return ActivityLog.create(data);
+  const doc = await ActivityLog.create(data);
+  return doc.toObject({ minimize: false });
 }
 
 export async function findActivityLogs({ actorId, action, targetId, targetType, limit = 50, skip = 0 } = {}) {

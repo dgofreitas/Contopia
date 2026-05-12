@@ -15,12 +15,35 @@ import {
   upsertReadingProgress,
   findReadingProgressByUser,
   createActivityLog,
+  createAsset,
+  sumAssetBytesByAuthor,
 } from './book-dao.js';
 
 const logger = pino({ name: 'book-manager', level: process.env.LOG_LEVEL || 'info' });
 
 const MAX_BOOKS_PER_USER = 100;
 const ASSET_QUOTA_BYTES = 524_288_000; // 500MB
+
+// ── Asset Operations ─────────────────────────────────────────────────────────
+
+/**
+ * Create an asset for a book, enforcing per-user storage quota (NFR-SCL-02).
+ * @param {{ bookId: string, authorId: string, url: string, type: string, mimeType: string, sizeBytes: number }} data
+ */
+export async function createAssetManager(data) {
+  const currentBytes = await sumAssetBytesByAuthor(data.authorId);
+  if (currentBytes + data.sizeBytes > ASSET_QUOTA_BYTES) {
+    const err = new Error('Asset quota exceeded');
+    err.code = 'ASSET_QUOTA_EXCEEDED';
+    err.status = 403;
+    throw err;
+  }
+
+  const asset = await createAsset(data);
+
+  logger.info({ assetId: asset._id, authorId: data.authorId, sizeBytes: data.sizeBytes }, 'Asset created');
+  return asset;
+}
 
 // ── Book Operations ───────────────────────────────────────────────────────────
 
@@ -56,7 +79,9 @@ export async function createBookManager({ authorId, title, description, language
     action: 'book.create',
     targetId: book._id,
     targetType: 'book',
-  }).catch(() => {});
+  }).catch((err) => {
+    logger.error({ err }, 'Audit log failed for action book.create');
+  });
 
   logger.info({ bookId: book._id, authorId }, 'Book created');
   return book;
@@ -127,7 +152,9 @@ export async function deleteBookManager(bookId, authorId) {
     action: 'book.delete',
     targetId: bookId,
     targetType: 'book',
-  }).catch(() => {});
+  }).catch((err) => {
+    logger.error({ err }, 'Audit log failed for action book.delete');
+  });
 
   logger.info({ bookId, authorId }, 'Book soft-deleted');
   return deleted;
@@ -168,7 +195,9 @@ export async function publishBookManager(bookId, authorId) {
     action: 'book.publish',
     targetId: bookId,
     targetType: 'book',
-  }).catch(() => {});
+  }).catch((err) => {
+    logger.error({ err }, 'Audit log failed for action book.publish');
+  });
 
   logger.info({ bookId, authorId }, 'Book published');
   return updated;

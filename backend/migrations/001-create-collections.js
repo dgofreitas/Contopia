@@ -35,7 +35,7 @@ async function up(db, client) {
     { status: 1, publishedAt: -1, deletedAt: 1 },
     { partialFilterExpression: { deletedAt: null } }
   );
-  await books.createIndex({ title: 'text' }, { collation: { locale: 'simple' } });
+  await books.createIndex({ title: 'text' }, { language_override: 'searchLanguage', collation: { locale: 'simple' } });
 
   // ── Chapters Indexes ──────────────────────────────────────────────────────────
   const chapters = db.collection('chapters');
