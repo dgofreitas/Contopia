@@ -1,0 +1,8 @@
+{
+  "title": "Ler",
+  "subtitle": "Aproveite a leitura!",
+  "backToShelf": "Voltar para Estante",
+  "prevChapter": "Anterior",
+  "nextChapter": "Próximo",
+  "chapterOf": "Capítulo {{current}} de {{total}}"
+}

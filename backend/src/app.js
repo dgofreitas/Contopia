@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import pino from 'pino';
 import authRouter from './app/auth/auth-router.js';
+import bookRouter from './app/book/book-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
 
 const logger = pino({
@@ -42,14 +43,13 @@ app.use((req, res, next) => {
 // ── Request Logging ───────────────────────────────────────────────────────
 app.use(pinoHttp({ logger, reqIdExpr: 'id' }));
 
-// ── Auth Routes (before global rate limit — have own stricter limiters) ────
+// ── Routes ─────────────────────────────────────────────────────────────────────
+// Auth routes (handle their own auth/rate-limiting)
 app.use('/api/auth', authRouter);
+// Book routes (authMiddleware applied internally in book-router)
+app.use('/api/books', bookRouter);
 
-// ── Protected Routes (require authMiddleware) ──────────────────────────────
-// Placeholder routes — middleware pattern must be in place; handlers return 404 for now
-app.use('/api/books', authMiddleware);
-app.use('/api/books', (_req, res) => res.status(404).json({ error: 'Not found' }));
-
+// Protected placeholder routes (auth required)
 app.use('/api/shelf', authMiddleware);
 app.use('/api/shelf', (_req, res) => res.status(404).json({ error: 'Not found' }));
 

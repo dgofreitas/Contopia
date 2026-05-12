@@ -1,0 +1,11 @@
+{
+  "title": "Estante",
+  "subtitle": "Sua estante digital de histórias!",
+  "createBook": "Criar história",
+  "emptyHint": "Sua estante está vazia. Crie sua primeira história!",
+  "openBook": "Ler",
+  "editBook": "Escrever",
+  "deleteBook": "Apagar",
+  "confirmDelete": "Tem certeza que quer apagar esta história?",
+  "lastEdited": "Editada {{date}}"
+}

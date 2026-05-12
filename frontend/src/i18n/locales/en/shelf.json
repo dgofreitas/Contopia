@@ -1,0 +1,11 @@
+{
+  "title": "Bookshelf",
+  "subtitle": "Your digital story bookshelf!",
+  "createBook": "Create story",
+  "emptyHint": "Your bookshelf is empty. Create your first story!",
+  "openBook": "Read",
+  "editBook": "Write",
+  "deleteBook": "Delete",
+  "confirmDelete": "Are you sure you want to delete this story?",
+  "lastEdited": "Edited {{date}}"
+}

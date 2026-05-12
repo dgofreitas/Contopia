@@ -1,0 +1,11 @@
+{
+  "title": "Escrever",
+  "subtitle": "Escreva sua história aqui!",
+  "backToShelf": "Voltar para Estante",
+  "autoSaveHint": "Seu trabalho é salvo automaticamente.",
+  "chapterNav": "Capítulos",
+  "addChapter": "Adicionar capítulo",
+  "saveDraft": "Salvar",
+  "preview": "Visualizar",
+  "lastSaved": "Salvo às {{time}}"
+}
