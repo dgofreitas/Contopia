@@ -15,7 +15,7 @@ async function up(db, client) {
   for (const name of requiredCollections) {
     if (!existingNames.includes(name)) {
       await db.createCollection(name, {
-        collation: { locale: 'pt_BR', strength: 2 },
+        collation: { locale: 'pt', strength: 2 },
       });
     }
   }
@@ -35,7 +35,7 @@ async function up(db, client) {
     { status: 1, publishedAt: -1, deletedAt: 1 },
     { partialFilterExpression: { deletedAt: null } }
   );
-  await books.createIndex({ title: 'text' });
+  await books.createIndex({ title: 'text' }, { collation: { locale: 'simple' } });
 
   // ── Chapters Indexes ──────────────────────────────────────────────────────────
   const chapters = db.collection('chapters');
