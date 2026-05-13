@@ -3,53 +3,28 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useAuth from '../hooks/useAuth';
 
-// ── Zustand mock store ──
 const IDLE_WARNING_MS = 25 * 60 * 1000;
 const IDLE_EXPIRE_MS = 30 * 60 * 1000;
 
-let mockState = {
-  token: null,
-  user: null,
-  sessionExpiresAt: null,
-  sessionTimeoutWarning: false,
-  lastActivity: null,
-  updateActivity: vi.fn(),
-  setSessionTimeoutWarning: vi.fn(),
-  clearAll: vi.fn(),
-  logout: vi.fn(),
-};
-
-function setMockState(overrides) {
-  Object.assign(mockState, overrides);
-}
-
-function resetMockState() {
-  mockState = {
-    token: null,
-    user: null,
-    sessionExpiresAt: null,
-    sessionTimeoutWarning: false,
-    lastActivity: null,
-    updateActivity: vi.fn(),
-    setSessionTimeoutWarning: vi.fn(),
-    clearAll: vi.fn(),
-    logout: vi.fn(),
+// vi.hoisted() runs at hoist position — its return value is usable by vi.mock() factories
+const { mockState, mockGetState } = vi.hoisted(() => {
+  const state = {
+    token: null, user: null, sessionExpiresAt: null,
+    sessionTimeoutWarning: false, lastActivity: null,
+    updateActivity: vi.fn(), setSessionTimeoutWarning: vi.fn(),
+    clearAll: vi.fn(), logout: vi.fn(),
   };
-}
+  const getState = vi.fn(() => state);
+  const storeFn = (selector) => (selector ? selector(state) : state);
+  storeFn.getState = getState;
+  return { mockState: state, mockGetState: getState };
+});
 
-vi.mock('../stores/auth-store', () => ({
-  default: (selector) => (selector ? selector(mockState) : mockState),
-  // Zustand.getState() pattern used in source
-}));
-
-// Direct mock override for useAuthStore.getState()
-const mockGetState = vi.fn(() => mockState);
-const useAuthStoreMock = (selector) => (selector ? selector(mockState) : mockState);
-useAuthStoreMock.getState = mockGetState;
-
-vi.mock('../stores/auth-store', () => ({
-  default: useAuthStoreMock,
-}));
+vi.mock('../stores/auth-store', () => {
+  const storeFn = (selector) => (selector ? selector(mockState) : mockState);
+  storeFn.getState = mockGetState;
+  return { default: storeFn };
+});
 
 vi.mock('../lib/api-client', () => ({
   default: {
@@ -58,12 +33,20 @@ vi.mock('../lib/api-client', () => ({
   },
 }));
 
+function resetState() {
+  Object.assign(mockState, {
+    token: null, user: null, sessionExpiresAt: null,
+    sessionTimeoutWarning: false, lastActivity: null,
+    updateActivity: vi.fn(), setSessionTimeoutWarning: vi.fn(),
+    clearAll: vi.fn(), logout: vi.fn(),
+  });
+}
+
 describe('useAuth', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    resetMockState();
+    resetState();
     mockGetState.mockReturnValue(mockState);
-    // Spy on window.location.href setter
     vi.spyOn(window, 'location', 'get').mockReturnValue({
       href: '',
       assign: vi.fn(),
@@ -124,9 +107,8 @@ describe('useAuth', () => {
   it('starts idle timers when authenticated with no lastActivity', () => {
     mockState.token = 'jwt';
     mockState.lastActivity = null;
-    const { result } = renderHook(() => useAuth());
+    renderHook(() => useAuth());
 
-    // Verify timers were set up — we check by advancing to warning time
     act(() => {
       vi.advanceTimersByTime(IDLE_WARNING_MS);
     });
@@ -166,7 +148,6 @@ describe('useAuth', () => {
 
     renderHook(() => useAuth());
 
-    // Already past warning time — warning should fire immediately
     expect(mockState.setSessionTimeoutWarning).toHaveBeenCalledWith(true);
   });
 
@@ -185,7 +166,6 @@ describe('useAuth', () => {
   });
 
   it('auto-logout redirects to /login', () => {
-    // Replace window.location with writable mock
     const originalLocation = window.location;
     delete window.location;
     window.location = { href: '' };
@@ -200,7 +180,6 @@ describe('useAuth', () => {
     });
 
     expect(window.location.href).toBe('/login');
-
     window.location = originalLocation;
   });
 
@@ -218,7 +197,6 @@ describe('useAuth', () => {
 
     expect(mockState.clearAll).toHaveBeenCalled();
     expect(window.location.href).toBe('/login');
-
     window.location = originalLocation;
   });
 
@@ -229,12 +207,10 @@ describe('useAuth', () => {
     mockState.lastActivity = null;
     renderHook(() => useAuth());
 
-    // Simulate user activity event
     act(() => {
       window.dispatchEvent(new Event('mousemove'));
     });
 
-    // After debounce (5s), updateActivity should be called
     act(() => {
       vi.advanceTimersByTime(5000);
     });
@@ -248,20 +224,16 @@ describe('useAuth', () => {
     mockState.lastActivity = null;
     renderHook(() => useAuth());
 
-    // Fire multiple activity events rapidly
     act(() => {
       window.dispatchEvent(new Event('mousemove'));
       window.dispatchEvent(new Event('keydown'));
       window.dispatchEvent(new Event('scroll'));
     });
 
-    // Only one debounce period should run
     act(() => {
       vi.advanceTimersByTime(5000);
     });
 
-    // updateActivity called once (debounce prevents rapid re-fires)
-    // The handler returns early if debounce is in progress
     expect(mockState.updateActivity).toHaveBeenCalled();
   });
 
@@ -274,15 +246,10 @@ describe('useAuth', () => {
 
     unmount();
 
-    // Advance time past all timers — should be cleaned up
     act(() => {
       vi.advanceTimersByTime(IDLE_EXPIRE_MS);
     });
 
-    // After unmount, clearAll should NOT have been called (timers were cleared)
-    // Only called if the expire timer fires — it shouldn't after unmount
-    // Note: clearAll may have been called from the timeout before unmount
-    // depending on timing, so we just verify no crash
     expect(true).toBe(true);
   });
 
@@ -291,18 +258,13 @@ describe('useAuth', () => {
     mockState.lastActivity = null;
     const { rerender } = renderHook(() => useAuth());
 
-    // Re-render as unauthenticated
     mockState.token = null;
     mockGetState.mockReturnValue({ ...mockState, token: null });
     rerender();
 
-    // Advance time — expire timer should have been cleared
     act(() => {
       vi.advanceTimersByTime(IDLE_EXPIRE_MS);
     });
-
-    // No auto-logout since token is gone
-    // clearAll from auto-logout should not fire
   });
 
   // ── continueSession ──
@@ -325,7 +287,6 @@ describe('useAuth', () => {
     mockState.lastActivity = null;
     const { result } = renderHook(() => useAuth());
 
-    // The apiClient.get mock resolves immediately, so we check final state
     await act(async () => {
       await result.current.continueSession();
     });
@@ -352,7 +313,6 @@ describe('useAuth', () => {
 
     expect(mockState.clearAll).toHaveBeenCalled();
     expect(window.location.href).toBe('/login');
-
     window.location = originalLocation;
   });
 
@@ -373,7 +333,6 @@ describe('useAuth', () => {
     });
 
     expect(window.location.href).toBe('/login');
-
     window.location = originalLocation;
   });
 
@@ -386,7 +345,6 @@ describe('useAuth', () => {
 
     renderHook(() => useAuth());
 
-    // remainingWarning <= 0, remainingExpire > 0 → set warning immediately
     expect(mockState.setSessionTimeoutWarning).toHaveBeenCalledWith(true);
   });
 
@@ -402,13 +360,11 @@ describe('useAuth', () => {
 
     renderHook(() => useAuth());
 
-    // 3 remaining minutes until expiry
     act(() => {
       vi.advanceTimersByTime(3 * 60 * 1000);
     });
 
     expect(mockState.clearAll).toHaveBeenCalled();
-
     window.location = originalLocation;
   });
 

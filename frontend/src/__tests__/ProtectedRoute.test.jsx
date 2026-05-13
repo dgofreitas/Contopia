@@ -1,7 +1,7 @@
 // Contopia — ProtectedRoute Component Tests (STORY-002)
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 
 // ── Location observer component for asserting redirect URL ──
@@ -19,10 +19,14 @@ vi.mock('../stores/auth-store', () => ({
 function renderProtectedRoute(initialRoute = '/dashboard') {
   return render(
     <MemoryRouter initialEntries={[initialRoute]}>
-      <ProtectedRoute>
-        <div data-testid="protected-content">Protected Content</div>
-      </ProtectedRoute>
-      <LocationDisplay />
+      <Routes>
+        <Route path="/login" element={<LocationDisplay />} />
+        <Route path="*" element={
+          <ProtectedRoute>
+            <div data-testid="protected-content">Protected Content</div>
+          </ProtectedRoute>
+        } />
+      </Routes>
     </MemoryRouter>,
   );
 }
