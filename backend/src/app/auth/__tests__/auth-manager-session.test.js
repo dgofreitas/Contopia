@@ -34,7 +34,14 @@ vi.mock('../auth-dao.js', () => ({
   updateChildPassword: vi.fn(),
   createAuditLog: vi.fn().mockReturnValue({ catch: vi.fn() }),
 }));
-vi.mock('../../../config/redis.js');
+vi.mock('../../../config/redis.js', () => ({
+  default: {
+    set: vi.fn(), get: vi.fn(), del: vi.fn(), exists: vi.fn(),
+    incr: vi.fn(), expire: vi.fn(), keys: vi.fn(), call: vi.fn(),
+    scanIterator: vi.fn(() => (async function* () {})()),
+    status: 'ready', on: vi.fn(),
+  },
+}));
 vi.mock('pino', () => ({
   default: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
 }));
@@ -44,6 +51,23 @@ vi.mock('bcryptjs', () => ({
 }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+
+// Helper: create an async generator from an array of keys (for scanIterator mock)
+function mockScanIterator(keys) {
+  return vi.fn(() => {
+    const iter = keys[Symbol.iterator]();
+    return {
+      [Symbol.asyncIterator]() {
+        return {
+          next: async () => {
+            const { value, done } = iter.next();
+            return done ? { value: undefined, done: true } : { value, done: false };
+          },
+        };
+      },
+    };
+  });
+}
 
 import * as authManager from '../auth-manager.js';
 import * as authDao from '../auth-dao.js';
@@ -59,7 +83,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
 
   describe('createSession', () => {
     it('should create session in Redis and return sessionId + refreshAvailable', async () => {
-      redis.keys.mockResolvedValue([]); // no old sessions
+      redis.scanIterator = mockScanIterator([]); // no old sessions
       redis.set.mockResolvedValue('OK');
 
       const result = await authManager.createSession({
@@ -96,7 +120,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         sessionId: 'sess_old123',
         childId: 'child1',
       });
-      redis.keys.mockResolvedValue(['session:child1:sess_old123']);
+      redis.scanIterator = mockScanIterator(['session:child1:sess_old123']);
       redis.get.mockResolvedValueOnce(oldSessionData); // get old session data
       redis.del.mockResolvedValue(1);
       redis.set.mockResolvedValue('OK');
@@ -114,7 +138,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
     });
 
     it('should set refreshAvailable=false when Redis fails on refresh set', async () => {
-      redis.keys.mockResolvedValue([]);
+      redis.scanIterator = mockScanIterator([]);
       // First set (session) succeeds, second set (refresh) fails
       redis.set
         .mockResolvedValueOnce('OK')
@@ -132,7 +156,12 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
     });
 
     it('should still create session when Redis keys scan fails', async () => {
-      redis.keys.mockRejectedValue(new Error('Redis scan down'));
+      const errorIter = vi.fn(() => ({
+        [Symbol.asyncIterator]() {
+          return { next: async () => { throw new Error('Redis scan down'); } };
+        },
+      }));
+      redis.scanIterator = errorIter;
       redis.set.mockResolvedValue('OK');
 
       const result = await authManager.createSession({
@@ -166,7 +195,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         .mockReturnValueOnce('access-no-sid')
         .mockReturnValueOnce('refresh-token')
         .mockReturnValueOnce('access-with-sid');
-      redis.keys.mockResolvedValue([]);
+      redis.scanIterator = mockScanIterator([]);
       redis.set.mockResolvedValue('OK');
 
       const result = await authManager.loginWithPassword({
@@ -239,8 +268,8 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         .mockReturnValueOnce('at1')
         .mockReturnValueOnce('rt1')
         .mockReturnValueOnce('at2');
-      // First call to keys (createSession scan for old sessions)
-      redis.keys.mockResolvedValue(['session:child1:sess_old999']);
+      // First call to scanIterator (createSession scan for old sessions)
+      redis.scanIterator = mockScanIterator(['session:child1:sess_old999']);
       redis.get.mockResolvedValueOnce(oldSessionData);
       redis.del.mockResolvedValue(1);
       redis.set.mockResolvedValue('OK');
@@ -404,7 +433,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         firstName: 'João',
       });
       // Session lookup
-      redis.keys.mockResolvedValue(['session:child1:sess_abc123']);
+      redis.scanIterator = mockScanIterator(['session:child1:sess_abc123']);
       redis.get.mockResolvedValueOnce(JSON.stringify({
         sessionId: 'sess_abc123',
         childId: 'child1',
@@ -505,7 +534,12 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         firstName: 'Ana',
       });
       // Session lookup fails
-      redis.keys.mockRejectedValue(new Error('Redis down'));
+      const errorIter = vi.fn(() => ({
+        [Symbol.asyncIterator]() {
+          return { next: async () => { throw new Error('Redis down'); } };
+        },
+      }));
+      redis.scanIterator = errorIter;
       // New refresh hash store fails too
       redis.set.mockRejectedValue(new Error('Redis down'));
       jwt.sign
@@ -531,7 +565,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         firstName: 'João',
         onboardingCompleted: true,
       });
-      redis.keys.mockResolvedValue(['session:child1:sess_abc123']);
+      redis.scanIterator = mockScanIterator(['session:child1:sess_abc123']);
       redis.get.mockResolvedValue(JSON.stringify({
         sessionId: 'sess_abc123',
         childId: 'child1',
@@ -556,7 +590,7 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         firstName: 'João',
         onboardingCompleted: false,
       });
-      redis.keys.mockResolvedValue([]);
+      redis.scanIterator = mockScanIterator([]);
 
       const result = await authManager.getCurrentUser('child1');
 
@@ -583,7 +617,12 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
         firstName: 'Ana',
         onboardingCompleted: false,
       });
-      redis.keys.mockRejectedValue(new Error('Redis down'));
+      const errorIter = vi.fn(() => ({
+        [Symbol.asyncIterator]() {
+          return { next: async () => { throw new Error('Redis down'); } };
+        },
+      }));
+      redis.scanIterator = errorIter;
 
       const result = await authManager.getCurrentUser('child1');
 

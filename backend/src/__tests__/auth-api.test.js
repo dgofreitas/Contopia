@@ -1,14 +1,34 @@
 // Contopia — Auth API Integration Tests (supertest)
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Mock ALL dependencies BEFORE router loads ──────────────────────────────
+// ── Stateful rate-limiter mock: per-key counters ──────────────────────────────
+const rateLimitCounters = new Map();
+
 vi.mock('pino', () => ({
   default: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
 }));
 
 vi.mock('rate-limit-redis', () => ({}));
 
-vi.mock('../../config/redis.js', () => ({
+vi.mock('express-rate-limit', () => ({
+  default: vi.fn((opts) => {
+    const max = opts.max || 5;
+    return (req, res, next) => {
+      const key = opts.keyGenerator ? opts.keyGenerator(req) : req.ip;
+      const current = rateLimitCounters.get(key) || 0;
+      rateLimitCounters.set(key, current + 1);
+      if (current >= max) {
+        return res.status(429).json({
+          error: { code: 'RATE_LIMITED', message: opts.message || 'Too many attempts.' },
+          meta: { requestId: req.id },
+        });
+      }
+      next();
+    };
+  }),
+}));
+
+vi.mock('../config/redis.js', () => ({
   default: {
     set: vi.fn(), get: vi.fn(), del: vi.fn(), exists: vi.fn(),
     incr: vi.fn(), expire: vi.fn(), keys: vi.fn(), call: vi.fn(),
@@ -37,7 +57,7 @@ import express from 'express';
 import authRouter from '../app/auth/auth-router.js';
 import * as authManager from '../app/auth/auth-manager.js';
 import { sendVerificationEmail } from '../app/common/email-service.js';
-import redis from '../../config/redis.js';
+import redis from '../config/redis.js';
 
 const app = express();
 app.use(express.json());
@@ -55,6 +75,7 @@ function makeAccessToken(payload = {}) {
 describe('Auth API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    rateLimitCounters.clear();
   });
 
   // ── POST /register ──────────────────────────────────────────────────────

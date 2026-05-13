@@ -5,15 +5,16 @@ vi.mock('pino', () => ({
   default: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
 }));
 
-vi.mock('../../../config/redis.js', () => ({
+vi.mock('../config/redis.js', () => ({
   default: {
     set: vi.fn(), get: vi.fn(), del: vi.fn(), exists: vi.fn(),
-    incr: vi.fn(), expire: vi.fn(), keys: vi.fn(),
+    incr: vi.fn(), expire: vi.fn(), keys: vi.fn(), call: vi.fn(),
+    scanIterator: vi.fn(() => (async function* () {})()),
     status: 'ready', on: vi.fn(),
   },
 }));
 
-vi.mock('../../auth/auth-manager.js', () => ({
+vi.mock('../app/auth/auth-manager.js', () => ({
   hashToken: vi.fn((t) => `hashed:${t}`),
 }));
 
@@ -23,7 +24,7 @@ import request from 'supertest';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { authMiddleware, sessionTimeoutMiddleware } from '../app/common/auth-middleware.js';
-import redis from '../../../config/redis.js';
+import redis from '../config/redis.js';
 
 function makeToken(payload, secret = JWT_SECRET) {
   return jwt.sign(payload, secret, { expiresIn: '30m' });

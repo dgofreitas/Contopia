@@ -8,7 +8,33 @@ vi.mock('pino', () => ({
 
 vi.mock('rate-limit-redis', () => ({}));
 
-vi.mock('../../config/redis.js', () => ({
+// Stateful rate-limiter mock: per-key counters, reset in beforeEach
+const rateLimitCounters = new Map();
+const rateLimitMaxes = new Map();
+
+vi.mock('express-rate-limit', () => ({
+  default: vi.fn((opts) => {
+    const max = opts.max || 5;
+    return (req, res, next) => {
+      const key = opts.keyGenerator ? opts.keyGenerator(req) : req.ip;
+      const current = rateLimitCounters.get(key) || 0;
+      const effectiveMax = rateLimitMaxes.get(key) ?? max;
+      rateLimitCounters.set(key, current + 1);
+      // Set rate-limit headers
+      res.setHeader('RateLimit-Limit', effectiveMax);
+      res.setHeader('RateLimit-Remaining', Math.max(0, effectiveMax - current - 1));
+      if (current >= effectiveMax) {
+        return res.status(429).json({
+          error: { code: 'RATE_LIMITED', message: opts.message || 'Too many attempts.' },
+          meta: { requestId: req.id },
+        });
+      }
+      next();
+    };
+  }),
+}));
+
+vi.mock('../config/redis.js', () => ({
   default: {
     set: vi.fn(), get: vi.fn(), del: vi.fn(), exists: vi.fn(),
     incr: vi.fn(), expire: vi.fn(), keys: vi.fn(), call: vi.fn(),
@@ -43,6 +69,8 @@ app.use('/api/auth', authRouter);
 describe('Auth Rate Limiting (STORY-002)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    rateLimitCounters.clear();
+    rateLimitMaxes.clear();
   });
 
   // ── Login rate limiter ──────────────────────────────────────────────────
