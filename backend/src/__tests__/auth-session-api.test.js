@@ -13,7 +13,7 @@ vi.mock('express-rate-limit', () => ({
 
 vi.mock('rate-limit-redis', () => ({}));
 
-vi.mock('../../config/redis.js', () => ({
+vi.mock('../config/redis.js', () => ({
   default: {
     set: vi.fn(), get: vi.fn(), del: vi.fn(), exists: vi.fn(),
     incr: vi.fn(), expire: vi.fn(), keys: vi.fn(), call: vi.fn(),
@@ -43,7 +43,7 @@ import request from 'supertest';
 import express from 'express';
 import authRouter from '../app/auth/auth-router.js';
 import * as authManager from '../app/auth/auth-manager.js';
-import redis from '../../config/redis.js';
+import redis from '../config/redis.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 
