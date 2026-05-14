@@ -54,7 +54,7 @@ export async function createAssetManager(data) {
 export async function createBookManager({ authorId, title, description, language }) {
   const count = await countBooksByAuthor(authorId);
   if (count >= MAX_BOOKS_PER_USER) {
-    const err = new Error('Book limit reached');
+    const err = new Error("You've reached the maximum number of books");
     err.code = 'BOOK_LIMIT_REACHED';
     err.status = 403;
     throw err;
@@ -94,14 +94,14 @@ export async function createBookManager({ authorId, title, description, language
 export async function updateBookManager(bookId, authorId, updates) {
   const book = await findBookById(bookId);
   if (!book) {
-    const err = new Error('Book not found');
+    const err = new Error("We couldn't find that book");
     err.code = 'NOT_FOUND';
     err.status = 404;
     throw err;
   }
 
   if (book.authorId.toString() !== authorId.toString()) {
-    const err = new Error('Not authorized to update this book');
+    const err = new Error("That doesn't belong to you");
     err.code = 'FORBIDDEN';
     err.status = 403;
     throw err;
@@ -123,14 +123,14 @@ export async function updateBookManager(bookId, authorId, updates) {
 export async function deleteBookManager(bookId, authorId) {
   const book = await findBookById(bookId);
   if (!book) {
-    const err = new Error('Book not found');
+    const err = new Error("We couldn't find that book");
     err.code = 'NOT_FOUND';
     err.status = 404;
     throw err;
   }
 
   if (book.authorId.toString() !== authorId.toString()) {
-    const err = new Error('Not authorized to delete this book');
+    const err = new Error("That doesn't belong to you");
     err.code = 'FORBIDDEN';
     err.status = 403;
     throw err;
@@ -166,14 +166,14 @@ export async function deleteBookManager(bookId, authorId) {
 export async function publishBookManager(bookId, authorId) {
   const book = await findBookById(bookId);
   if (!book) {
-    const err = new Error('Book not found');
+    const err = new Error("We couldn't find that book");
     err.code = 'NOT_FOUND';
     err.status = 404;
     throw err;
   }
 
   if (book.authorId.toString() !== authorId.toString()) {
-    const err = new Error('Not authorized to publish this book');
+    const err = new Error("That doesn't belong to you");
     err.code = 'FORBIDDEN';
     err.status = 403;
     throw err;
@@ -205,17 +205,48 @@ export async function publishBookManager(bookId, authorId) {
 
 /**
  * Get all books by an author, optionally filtered by status.
+ * Returns pagination metadata.
  */
-export async function getBooksByAuthorManager(authorId, { status, limit, skip } = {}) {
-  return findBooksByAuthor(authorId, { status, limit, skip });
+export async function getBooksByAuthorManager(authorId, { status, page = 1, pageSize = 20, limit, skip } = {}) {
+  // Support both new (page/pageSize) and legacy (limit/skip) callers
+  const effectiveLimit = limit || pageSize;
+  const effectiveSkip = skip || (page > 0 ? (page - 1) * effectiveLimit : 0);
+
+  const [books, total] = await Promise.all([
+    findBooksByAuthor(authorId, { status, limit: effectiveLimit, skip: effectiveSkip }),
+    countBooksByAuthor(authorId, { status }),
+  ]);
+
+  return {
+    books,
+    total,
+    page,
+    pageSize: effectiveLimit,
+    totalPages: Math.ceil(total / effectiveLimit),
+  };
 }
 
 // ── Chapter Operations ────────────────────────────────────────────────────────
 
 /**
- * Get all chapters for a book (sorted by order).
+ * Get all chapters for a book (sorted by order), with ownership guard.
  */
-export async function getChaptersByBookManager(bookId) {
+export async function getChaptersByBookManager(bookId, authorId) {
+  const book = await findBookById(bookId);
+  if (!book) {
+    const err = new Error('We couldn\'t find that book');
+    err.code = 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+
+  if (book.authorId.toString() !== authorId.toString()) {
+    const err = new Error('That doesn\'t belong to you');
+    err.code = 'FORBIDDEN';
+    err.status = 403;
+    throw err;
+  }
+
   return findChaptersByBook(bookId);
 }
 

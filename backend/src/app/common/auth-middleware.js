@@ -31,7 +31,7 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization header' },
+        error: { code: 'UNAUTHORIZED', message: 'You need to sign in first' },
         meta: { requestId: req.id },
       });
     }
@@ -44,19 +44,19 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
     } catch (jwtErr) {
       if (jwtErr.name === 'TokenExpiredError') {
         return res.status(401).json({
-          error: { code: 'TOKEN_EXPIRED', message: 'Access token has expired' },
+          error: { code: 'TOKEN_EXPIRED', message: 'Your session expired — please sign in again' },
           meta: { requestId: req.id },
         });
       }
       return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Invalid access token' },
+        error: { code: 'UNAUTHORIZED', message: 'You need to sign in first' },
         meta: { requestId: req.id },
       });
     }
 
     if (decoded.type !== 'access') {
       return res.status(401).json({
-        error: { code: 'INVALID_TOKEN_TYPE', message: 'Token is not an access token' },
+        error: { code: 'INVALID_TOKEN_TYPE', message: 'You need to sign in first' },
         meta: { requestId: req.id },
       });
     }
@@ -66,10 +66,10 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
 
     try {
       const tokenHash = hashToken(token);
-      const blacklisted = await redis.exists(`bl:${tokenHash}`);
+        const blacklisted = await redis.exists(`bl:${tokenHash}`);
       if (blacklisted === 1) {
         return res.status(401).json({
-          error: { code: 'TOKEN_REVOKED', message: 'Token has been revoked' },
+          error: { code: 'TOKEN_REVOKED', message: 'Your session was signed out — please sign in again' },
           meta: { requestId: req.id },
         });
       }

@@ -74,6 +74,17 @@ bookSchema.index(
 );
 bookSchema.index({ title: 'text' }, { language_override: 'searchLanguage', collation: { locale: 'simple' } });
 
+// ── Spine Color Virtual ──────────────────────────────────────────────────────
+// Deterministic pastel from book ID — child-safe palette
+bookSchema.virtual('spineColor').get(function () {
+  const palette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+  const idx = this._id.toString().split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % palette.length;
+  return palette[idx];
+});
+
+bookSchema.set('toObject', { virtuals: true });
+bookSchema.set('toJSON', { virtuals: true });
+
 // ── Chapter Schema ────────────────────────────────────────────────────────────
 const chapterSchema = new Schema(
   {

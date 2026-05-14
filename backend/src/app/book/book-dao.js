@@ -9,13 +9,13 @@ export async function createBook(data) {
 }
 
 export async function findBookById(id) {
-  return Book.findOne({ _id: id, deletedAt: null }).lean().exec();
+  return Book.findOne({ _id: id, deletedAt: null }).lean({ virtuals: true }).exec();
 }
 
 export async function findBooksByAuthor(authorId, { status, limit = 50, skip = 0 } = {}) {
   const filter = { authorId, deletedAt: null };
   if (status) filter.status = status;
-  return Book.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec();
+  return Book.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }).exec();
 }
 
 export async function updateBookById(id, update) {
