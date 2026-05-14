@@ -9,6 +9,7 @@ import pino from 'pino';
 import authRouter from './app/auth/auth-router.js';
 import bookRouter from './app/book/book-router.js';
 import chapterRouter from './app/editor/chapter-router.js';
+import storageRouter from './app/storage/storage-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
 import { rateLimitMiddleware } from './app/common/rate-limit-middleware.js';
 
@@ -54,6 +55,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/v1', authMiddleware, rateLimitMiddleware);
 app.use('/api/v1/books', bookRouter);
 app.use('/api/v1/chapters', chapterRouter);
+app.use('/api/v1', storageRouter);
 
 // Protected placeholder routes (auth required)
 app.use('/api/shelf', authMiddleware);
