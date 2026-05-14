@@ -1,6 +1,6 @@
 // Contopia — S3/MinIO Storage Service (put, getSignedUrl, delete)
 import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, BUCKET_NAME } from './storage-config.js';
 import pino from 'pino';
 
@@ -38,7 +38,7 @@ export async function getSignedUrl(key, expiresInSeconds = 3600) {
     ResponseCacheControl: 'public, max-age=31536000, immutable',
   });
 
-  const url = await getSignedUrl(s3Client, command, { expiresInSeconds });
+  const url = await awsGetSignedUrl(s3Client, command, { expiresInSeconds });
   logger.info({ key, expiresInSeconds }, 'Presigned URL generated');
   return url;
 }

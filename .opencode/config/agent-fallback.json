@@ -23,279 +23,199 @@
   ],
   "agents": {
     "master": {
-      "fallbackModels": []
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "minimax-m2.7" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
+      ]
     },
     "architect": {
-      "fallbackModels": []
-    },
-    "backend-developer": {
-      "fallbackModels": []
-    },
-    "bug-fixer-nodejs": {
-      "fallbackModels": []
-    },
-    "build-agent": {
-      "fallbackModels": []
-    },
-    "code-analyzer": {
       "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "code-reviewer": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "context-organizer": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "contextscout": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "devops-specialist": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "documentation": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "externalscout": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "frontend-developer": {
-      "fallbackModels": []
-    },
-    "frontend-developer-angular": {
-      "fallbackModels": []
-    },
-    "frontend-developer-react": {
-      "fallbackModels": []
-    },
-    "frontend-developer-vue": {
-      "fallbackModels": []
-    },
-    "impl-reviewer-nodejs": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "merge-request-creator": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "product-manager": {
-      "fallbackModels": []
-    },
-    "qa-analyst": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
-      ]
-    },
-    "shell-developer": {
-      "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-pro" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" },
+        { "providerID": "ollama-cloud", "modelID": "cogito-2.1:671b" }
       ]
     },
     "system-architect": {
       "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-pro" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" },
+        { "providerID": "ollama-cloud", "modelID": "cogito-2.1:671b" }
       ]
     },
-    "task-manager": {
+    "product-manager": {
       "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "minimax-m2.7" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
+      ]
+    },
+    "product-owner": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "minimax-m2.7" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
       ]
     },
     "tech-lead": {
-      "fallbackModels": []
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "minimax-m2.7" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
+      ]
+    },
+    "qa-analyst": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-pro" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" },
+        { "providerID": "ollama-cloud", "modelID": "cogito-2.1:671b" }
+      ]
+    },
+    "merge-request-creator": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "qwen3.5:397b" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" }
+      ]
+    },
+    "backend-developer": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" }
+      ]
+    },
+    "bug-fixer-nodejs": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "devstral-2:123b" }
+      ]
     },
     "test-engineer": {
       "cooldownMs": 30000,
       "fallbackModels": [
-        {
-          "providerID": "opencode",
-          "modelID": "minimax-m2.5-free"
-        },
-        {
-          "providerID": "openrouter",
-          "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-        },
-        {
-          "providerID": "zai-coding-plan",
-          "modelID": "glm-4.5-air"
-        }
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" }
+      ]
+    },
+    "code-reviewer": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-pro" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" },
+        { "providerID": "ollama-cloud", "modelID": "cogito-2.1:671b" }
+      ]
+    },
+    "build-agent": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" },
+        { "providerID": "ollama-cloud", "modelID": "devstral-2:123b" }
+      ]
+    },
+    "frontend-developer": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" }
+      ]
+    },
+    "frontend-developer-angular": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" }
+      ]
+    },
+    "frontend-developer-react": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" }
+      ]
+    },
+    "frontend-developer-vue": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" }
+      ]
+    },
+    "devops-specialist": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-pro" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "mistral-large-3:675b" }
+      ]
+    },
+    "shell-developer": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "glm-5.1" },
+        { "providerID": "ollama-cloud", "modelID": "devstral-2:123b" }
       ]
     },
     "ux-designer": {
-      "fallbackModels": []
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "qwen3.5:397b" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "gemini-3-flash-preview" }
+      ]
+    },
+    "code-analyzer": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-pro" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" },
+        { "providerID": "ollama-cloud", "modelID": "cogito-2.1:671b" }
+      ]
+    },
+    "impl-reviewer-nodejs": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-pro" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" },
+        { "providerID": "ollama-cloud", "modelID": "cogito-2.1:671b" }
+      ]
+    },
+    "contextscout": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
+      ]
+    },
+    "task-manager": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
+      ]
+    },
+    "docwriter": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "qwen3.5:397b" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "kimi-k2.6" }
+      ]
+    },
+    "externalscout": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
+      ]
+    },
+    "context-organizer": {
+      "fallbackModels": [
+        { "providerID": "ollama-cloud", "modelID": "qwen3-coder-next" },
+        { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+        { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
+      ]
     }
   },
   "fallbackModels": [
-    {
-      "providerID": "opencode",
-      "modelID": "minimax-m2.5-free"
-    },
-    {
-      "providerID": "openrouter",
-      "modelID": "nvidia/nemotron-3-super-120b-a12b:free"
-    },
-    {
-      "providerID": "zai-coding-plan",
-      "modelID": "glm-4.5-air"
-    }
+    { "providerID": "ollama-cloud", "modelID": "deepseek-v4-flash" },
+    { "providerID": "ollama-cloud", "modelID": "minimax-m2.7" },
+    { "providerID": "ollama-cloud", "modelID": "qwen3-next:80b" }
   ]
 }

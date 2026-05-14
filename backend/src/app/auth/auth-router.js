@@ -7,6 +7,7 @@ import { registerSchema, resendSchema, childLoginSchema, loginSchema, logoutSche
 import { authMiddleware } from '../common/auth-middleware.js';
 import * as authManager from './auth-manager.js';
 import { sendVerificationEmail } from '../common/email-service.js';
+import { ok, fail } from '../common/response-envelope.js';
 
 const logger = pino({ name: 'auth-router', level: process.env.LOG_LEVEL || 'info' });
 
@@ -32,10 +33,7 @@ function createLimiter({ windowMs, max, message, keyGenerator }) {
     legacyHeaders: false,
     keyGenerator: keyGenerator || ((req) => req.ip),
     handler: (req, res) => {
-      res.status(429).json({
-        error: { code: 'RATE_LIMITED', message: 'Too many attempts.' },
-        meta: { requestId: req.id },
-      });
+      res.status(429).json(fail('RATE_LIMITED', 'Too many attempts.', { requestId: req.id }));
     },
   };
 
@@ -117,10 +115,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     // Validate input
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
-        meta: { requestId },
-      });
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
     const { parentEmail, childFirstName } = parsed.data;
@@ -138,10 +133,7 @@ router.post('/register', registerLimiter, async (req, res) => {
         verificationLink: buildVerificationLink(result.token),
       });
       logger.info({ parentId: result.parent._id, requestId }, 'Verification resent (idempotent register)');
-      return res.status(200).json({
-        data: { parentId: result.parent._id.toString(), emailSent: true, resent: true },
-        meta: { requestId },
-      });
+      return res.status(200).json(ok({ parentId: result.parent._id.toString(), emailSent: true, resent: true }, { requestId }));
     }
 
     // Normal registration
@@ -153,10 +145,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     logger.info({ parentId: result.parent._id, childId: result.child._id, requestId }, 'Parent+child registered');
 
-    return res.status(201).json({
-      data: { parentId: result.parent._id.toString(), emailSent: true },
-      meta: { requestId },
-    });
+    return res.status(201).json(ok({ parentId: result.parent._id.toString(), emailSent: true }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -172,10 +161,7 @@ router.get('/verify/:token', verifyLimiter, async (req, res) => {
 
     logger.info({ childId: result.childId, requestId }, 'Email verified');
 
-    return res.status(200).json({
-      data: { childId: result.childId },
-      meta: { requestId },
-    });
+    return res.status(200).json(ok({ childId: result.childId }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -188,10 +174,7 @@ router.post('/resend-verification', resendLimiter, async (req, res) => {
   try {
     const parsed = resendSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
-        meta: { requestId },
-      });
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
     const { parentEmail } = parsed.data;
@@ -205,10 +188,7 @@ router.post('/resend-verification', resendLimiter, async (req, res) => {
 
     logger.info({ parentId: result.parentId, requestId }, 'Verification resent');
 
-    return res.status(200).json({
-      data: { emailSent: true },
-      meta: { requestId },
-    });
+    return res.status(200).json(ok({ emailSent: true }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -221,10 +201,7 @@ router.post('/child-login', loginLimiter, childLoginLimiter, async (req, res) =>
   try {
     const parsed = childLoginSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
-        meta: { requestId },
-      });
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
     const { childId, parentId } = parsed.data;
@@ -232,8 +209,7 @@ router.post('/child-login', loginLimiter, childLoginLimiter, async (req, res) =>
     const deviceHint = sanitizeUserAgent(req);
     const result = await authManager.childLogin({ childId, parentId, ip, deviceHint });
 
-    return res.status(200).json({
-      data: {
+    return res.status(200).json(ok({
         accessToken: result.accessToken,
         refreshToken: result.refreshToken || undefined,
         childId: result.childId,
@@ -242,9 +218,7 @@ router.post('/child-login', loginLimiter, childLoginLimiter, async (req, res) =>
         refreshAvailable: result.refreshAvailable,
         method: result.method,
         sessionId: result.sessionId,
-      },
-      meta: { requestId },
-    });
+      }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -257,10 +231,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
-        meta: { requestId },
-      });
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
     const { method } = parsed.data;
@@ -273,26 +244,20 @@ router.post('/login', loginLimiter, async (req, res) => {
       // Check login attempts before attempting auth
       const attempts = await authManager.incrementLoginAttempts(ip);
       if (attempts > 5) {
-        return res.status(429).json({
-          error: { code: 'RATE_LIMITED', message: 'Too many login attempts.' },
-          meta: { requestId },
-        });
+        return res.status(429).json(fail('RATE_LIMITED', 'Too many login attempts.', { requestId }));
       }
 
       try {
         const result = await authManager.loginWithPassword({ childId, password, ip, deviceHint });
-        return res.status(200).json({
-          data: {
-            accessToken: result.accessToken,
-            refreshToken: result.refreshToken,
-            childId: result.childId,
-            childFirstName: result.childFirstName,
-            isOnboardingComplete: result.isOnboardingComplete,
-            method: result.method,
-            sessionId: result.sessionId,
-          },
-          meta: { requestId },
-        });
+        return res.status(200).json(ok({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          childId: result.childId,
+          childFirstName: result.childFirstName,
+          isOnboardingComplete: result.isOnboardingComplete,
+          method: result.method,
+          sessionId: result.sessionId,
+        }, { requestId }));
       } catch (loginErr) {
         // Don't reset attempts on failure — let rate limiter handle it
         throw loginErr;
@@ -302,10 +267,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     if (method === 'magic-link') {
       const { parentEmail, childFirstName } = parsed.data;
       const result = await authManager.loginWithMagicLink({ parentEmail, childFirstName });
-      return res.status(200).json({
-        data: { magicLinkSent: result.magicLinkSent, parentEmail: result.parentEmail },
-        meta: { requestId },
-      });
+      return res.status(200).json(ok({ magicLinkSent: result.magicLinkSent, parentEmail: result.parentEmail }, { requestId }));
     }
   } catch (err) {
     return handleError(err, req, res);
@@ -319,10 +281,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
   try {
     const parsed = logoutSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
-        meta: { requestId },
-      });
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
     const { childId, sessionId, token } = req;
@@ -343,10 +302,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
       deviceHint,
     });
 
-    return res.status(200).json({
-      data: { loggedOut: result.loggedOut },
-      meta: { requestId },
-    });
+    return res.status(200).json(ok({ loggedOut: result.loggedOut }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -359,10 +315,7 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
   try {
     const parsed = refreshSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') },
-        meta: { requestId },
-      });
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
     const { refreshToken } = parsed.data;
@@ -373,15 +326,12 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
 
     const result = await authManager.refreshSession({ refreshToken, ip, deviceHint });
 
-    return res.status(200).json({
-      data: {
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        childId: result.childId,
-        childFirstName: result.childFirstName,
-      },
-      meta: { requestId },
-    });
+    return res.status(200).json(ok({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      childId: result.childId,
+      childFirstName: result.childFirstName,
+    }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -394,10 +344,20 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const result = await authManager.getCurrentUser(req.childId);
 
-    return res.status(200).json({
-      data: result,
-      meta: { requestId },
-    });
+    return res.status(200).json(ok(result, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── DELETE /account ───────────────────────────────────────────────────────────
+router.delete('/account', authMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const result = await authManager.deleteAccountManager({ childId: req.childId });
+
+    return res.status(200).json(ok({ deleted: true }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -408,17 +368,15 @@ function handleError(err, req, res) {
   const requestId = req.id;
   const status = err.status || 500;
   const code = err.code || 'INTERNAL_ERROR';
-  const message = err.message || 'Internal server error';
+  let message = err.message || 'Internal server error';
 
   // Never leak stack traces in production
   if (status >= 500) {
     logger.error({ err, requestId }, 'Unhandled auth error');
+    message = 'Something went wrong — please try again later';
   }
 
-  return res.status(status).json({
-    error: { code, message },
-    meta: { requestId },
-  });
+  return res.status(status).json(fail(code, message, { requestId }));
 }
 
 export default router;

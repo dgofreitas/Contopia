@@ -18,7 +18,8 @@ permission:
     "**/*": "deny"
     "docs/stories/**": "allow"
   task:
-    "*": "allow"
+    "*": "deny"
+    "ContextScout": "allow"
 ---
 
 # QA Analyst — Quality Validation Specialist

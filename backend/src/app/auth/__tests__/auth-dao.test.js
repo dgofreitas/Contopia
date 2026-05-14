@@ -180,4 +180,44 @@ describe('Auth DAO', () => {
       expect(Child.findByIdAndUpdate).toHaveBeenCalledWith('c1', { isActive: true }, { new: true });
     });
   });
+
+  // ── softDeleteChildById ───────────────────────────────────────────────────
+  describe('softDeleteChildById', () => {
+    it('should set deletedAt on the child', async () => {
+      const now = new Date();
+      const mock = { _id: 'c1', firstName: 'A', deletedAt: now };
+      Child.findByIdAndUpdate.mockReturnValue(leanExecChain(mock));
+
+      const result = await authDao.softDeleteChildById('c1');
+      expect(result).toEqual(mock);
+      expect(Child.findByIdAndUpdate).toHaveBeenCalledWith('c1', { deletedAt: expect.any(Date) }, { new: true });
+    });
+
+    it('should return null when child not found', async () => {
+      Child.findByIdAndUpdate.mockReturnValue(leanExecChain(null));
+      const result = await authDao.softDeleteChildById('nonexistent');
+      expect(result).toBeNull();
+    });
+  });
+
+  // ── hardDeleteChildById ───────────────────────────────────────────────────
+  describe('hardDeleteChildById', () => {
+    it('should delete the child document', async () => {
+      const mock = { _id: 'c1', firstName: 'A' };
+      const lean = vi.fn().mockResolvedValue(mock);
+      Child.findByIdAndDelete.mockReturnValue({ lean });
+
+      const result = await authDao.hardDeleteChildById('c1');
+      expect(result).toEqual(mock);
+      expect(Child.findByIdAndDelete).toHaveBeenCalledWith('c1');
+    });
+
+    it('should return null when child not found', async () => {
+      const lean = vi.fn().mockResolvedValue(null);
+      Child.findByIdAndDelete.mockReturnValue({ lean });
+
+      const result = await authDao.hardDeleteChildById('nonexistent');
+      expect(result).toBeNull();
+    });
+  });
 });

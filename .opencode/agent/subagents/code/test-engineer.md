@@ -28,7 +28,8 @@ permission:
     "node_modules/**": "deny"
     ".git/**": "deny"
   task:
-    "*": "allow"
+    "*": "deny"
+    "ContextScout": "allow"
 ---
 
 # TestEngineer
@@ -232,7 +233,12 @@ Test runners (vitest, jest, mocha, etc.) are **local dependencies** — they are
 6. **Coverage commands** — Always use `npx` for coverage too:
    - ✅ `npx vitest run --coverage`
    - ✅ `npx jest --coverage`
-7. **Monorepo awareness** — In monorepos or multi-package projects, `cd` into the correct package directory BEFORE running `npx`. Each package has its own `node_modules`.
+7. **Monorepo awareness** — In monorepos or multi-package projects:
+   - **Detect the package**: if `backend/package.json` exists → `cd backend/` before running vitest.
+   - If `frontend/package.json` exists → `cd frontend/` before running vitest.
+   - If single package, run from root. Each package has its own `node_modules` and vitest config.
+   - **Run tests from the correct directory to avoid PASS(0) FAIL(0)**.
+   - **Run the exact test file**: `cd backend && npx vitest run src/app/storage/__tests__/storage-manager.test.js --no-cache`
 
 **Before writing functional tests, build the Test Coverage Inventory:**
 ```

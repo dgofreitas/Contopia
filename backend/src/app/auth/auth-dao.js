@@ -141,6 +141,20 @@ export async function updateChildPassword(childId, passwordHash) {
 }
 
 /**
+ * Soft-delete a child by setting deletedAt.
+ */
+export async function softDeleteChildById(childId) {
+  return Child.findByIdAndUpdate(childId, { deletedAt: new Date() }, { new: true }).lean().exec();
+}
+
+/**
+ * Hard-delete a child document.
+ */
+export async function hardDeleteChildById(childId) {
+  return Child.findByIdAndDelete(childId).lean();
+}
+
+/**
  * Create a session audit log entry (fire-and-forget style).
  */
 export async function createAuditLog({ childId, sessionId, event, ip, deviceHint }) {

@@ -28,7 +28,9 @@ permission:
     "node_modules/**": "deny"
     ".git/**": "deny"
   task:
-    "*": "allow"
+    "*": "deny"
+    "ContextScout": "allow"
+    "ExternalScout": "allow"
 ---
 
 # BugFixerNodejs
@@ -184,8 +186,16 @@ After ContextScout returns:
 
 ### 6. Validation
 
-- Run full test suite (`yarn test`)
-- Verify coverage (`yarn test --coverage`)
+- **CRITICAL: Detect package directory first.**
+  - If `backend/package.json` exists → `cd backend/` before running vitest.
+  - If `frontend/package.json` exists → `cd frontend/` before running vitest.
+  - If there's no monorepo structure, run from project root.
+- Run the target test from the correct directory:
+  ```bash
+  cd backend && vitest run src/app/storage/__tests__/storage-manager.test.js --no-cache
+  ```
+- Run full test suite from the correct directory: `cd backend && npm run test`
+- Verify coverage from correct directory
 - Confirm regression test fails on old code path
 - Run lint, check for build/type errors
 - Verify fix under original reproduction conditions

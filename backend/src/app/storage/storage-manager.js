@@ -54,27 +54,34 @@ export async function uploadAssetManager({ childId, bookId, file }) {
   // 4. Strip EXIF
   const cleanBuffer = await stripExif(file.buffer);
 
-  // 5. Determine storage path & create asset record
+  // 5. Path traversal defense (defense-in-depth since router validates ObjectIds)
+  const SAFE_ID_REGEX = /^[a-f\d]{24}$/i;
+  if (!SAFE_ID_REGEX.test(childId) || !SAFE_ID_REGEX.test(bookId)) {
+    const err = new Error('Invalid identifier');
+    err.status = 400;
+    err.code = 'VALIDATION_ERROR';
+    throw err;
+  }
+
+  // 6. Determine storage path using a temp asset ID (do NOT create DB record yet)
   const ext = MIME_TO_EXT[file.mimetype] || 'bin';
-  // Create asset record first to get the _id
+  const tempAssetId = new mongoose.Types.ObjectId();
+  const storagePath = `users/${childId}/books/${bookId}/assets/${tempAssetId}.${ext}`;
+
+  // 7. Upload to S3/MinIO FIRST
+  await storageService.putObject(storagePath, cleanBuffer, file.mimetype);
+
+  // 8. Only after successful S3 upload, create the asset record with the storage path
   const assetRecord = await storageDao.createAssetRecord({
     bookId,
     authorId: childId,
-    url: '', // Will be updated after S3 upload
+    url: storagePath,
     type: 'upload',
     mimeType: file.mimetype,
     sizeBytes: cleanBuffer.length,
   });
 
-  const storagePath = `users/${childId}/books/${bookId}/assets/${assetRecord._id}.${ext}`;
-
-  // 6. Upload to S3/MinIO
-  await storageService.putObject(storagePath, cleanBuffer, file.mimetype);
-
-  // 7. Update asset record with storage path
-  await Asset.updateOne({ _id: assetRecord._id }, { url: storagePath }).exec();
-
-  // 8. Generate presigned URL
+  // 9. Generate presigned URL
   const url = await storageService.getSignedUrl(storagePath);
   const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
 

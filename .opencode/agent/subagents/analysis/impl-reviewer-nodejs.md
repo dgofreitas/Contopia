@@ -18,7 +18,9 @@ permission:
     "**/*": "deny"
     "docs/stories/**": "allow"
   task:
-    "*": "allow"
+    "*": "deny"
+    "ContextScout": "allow"
+    "ExternalScout": "allow"
 ---
 
 # Implementation Reviewer -- Node.js Specialist

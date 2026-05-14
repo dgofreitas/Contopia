@@ -28,8 +28,9 @@ permission:
     "node_modules/**": "deny"
     ".git/**": "deny"
   task:
-    "*": "allow"
----
+    "*": "deny"
+    "ContextScout": "allow"
+    "ExternalScout": "allow"
 
 # Frontend Developer — React/Next.js Specialist
 

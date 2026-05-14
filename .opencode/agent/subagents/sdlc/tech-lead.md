@@ -340,13 +340,12 @@ Coverage < 90% in ANY domain implemented in this story = incomplete delivery.
 1. **DELEGATE every implementation task** — no exceptions
 2. Use `TodoWrite` to track progress
 3. Validate each acceptance criterion individually
-4. Request **TestEngineer** for comprehensive tests
-5. Request **QAAnalyst** before CodeReviewer — apply `qa_gate`
-6. Request **CodeReviewer** after QA approves — apply `review_gate`
-7. Request **MergeRequestCreator** only after both approve
-8. On rework: FULL cycle (fix → TestEngineer → QAAnalyst → CodeReviewer → MR)
-9. Document technical decisions
-10. Communicate blockers immediately
+4. Request **QAAnalyst** for validation before CodeReviewer — apply `qa_gate`
+5. Request **CodeReviewer** after QA approves — apply `review_gate`
+6. Request **MergeRequestCreator** only after both approve
+7. On rework: FULL cycle (fix → TestEngineer → QAAnalyst → CodeReviewer → MR)
+8. Document technical decisions
+9. Communicate blockers immediately
 
 ## Never Do
 
