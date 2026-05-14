@@ -102,3 +102,56 @@ export const progressUpdateSchema = z.object({
   lastPosition: z.number().min(0).optional(),
   percentage: z.number().min(0).max(100).optional(),
 });
+
+// ── STORY-005: New Schemas ────────────────────────────────────────────────────
+
+/**
+ * Query params for GET /api/v1/books (paginated list).
+ */
+export const bookListQuerySchema = z.object({
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+/**
+ * Params for GET /api/v1/books/:bookId/chapters.
+ */
+export const bookChaptersParamsSchema = z.object({
+  bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
+});
+
+/**
+ * Params for PUT /api/v1/chapters/:chapterId.
+ */
+export const chapterPutSchema = z.object({
+  chapterId: z.string().regex(objectIdRegex, 'Invalid chapter ID format'),
+});
+
+/**
+ * Body for PUT /api/v1/chapters/:chapterId.
+ * At least one of title, content, or wordCount must be provided.
+ */
+export const chapterPutBodySchema = z.object({
+  title: z.string().min(1).max(200).trim().optional(),
+  content: z.string().optional(),
+  wordCount: z.number().int().min(0).optional(),
+}).refine(
+  (data) => data.title !== undefined || data.content !== undefined || data.wordCount !== undefined,
+  { message: 'At least one field must be provided for update' },
+);
+
+/**
+ * Body for POST /api/v1/books (V2 — accepts both summary and description).
+ * Normalizes summary → description.
+ */
+export const bookCreateSchemaV2 = z.object({
+  title: z.string().min(1).max(200).trim(),
+  summary: z.string().max(2000).trim().optional().default(''),
+  description: z.string().max(2000).trim().optional(),
+  language: z.string().max(5).optional().default('pt-BR'),
+}).transform((data) => ({
+  title: data.title,
+  description: data.summary || data.description || '',
+  language: data.language,
+}));

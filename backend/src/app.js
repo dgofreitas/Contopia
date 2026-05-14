@@ -8,7 +8,9 @@ import pinoHttp from 'pino-http';
 import pino from 'pino';
 import authRouter from './app/auth/auth-router.js';
 import bookRouter from './app/book/book-router.js';
+import chapterRouter from './app/editor/chapter-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
+import { rateLimitMiddleware } from './app/common/rate-limit-middleware.js';
 
 const logger = pino({
   name: 'app',
@@ -21,7 +23,7 @@ const app = express();
 // Ensures req.ip reflects the real client IP behind nginx/reverse proxy
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
 
-// ── Security Middleware ────────────────────────────────────────────────────
+// ── Security Middleware ────────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -31,23 +33,27 @@ app.use(helmet({
   },
 }));
 
-// ── Body Parsing ──────────────────────────────────────────────────────────
+// ── Body Parsing ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 
-// ── Request ID ────────────────────────────────────────────────────────────
+// ── Request ID ────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
   req.id = crypto.randomUUID();
   next();
 });
 
-// ── Request Logging ───────────────────────────────────────────────────────
+// ── Request Logging ───────────────────────────────────────────────────────────
 app.use(pinoHttp({ logger, reqIdExpr: 'id' }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
+
 // Auth routes (handle their own auth/rate-limiting)
 app.use('/api/auth', authRouter);
-// Book routes (authMiddleware applied internally in book-router)
-app.use('/api/books', bookRouter);
+
+// V1 API routes — auth + per-user rate limiting applied at mount level
+app.use('/api/v1', authMiddleware, rateLimitMiddleware);
+app.use('/api/v1/books', bookRouter);
+app.use('/api/v1/chapters', chapterRouter);
 
 // Protected placeholder routes (auth required)
 app.use('/api/shelf', authMiddleware);
@@ -68,7 +74,7 @@ app.use(
   })
 );
 
-// ── Health Check ──────────────────────────────────────────────────────────
+// ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -76,12 +82,12 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// ── 404 Handler ───────────────────────────────────────────────────────────
+// ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-// ── Global Error Handler ──────────────────────────────────────────────────
+// ── Global Error Handler ──────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
   logger.error({
     err,
