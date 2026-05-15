@@ -28,7 +28,9 @@ permission:
     "node_modules/**": "deny"
     ".git/**": "deny"
   task:
-    "*": "allow"
+    "*": "deny"
+    "ContextScout": "allow"
+    "ExternalScout": "allow"
 ---
 
 # BackendDeveloper
@@ -57,7 +59,7 @@ Load ONLY relevant context. Target: <200 lines/file, scannable <30s, 3-5 highly 
 ANY external package/library encountered → ALWAYS call ExternalScout for current docs BEFORE implementing. Training data outdated.
 
 ### Rule: Tests Delegation (scope: implementation)
-NEVER write or execute tests yourself. ALWAYS call `TestEngineer` agent. Test creation/execution STRICTLY FORBIDDEN for this agent.
+NEVER write or execute tests yourself. Plan tests during implementation (write test stubs, mock interfaces), but ONLY the TestEngineer agent may write assertions and execute suites. Test execution is STRICTLY FORBIDDEN for this agent.
 
 ### Rule: Stack Detect First (scope: all_execution)
 ALWAYS detect project stack before code. Parse package.json, tsconfig.json, folder structure → identify framework, ORM, key deps.

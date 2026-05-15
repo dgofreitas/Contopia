@@ -62,11 +62,18 @@ const childSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// TTL index: auto-delete soft-deleted children after 30 days
+childSchema.index({ deletedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 childSchema.pre('save', async function(next) {
   if (this.isModified('password') && this.password) {

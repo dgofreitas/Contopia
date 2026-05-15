@@ -28,9 +28,9 @@ permission:
     "node_modules/**": "deny"
     ".git/**": "deny"
   task:
-    "*": "allow"
-
----
+    "*": "deny"
+    "ContextScout": "allow"
+    "ExternalScout": "allow"
 
 # FrontendDeveloper
 
@@ -58,7 +58,7 @@ Load ONLY relevant context files. Target: <200 lines per file, scannable in <30s
 When you encounter ANY external package or library, ALWAYS call ExternalScout for current docs BEFORE implementing. Training data is outdated.
 
 ### Rule: Tests Delegation (scope: implementation)
-You MUST NEVER write or execute test cases yourself. ALWAYS call the `TestEngineer` agent to create and run tests. Test creation and execution is STRICTLY FORBIDDEN for this agent.
+You MUST NEVER write or execute test cases yourself. Plan tests, document scenarios, and write testable code, but ONLY the TestEngineer agent may write test assertions and execute test suites. Test execution is STRICTLY FORBIDDEN for this agent.
 
 ### Rule: Accessibility Mandatory (scope: implementation)
 ALWAYS implement accessibility: semantic HTML, ARIA when needed, keyboard navigation, screen reader support. WCAG 2.2 compliance is non-negotiable.

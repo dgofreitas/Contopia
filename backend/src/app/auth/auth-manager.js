@@ -20,7 +20,10 @@ import {
   findChildByIdWithPassword,
   updateChildPassword,
   createAuditLog,
+  softDeleteChildById,
+  hardDeleteChildById,
 } from './auth-dao.js';
+import { purgeAssetsByAuthorManager } from '../storage/storage-manager.js';
 
 const logger = pino({ name: 'auth-manager', level: process.env.LOG_LEVEL || 'info' });
 
@@ -788,7 +791,7 @@ export async function childLogin({ childId, parentId, password, ip, deviceHint }
 
   logger.info({ childId: child._id, method: password ? 'password' : 'id' }, 'Child login successful');
 
-  return {
+return {
     accessToken: accessWithSid,
     refreshToken,
     childId: child._id.toString(),
@@ -798,4 +801,35 @@ export async function childLogin({ childId, parentId, password, ip, deviceHint }
     refreshAvailable,
     sessionId,
   };
+}
+
+/**
+ * Delete a child account and purge all associated assets (GDPR).
+ * Soft-deletes the child, purges assets, returns confirmation.
+ * @param {{ childId: string }} params
+ * @returns {{ deleted: true, childId: string }}
+ */
+export async function deleteAccountManager({ childId }) {
+  const child = await findChildById(childId);
+
+  if (!child) {
+    const err = new Error('Account not found');
+    err.code = 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+
+  // Purge all assets for this child (best-effort)
+  try {
+    await purgeAssetsByAuthorManager(childId);
+  } catch (purgeErr) {
+    logger.warn({ err: purgeErr, childId }, 'Asset purge failed during account deletion — continuing with soft-delete');
+  }
+
+  // Soft-delete: set deletedAt
+  await softDeleteChildById(childId);
+
+  logger.info({ childId }, 'Account deleted and assets purged');
+
+  return { deleted: true, childId };
 }

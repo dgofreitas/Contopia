@@ -3,6 +3,7 @@ import pino from 'pino';
 import app from './app.js';
 import { connectDB } from './config/database.js';
 import redis from './config/redis.js';
+import { scheduleGdrpCleanup } from './app/common/gdpr-cleanup.js';
 
 const logger = pino({
   name: 'server',
@@ -35,6 +36,9 @@ async function start() {
       `Contopia backend listening on port ${PORT}`
     );
   });
+
+  // Start GDPR cleanup scheduler (runs every 24h)
+  scheduleGdrpCleanup();
 }
 
 // Handle unhandled promise rejections

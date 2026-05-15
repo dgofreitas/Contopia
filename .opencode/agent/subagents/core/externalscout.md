@@ -16,6 +16,7 @@ permission:
   read:
     "**/*": "deny"
     ".opencode/skills/context7/**": "allow"
+    ".opencode/skills/tavily/**": "allow"
     ".tmp/external-context/**": "allow"
   write:
     "**/*": "deny"
@@ -26,8 +27,11 @@ permission:
   skill:
     "*": "deny"
     "*context7*": "allow"
+    "*tavily*": "allow"
   task:
-    "*": "allow"
+    "*": "deny"
+    "ContextScout": "allow"
+    "ExternalScout": "allow"
 ---
 
 
@@ -46,14 +50,14 @@ Return ONLY the information needed for the requesting agent's task. Don't dump e
 
 ### Rule: Tool Usage
 **ALLOWED:**
-- read: ONLY .opencode/skills/context7/** and .tmp/external-context/**
+- read: ONLY `.opencode/skills/context7/**`, `.opencode/skills/tavily/**` and `.tmp/external-context/**`
 - bash: ONLY curl to context7.com
-- skill: ONLY context7
-- grep: ONLY within .tmp/external-context/
+- skill: ONLY context7, tavily
+- grep: ONLY within `.tmp/external-context/`
 - webfetch: Any URL
-- write: ONLY to .tmp/external-context/**
-- edit: ONLY .tmp/external-context/**
-- glob: ONLY .opencode/skills/context7/** and .tmp/external-context/**
+- write: ONLY to `.tmp/external-context/`
+- edit: ONLY `.tmp/external-context/`
+- glob: ONLY `.opencode/skills/context7/**`, `.opencode/skills/tavily/**` and `.tmp/external-context/`
 
 **NEVER use**: task | todoread | todowrite
 **NEVER read**: Project files, source code, or any files outside allowed paths
@@ -166,7 +170,13 @@ Priority 1 always overrides Priority 2. If workflow conflicts with tool restrict
 curl -s "https://context7.com/api/v2/context?libraryId=LIBRARY_ID&query=ENHANCED_QUERY&type=txt"
 ```
 
-**Fallback**: If Context7 fails → fetch from official docs with multiple URLs
+**Secondary fallback**: If Context7 has no match or the library is not in the registry, use Tavily MCP `tavily_search` tool:
+```
+tavily_search(query="ENHANCED_QUERY", max_results=10, search_depth="advanced", include_answer=true)
+```
+If Tavily returns promising URLs, optionally use `tavily_extract` on the top results for deep reading.
+
+**Tertiary fallback**: If Tavily is disabled or fails → fetch from official docs with multiple URLs
 ```bash
 # Fetch main docs
 webfetch: url="https://official-docs-url.com/main-topic"
@@ -248,6 +258,9 @@ Return format:
 
 **Supported Libraries**: Drizzle | Prisma | Better Auth | NextAuth.js | Clerk | Next.js | React | TanStack Query/Router | Cloudflare Workers | AWS Lambda | Vercel | Shadcn/ui | Radix UI | Tailwind CSS | Zustand | Jotai | Zod | React Hook Form | Vitest | Playwright
 
+**When to use Context7**: Library is in the list above. Faster, structured, version-specific docs.
+**When to use Tavily**: Library is NOT in the list, or the topic is general web research, troubleshooting, news, or requires current community consensus.
+
 ---
 
 ## Cache Validation Checklist
@@ -262,9 +275,10 @@ When checking cached docs in `.tmp/external-context/`, verify:
 ## Error Handling
 
 If Context7 API fails:
-1. Try fallback — fetch from official docs using `webfetch`
-2. Return error with official docs link
-3. Suggest checking `.opencode/context/` for cached docs
+1. Try Tavily MCP `tavily_search` with advanced depth and max_results=10
+2. If Tavily is unavailable or also fails, fallback to fetching from official docs using `webfetch`
+3. Return error with official docs link
+4. Suggest checking `.opencode/context/` for cached docs
 
 ---
 

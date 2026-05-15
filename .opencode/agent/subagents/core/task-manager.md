@@ -20,9 +20,9 @@ permission:
     "*": "deny"
     ".tmp/**": "allow"
   task:
+    "*": "deny"
     contextscout: "allow"
     externalscout: "allow"
-    "*": "deny"
   skill:
     "*": "deny"
     "task-management": "allow"

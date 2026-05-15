@@ -28,7 +28,9 @@ permission:
     "node_modules/**": "deny"
     ".git/**": "deny"
   task:
-    "*": "allow"
+    "*": "deny"
+    "ContextScout": "allow"
+    "TaskManager": "allow"
 ---
 
 # MergeRequestCreator

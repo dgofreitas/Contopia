@@ -9,8 +9,10 @@ import pino from 'pino';
 import authRouter from './app/auth/auth-router.js';
 import bookRouter from './app/book/book-router.js';
 import chapterRouter from './app/editor/chapter-router.js';
+import storageRouter from './app/storage/storage-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
 import { rateLimitMiddleware } from './app/common/rate-limit-middleware.js';
+import { fail } from './app/common/response-envelope.js';
 
 const logger = pino({
   name: 'app',
@@ -54,6 +56,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/v1', authMiddleware, rateLimitMiddleware);
 app.use('/api/v1/books', bookRouter);
 app.use('/api/v1/chapters', chapterRouter);
+app.use('/api/v1', storageRouter);
 
 // Protected placeholder routes (auth required)
 app.use('/api/shelf', authMiddleware);
@@ -96,10 +99,7 @@ app.use((err, req, res, _next) => {
     url: req.originalUrl,
   }, 'Unhandled error');
 
-  res.status(500).json({
-    error: 'Internal server error',
-    requestId: req.id,
-  });
+  res.status(500).json(fail('INTERNAL_ERROR', 'Something went wrong — please try again later', { requestId: req.id }));
 });
 
 export default app;
