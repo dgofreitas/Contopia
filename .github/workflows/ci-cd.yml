@@ -1,0 +1,376 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Contopia — CI/CD Pipeline
+# STORY-007: Full pipeline: lint → test → security → build → deploy
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for deployment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '22'
+
+# ── Jobs ─────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── 1. Lint ────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Lint Backend
+        working-directory: ./backend
+        run: |
+          npm ci
+          npm run lint
+
+      - name: Lint Frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run lint
+
+  # ── 2. Unit Tests — Backend ───────────────────────────────────────────────
+  unit-tests-backend:
+    name: Unit Tests (Backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: ./backend
+        run: npm test
+
+  # ── 3. Unit Tests — Frontend ──────────────────────────────────────────────
+  unit-tests-frontend:
+    name: Unit Tests (Frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: ./frontend
+        run: npm test
+
+  # ── 4. Integration Tests ──────────────────────────────────────────────────
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests-backend, unit-tests-frontend]
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "echo 'db.runCommand(\"ping\").ok' | mongosh --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+    env:
+      MONGODB_URI: mongodb://localhost:27017/contopia-test
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run integration tests
+        working-directory: ./backend
+        run: npm test
+
+  # ── 5. Security Scan ──────────────────────────────────────────────────────
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests-backend, unit-tests-frontend]
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: npm audit — Backend
+        working-directory: ./backend
+        run: npm audit --audit-level=high
+
+      - name: npm audit — Frontend
+        working-directory: ./frontend
+        run: npm audit --audit-level=high
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  # ── 6. Build Docker Images ────────────────────────────────────────────────
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [unit-tests-frontend, integration-tests, security-scan]
+    if: >
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        run: |
+          docker build \
+            -t contopia-backend:${{ github.sha }} \
+            --target production \
+            ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            -t contopia-frontend:${{ github.sha }} \
+            --target production \
+            --build-arg VITE_API_URL=/api \
+            ./frontend
+
+      - name: Save images to tar
+        run: |
+          mkdir -p /tmp/docker-images
+          docker save contopia-backend:${{ github.sha }} \
+            > /tmp/docker-images/backend.tar
+          docker save contopia-frontend:${{ github.sha }} \
+            > /tmp/docker-images/frontend.tar
+
+      - name: Upload docker images artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images/
+          retention-days: 3
+
+  # ── 7. Deploy — Staging ───────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-docker]
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download docker images artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images/
+
+      - name: Setup SSH agent
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Transfer images to staging VPS
+        run: |
+          scp /tmp/docker-images/backend.tar \
+              /tmp/docker-images/frontend.tar \
+              "root@${{ secrets.STAGING_HOST }}:/tmp/"
+
+      - name: Deploy on staging VPS
+        run: |
+          ssh "root@${{ secrets.STAGING_HOST }}" '
+            set -e
+
+            echo "=== Loading Docker images ==="
+            docker load -i /tmp/backend.tar
+            docker load -i /tmp/frontend.tar
+            rm -f /tmp/backend.tar /tmp/frontend.tar
+
+            echo "=== Tagging images ==="
+            docker tag contopia-backend:${{ github.sha }} contopia-backend:staging
+            docker tag contopia-frontend:${{ github.sha }} contopia-frontend:staging
+
+            echo "=== Deploying with docker compose ==="
+            cd /opt/contopia
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose up -d --no-build
+
+            echo "=== Health check ==="
+            TIMEOUT=120
+            ELAPSED=0
+            until curl -sf http://localhost:8000/api/v1/ready; do
+              if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+                echo "ERROR: Health check timed out after ${TIMEOUT}s" >&2
+                exit 1
+              fi
+              sleep 5
+              ELAPSED=$((ELAPSED + 5))
+            done
+            echo "Health check passed."
+
+            echo "=== Pruning old images ==="
+            docker image prune -f
+          '
+
+  # ── 8. Deploy — Production ────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-docker]
+    if: >
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download docker images artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images/
+
+      - name: Setup SSH agent
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Transfer images to production VPS
+        run: |
+          scp /tmp/docker-images/backend.tar \
+              /tmp/docker-images/frontend.tar \
+              "root@${{ secrets.PROD_HOST }}:/tmp/"
+
+      - name: Deploy on production VPS (rolling update with rollback)
+        run: |
+          ssh "root@${{ secrets.PROD_HOST }}" '
+            set -e
+
+            echo "=== Tagging current images as :previous ==="
+            docker tag contopia-backend:current contopia-backend:previous 2>/dev/null || true
+            docker tag contopia-frontend:current contopia-frontend:previous 2>/dev/null || true
+
+            echo "=== Loading new images ==="
+            docker load -i /tmp/backend.tar
+            docker load -i /tmp/frontend.tar
+            rm -f /tmp/backend.tar /tmp/frontend.tar
+
+            echo "=== Tagging new images as :current ==="
+            docker tag contopia-backend:${{ github.sha }} contopia-backend:current
+            docker tag contopia-frontend:${{ github.sha }} contopia-frontend:current
+
+            echo "=== Deploying with docker compose ==="
+            cd /opt/contopia
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose up -d --no-build
+
+            echo "=== Health check (timeout: 120s) ==="
+            TIMEOUT=120
+            ELAPSED=0
+            HEALTHY=false
+            until curl -sf http://localhost:8000/api/v1/ready; do
+              if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+                echo "ERROR: Health check failed after ${TIMEOUT}s — initiating rollback" >&2
+                HEALTHY=false
+                break
+              fi
+              sleep 5
+              ELAPSED=$((ELAPSED + 5))
+            done
+
+            if [ "$HEALTHY" = false ]; then
+              echo "=== Rolling back to :previous ==="
+              docker tag contopia-backend:previous contopia-backend:current 2>/dev/null || true
+              docker tag contopia-frontend:previous contopia-frontend:current 2>/dev/null || true
+              docker compose up -d --no-build
+
+              echo "=== Re-checking health after rollback ==="
+              sleep 10
+              if curl -sf http://localhost:8000/api/v1/ready; then
+                echo "Rollback succeeded — service is healthy."
+              else
+                echo "CRITICAL: Rollback also failed — manual intervention required." >&2
+              fi
+              exit 1
+            fi
+
+            echo "Production deploy successful."
+
+            echo "=== Pruning old images ==="
+            docker image prune -f
+          '
