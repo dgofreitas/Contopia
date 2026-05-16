@@ -89,6 +89,18 @@ apiClient.interceptors.response.use(
       useAuthStore.getState().setSessionTimeoutWarning(true);
     }
 
+    // General error handling for 4xx/5xx and network errors
+    if (error.response?.data?.error?.code) {
+      const { code, message } = error.response.data.error;
+      import('../stores/error-store.js').then(({ useErrorStore }) => {
+        useErrorStore.getState().addToast(code, message);
+      });
+    } else if (!error.response) {
+      import('../stores/error-store.js').then(({ useErrorStore }) => {
+        useErrorStore.getState().addToast('NETWORK_ERROR', null);
+      });
+    }
+
     return Promise.reject(error);
   }
 );

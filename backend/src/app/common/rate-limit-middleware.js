@@ -1,6 +1,8 @@
 // Contopia — Per-User Rate Limit Middleware (Redis sliding window)
 import redis from '../../config/redis.js';
 import pino from 'pino';
+import { fail } from './response-envelope.js';
+import { getErrorMessage } from './error-codes.js';
 
 const logger = pino({ name: 'rate-limit', level: process.env.LOG_LEVEL || 'info' });
 
@@ -23,10 +25,7 @@ export async function rateLimitMiddleware(req, res, next) {
     if (count === 1) await redis.expire(key, WINDOW_SECONDS);
     if (count > MAX_REQUESTS) {
       res.set('Retry-After', String(WINDOW_SECONDS));
-      return res.status(429).json({
-        error: { code: 'RATE_LIMITED', message: 'Slow down — try again in a minute' },
-        meta: { requestId: req.id },
-      });
+      return res.status(429).json(fail('RATE_LIMITED', getErrorMessage('RATE_LIMITED'), { requestId: req.id }, req.id));
     }
     next();
   } catch (err) {

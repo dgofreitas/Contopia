@@ -1,5 +1,6 @@
 // Contopia — Root Application Component
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
 import RegisterPage from './app/auth/RegisterPage';
 import VerifyPage from './app/auth/VerifyPage';
 import WelcomePage from './app/auth/WelcomePage';
@@ -11,6 +12,9 @@ import SettingsPage from './app/settings/SettingsPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Navbar from './components/common/Navbar';
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal';
+import OfflineBanner from './components/common/OfflineBanner';
+import ToastContainer from './components/common/ToastContainer';
+import { useErrorStore } from './stores/error-store';
 import useAuthStore from './stores/auth-store';
 
 function RootRedirect() {
@@ -32,8 +36,22 @@ function ProtectedLayout() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const handleOnline = () => useErrorStore.getState().setOffline(false);
+    const handleOffline = () => useErrorStore.getState().setOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    useErrorStore.getState().setOffline(!navigator.onLine);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <>
+      <OfflineBanner />
+      <ToastContainer />
       <SessionTimeoutModal />
       <Routes>
         <Route path="/" element={<RootRedirect />} />

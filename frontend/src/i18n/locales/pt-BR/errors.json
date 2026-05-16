@@ -1,0 +1,22 @@
+{
+  "VALIDATION_ERROR": "Algo não está certo — tente novamente",
+  "VALIDATION_ERROR.title": "O teu livro precisa de um título — como o vais chamar?",
+  "UNAUTHORIZED": "Você precisa entrar primeiro",
+  "TOKEN_EXPIRED": "Sua sessão expirou — entre novamente",
+  "TOKEN_REVOKED": "Sua sessão foi encerrada — entre novamente",
+  "FORBIDDEN": "Você não tem permissão para fazer isso",
+  "NOT_FOUND": "Não conseguimos encontrar isso — tente voltar",
+  "RATE_LIMITED": "Devagar — tente novamente em um minuto",
+  "PAYLOAD_TOO_LARGE": "Esse arquivo é grande demais! Tente uma imagem menor.",
+  "SESSION_EXPIRED": "Sua sessão expirou",
+  "SESSION_TIMEOUT": "Sua sessão vai expirar por inatividade",
+  "SERVICE_UNAVAILABLE": "Algo não está funcionando agora — tente novamente em breve",
+  "INTERNAL_ERROR": "Algo deu errado — tente novamente mais tarde",
+  "NETWORK_ERROR": "Sem internet — seu trabalho está salvo! Tente novamente.",
+  "TIMEOUT_ERROR": "Demorou muito para responder — tente novamente.",
+  "OFFLINE": "Sem internet — seu trabalho está salvo!",
+  "BACK_ONLINE": "Voltou! Você está conectado novamente.",
+  "TRY_AGAIN": "Tentar novamente",
+  "GOT_IT": "Entendi",
+  "MULTIPLE_ERRORS": "{{count}} coisas deram errado — tente novamente."
+}
