@@ -34,7 +34,7 @@ import { connectTestDb, disconnectTestDb, clearCollections } from '../../../test
 import { authMiddleware } from '../../common/auth-middleware.js';
 import { rateLimitMiddleware } from '../../common/rate-limit-middleware.js';
 import bookRouter from '../book-router.js';
-import * as bookDao from '../book-dao.js';
+import * as _bookDao from '../book-dao.js';
 import { Book, Chapter, ReadingProgress } from '../book-model.js';
 import redis from '../../../config/redis.js';
 

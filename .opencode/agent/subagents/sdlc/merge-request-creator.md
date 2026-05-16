@@ -50,6 +50,22 @@ permission:
 
 ## Critical Rules
 
+### Rule: No Heredoc Loops (scope: all_execution) — MANDATORY
+When creating GitHub PRs, GitLab MRs, or any command that requires multi-line input:
+1. **NEVER use heredoc (`<<<` or `EOF`)** with complex content — it breaks on special characters (`$`, `(`, quotes).
+2. **ALWAYS Write to a temp file first**, then use that file:
+   ```bash
+   # ✅ CORRECT: Write body to file, then reference it
+   write "Title: Fix login bug\n\nBody text here..." → /tmp/mr-body.md
+   gh pr create --title "fix(auth): resolve login timeout" --body-file /tmp/mr-body.md
+   
+   # ❌ WRONG: Heredoc with inline body
+   gh pr create --body-file -<<EOF
+   ...complex text...
+   EOF
+   ```
+3. If heredoc fails **once**, STOP trying — use temp file approach instead (regra dos 2 strikes).
+
 ### Rule: Approval Gate (scope: all_execution)
 Approval before ANY execution (bash, write, edit). Read/list/glob/grep exempt.
 

@@ -2,13 +2,9 @@
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
-import useAuthStore from '../stores/auth-store';
 
 export default function useRegister() {
   const { t } = useTranslation('auth');
-  const setToken = useAuthStore((s) => s.setToken);
-  const setUser = useAuthStore((s) => s.setUser);
-
   const mutation = useMutation({
     mutationFn: async ({ parentEmail, childFirstName }) => {
       const response = await axios.post('/api/auth/register', {
@@ -16,12 +12,6 @@ export default function useRegister() {
         childFirstName,
       });
       return response.data;
-    },
-    onSuccess: (data) => {
-      // Register response only returns { parentId, emailSent } — no token until login
-    },
-    onError: (error) => {
-      // Errors are mapped by consumers via getErrorMessage
     },
   });
 

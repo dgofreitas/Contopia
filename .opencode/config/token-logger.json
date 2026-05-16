@@ -1,3 +1,6 @@
 {
-    "enabled": false
+    "enabled": true,
+    "fetchTimeoutMs": 600000,
+    "fetchTimeoutEnabled": true,
+    "logLevel": "info"
 }

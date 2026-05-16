@@ -2,7 +2,7 @@
 // Manages books list, current book, chapters, and draft preservation
 import { create } from 'zustand';
 
-const useBookStore = create((set, get) => ({
+const useBookStore = create((set, _get) => ({
   // Book list
   books: [],
   isLoadingBooks: false,

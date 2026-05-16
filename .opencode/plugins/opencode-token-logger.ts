@@ -3,14 +3,28 @@ import type { Plugin } from "@opencode-ai/plugin";
 // @ts-ignore
 import { appendFileSync, readFileSync, existsSync } from "fs";
 // @ts-ignore
-import https from "https";
-// @ts-ignore
 import { join } from "path";
 // @ts-ignore
 import { homedir } from "os";
 
 interface TokenLoggerConfig {
   enabled?: boolean;
+  fetchTimeoutMs?: number;
+  fetchTimeoutEnabled?: boolean;
+  logLevel?: "debug" | "info" | "warn" | "error";
+}
+
+const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
+
+function getTimestamp(): string {
+  const d = new Date();
+  const offset = -d.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const hours = Math.abs(Math.floor(offset / 60)).toString().padStart(2, '0');
+  const minutes = Math.abs(offset % 60).toString().padStart(2, '0');
+  const tz = `${sign}${hours}:${minutes}`;
+  const iso = d.toLocaleString('sv-SE', { timeZone: 'UTC' }).replace(' ', 'T');
+  return `${iso}.${d.getMilliseconds().toString().padStart(3, '0')}${tz}`;
 }
 
 function loadConfig(directory: string, worktree: string): TokenLoggerConfig {
@@ -34,9 +48,9 @@ function loadConfig(directory: string, worktree: string): TokenLoggerConfig {
 
 /**
  * opencode-token-logger
- * 
- * Plugin para interceptar e registrar prompts, mensagens e eventos
- * para depurar o uso excessivo de tokens.
+ *
+ * Plugin para interceptar, registrar e aplicar timeout em chamadas de IA.
+ * Log levels: debug > info > warn > error
  */
 export const TokenLoggerPlugin: Plugin = async ({ client, directory, worktree }: any) => {
 
@@ -46,21 +60,30 @@ export const TokenLoggerPlugin: Plugin = async ({ client, directory, worktree }:
     return {};
   }
 
+  const LOG_LEVEL = LEVELS[config.logLevel ?? "info"];
+
   let activeSessionID = "global";
   let activeAgent = "unknown";
 
-  function fileLog(tag: string, data: any) {
+  function log(level: "debug" | "info" | "warn" | "error", tag: string, data: any) {
+    if (LEVELS[level] < LOG_LEVEL) return;
     try {
-      const logLine = `[${new Date().toISOString()}] [AGENT: ${activeAgent}] [${tag}] ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}\n\n`;
-      const fileName = `/tmp/opencode-token-logger-${activeSessionID.replace(/[^a-zA-Z0-9_-]/g, '')}.log`;
-      appendFileSync(fileName, logLine);
-    } catch (err) { }
+      const ts = getTimestamp();
+      const payload = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+      const line = `[${ts}] [${level.toUpperCase()}] [AGENT: ${activeAgent}] [${tag}] ${payload}\n\n`;
+      const fileName = `/tmp/opencode-token-logger-${activeSessionID.replace(/[^a-zA-Z0-9_-]/g, "")}.log`;
+      appendFileSync(fileName, line);
+    } catch { }
   }
 
-  fileLog("PLUGIN_INIT", "Token Logger Plugin Inicializado com Interceptador HTTP");
+  log("info", "PLUGIN_INIT", "Token Logger + Fetch Timeout Plugin inicializado");
+  log("info", "PLUGIN_CONFIG", config);
+
+  const FETCH_TIMEOUT_MS = config.fetchTimeoutMs ?? 600000;
+  const TIMEOUT_ENABLED = config.fetchTimeoutEnabled !== false;
+  log("info", "TIMEOUT_CONFIG", { fetchTimeoutMs: FETCH_TIMEOUT_MS, enabled: TIMEOUT_ENABLED });
 
   // --- Interceptação de globalThis.fetch ---
-  // A maioria dos SDKs modernos (incluindo o do OpenRouter/OpenAI/Anthropic) usa fetch por debaixo dos panos
   // @ts-ignore
   const originalFetch = globalThis.fetch;
   if (originalFetch) {
@@ -78,22 +101,48 @@ export const TokenLoggerPlugin: Plugin = async ({ client, directory, worktree }:
         url = (requestInput as any).url;
       }
 
-      // Intercepta requisições de provedores de IA (filtro simples para evitar ruído)
-      if (url && (url.includes("api") || url.includes("openai") || url.includes("openrouter") || url.includes("anthropic"))) {
+      const isProvider = url && (url.includes("api") || url.includes("openai") || url.includes("openrouter") || url.includes("anthropic") || url.includes("ollama"));
+
+      if (isProvider) {
+        // Log em debug: body completo. Info: apenas url + method.
         let bodyToLog = requestInit?.body;
-
-        // Se for string, tentamos parsear para logar bonito, senão loga como string
         if (typeof bodyToLog === "string") {
-          try {
-            bodyToLog = JSON.parse(bodyToLog);
-          } catch { }
+          try { bodyToLog = JSON.parse(bodyToLog); } catch { }
         }
+        log("info", "HTTP_FETCH_REQUEST", { url, method: requestInit?.method || "GET" });
+        log("debug", "HTTP_FETCH_REQUEST_BODY", bodyToLog);
 
-        fileLog("HTTP_FETCH_REQUEST", {
-          url,
-          method: requestInit?.method || "GET",
-          body: bodyToLog
-        });
+        if (TIMEOUT_ENABLED) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            log("warn", "HTTP_FETCH_TIMEOUT", { url, timeoutMs: FETCH_TIMEOUT_MS, message: `Abortado após ${FETCH_TIMEOUT_MS}ms` });
+            controller.abort();
+          }, FETCH_TIMEOUT_MS);
+
+          try {
+            const response = await originalFetch.call(this, requestInput, {
+              ...(requestInit || {}),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            log("info", "HTTP_FETCH_RESPONSE", { url, status: response.status, ok: response.ok });
+            log("debug", "HTTP_FETCH_RESPONSE_HEADERS", Object.fromEntries(response.headers.entries()));
+            return response;
+          } catch (err: any) {
+            clearTimeout(timeoutId);
+            if (err.name === "AbortError" || err.code === "ABORT_ERR") {
+              log("error", "HTTP_FETCH_ABORTED", { url, timeoutMs: FETCH_TIMEOUT_MS });
+              const error = new Error(`[FetchTimeout] Provedor não respondeu em ${FETCH_TIMEOUT_MS}ms. URL: ${url}`);
+              // @ts-ignore
+              error.code = "ETIMEDOUT";
+              throw error;
+            }
+            log("error", "HTTP_FETCH_ERROR", { url, error: err.message, stack: err.stack });
+            throw err;
+          }
+        } else {
+          return originalFetch.apply(this, args);
+        }
       }
 
       return originalFetch.apply(this, args);
@@ -101,42 +150,61 @@ export const TokenLoggerPlugin: Plugin = async ({ client, directory, worktree }:
   }
 
   return {
-    // Intercepta mensagens do chat antes de serem processadas/enviadas
     "chat.message": async (ctx: any, message: any) => {
       if (ctx?.sessionID) activeSessionID = ctx.sessionID;
-      fileLog("CHAT_MESSAGE", message);
-      return message; // Retorna a mensagem original para não bloquear o fluxo
+      log("info", "CHAT_MESSAGE", { sessionID: activeSessionID, role: message?.role });
+      log("debug", "CHAT_MESSAGE_BODY", message);
+      return message;
     },
 
-    // Escuta todos os eventos do sistema
     event: async ({ event }: any) => {
       const e = event as { type: string; properties: Record<string, any> };
-      
-      // Captura a sessão e o agente ativos
       const info = e.properties?.info;
       if (info?.sessionID) activeSessionID = info.sessionID;
       else if (e.properties?.sessionID) activeSessionID = e.properties.sessionID;
-
       if (info?.agent) activeAgent = info.agent;
       else if (info?.mode) activeAgent = info.mode;
 
-      // Filtra eventos irrelevantes se houver muito ruído, 
-      // mas por enquanto logamos todos os eventos de sessão e mensagem
       if (
         e.type.startsWith("message") ||
         e.type.startsWith("session") ||
         e.type.includes("provider") ||
         e.type.includes("model")
       ) {
-        fileLog(`EVENT:${e.type}`, e.properties);
+        log("debug", `EVENT:${e.type}`, { sessionID: activeSessionID, agent: activeAgent, ...e.properties });
       }
     },
 
-    // Middlewares para tools, caso o gasto seja nelas
     "tool.execute.before": async (ctx: any, toolName: string, params: any) => {
-      fileLog(`TOOL_BEFORE:${toolName}`, params);
+      let actualToolName: string;
+      if (typeof toolName === 'string') {
+        actualToolName = toolName;
+      } else if (toolName && typeof toolName === 'object') {
+        actualToolName = toolName.tool || toolName.name || toolName.command || JSON.stringify(toolName).slice(0, 40);
+      } else {
+        actualToolName = String(toolName);
+      }
+      // Info: agente + tool + arquivo (se houver filePath no params)
+      const fileHint = params?.filePath || params?.path || params?.file || '';
+      log("info", `TOOL_BEFORE:${actualToolName}`, { agent: activeAgent, file: fileHint });
+      log("debug", `TOOL_BEFORE:${actualToolName}:PARAMS`, params);
       return params;
-    }
+    },
+
+    "tool.execute.after": async (ctx: any, toolName: string, result: any) => {
+      let actualToolName: string;
+      if (typeof toolName === 'string') {
+        actualToolName = toolName;
+      } else if (toolName && typeof toolName === 'object') {
+        actualToolName = toolName.tool || toolName.name || toolName.command || JSON.stringify(toolName).slice(0, 40);
+      } else {
+        actualToolName = String(toolName);
+      }
+      // Info: apenas agente + tool + tipo de resultado (não o conteúdo)
+      const resultType = Array.isArray(result) ? `array[${result.length}]` : (result && typeof result === 'object' ? 'object' : typeof result);
+      log("info", `TOOL_AFTER:${actualToolName}`, { agent: activeAgent, resultType });
+      log("debug", `TOOL_AFTER:${actualToolName}:RESULT`, result);
+    },
   };
 };
 

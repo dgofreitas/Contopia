@@ -72,7 +72,7 @@ describe('authMiddleware', () => {
     const token = makeToken({ sub: 'c1', type: 'refresh' });
     const res = await request(app).get('/protected').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe('INVALID_TOKEN_TYPE');
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 
   it('should return 401 when token is blacklisted', async () => {
@@ -167,7 +167,7 @@ describe('sessionTimeoutMiddleware', () => {
     const app = createTimeoutApp();
     const res = await request(app).get('/protected');
     expect(res.status).toBe(419);
-    expect(res.body.error.code).toBe('SESSION_TIMEOUT_WARNING');
+    expect(res.body.error.code).toBe('SESSION_TIMEOUT');
   });
 
   it('should return 401 when idle > 30min (hard timeout)', async () => {

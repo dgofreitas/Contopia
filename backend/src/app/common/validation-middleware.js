@@ -1,5 +1,5 @@
 // Contopia — Validation Middleware Factory (Zod)
-import { ok, fail } from './response-envelope.js';
+import { fail } from './response-envelope.js';
 
 /**
  * Child-friendly Zod error message mapping.

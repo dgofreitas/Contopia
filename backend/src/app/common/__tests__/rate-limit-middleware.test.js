@@ -93,6 +93,13 @@ describe('rateLimitMiddleware (STORY-005)', () => {
     expect(jsonArg.meta.requestId).toBe('req-123');
   });
 
+  it('should include traceId in 429 response', async () => {
+    redis.incr.mockResolvedValue(101);
+    await rateLimitMiddleware(req, res, next);
+    const jsonArg = res.json.mock.calls[0][0];
+    expect(jsonArg.error.traceId).toBe('req-123');
+  });
+
   it('should not set expire on subsequent requests (count > 1)', async () => {
     redis.incr.mockResolvedValue(3);
     await rateLimitMiddleware(req, res, next);

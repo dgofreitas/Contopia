@@ -1,0 +1,92 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import BookshelfGridLayout from '../app/shelf/BookshelfGridLayout';
+import * as useBooksQueryModule from '../hooks/useBooksQuery';
+
+vi.mock('../hooks/useBooksQuery', () => ({
+  default: vi.fn(),
+}));
+
+vi.mock('../stores/book-store', () => ({
+  default: (selector) => selector({
+    setBooks: vi.fn(),
+  }),
+}));
+
+// setup.js already mocks react-i18next globally to pass through keys
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+function renderWithProviders(ui) {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{ui}</BrowserRouter>
+    </QueryClientProvider>,
+  );
+}
+
+describe('BookshelfGridLayout', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows loading state with aria-busy skeleton', () => {
+    useBooksQueryModule.default.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithProviders(<BookshelfGridLayout />);
+    expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  });
+
+  it('shows error state on error', () => {
+    useBooksQueryModule.default.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Network error'),
+      refetch: vi.fn(),
+    });
+    renderWithProviders(<BookshelfGridLayout />);
+    expect(screen.getByText('errorTitle')).toBeInTheDocument();
+    expect(screen.getByText('errorMessage')).toBeInTheDocument();
+    expect(screen.getByText('retryButton')).toBeInTheDocument();
+  });
+
+  it('shows empty state when data is empty', () => {
+    useBooksQueryModule.default.mockReturnValue({
+      data: { data: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderWithProviders(<BookshelfGridLayout />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('shows books grid with books on success', () => {
+    useBooksQueryModule.default.mockReturnValue({
+      data: {
+        data: [
+          { _id: '1', title: 'Story One' },
+          { _id: '2', title: 'Story Two' },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderWithProviders(<BookshelfGridLayout />);
+    expect(screen.getByText('Story One')).toBeInTheDocument();
+    expect(screen.getByText('Story Two')).toBeInTheDocument();
+  });
+});

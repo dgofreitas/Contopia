@@ -59,5 +59,30 @@ describe('response-envelope', () => {
       const result = fail('INTERNAL_ERROR', 'Something went wrong');
       expect(result.meta).toEqual({});
     });
+
+    it('should set traceId from explicit parameter', () => {
+      const result = fail('VALIDATION_ERROR', 'Bad input', {}, 'trace-abc');
+      expect(result.error.traceId).toBe('trace-abc');
+    });
+
+    it('should fall back traceId to meta.requestId when traceId is null', () => {
+      const result = fail('VALIDATION_ERROR', 'Bad input', { requestId: 'req-123' });
+      expect(result.error.traceId).toBe('req-123');
+    });
+
+    it('should fall back traceId to meta.requestId when traceId is not provided', () => {
+      const result = fail('VALIDATION_ERROR', 'Bad input', { requestId: 'req-456' });
+      expect(result.error.traceId).toBe('req-456');
+    });
+
+    it('should set traceId to null when neither traceId nor meta.requestId is provided', () => {
+      const result = fail('INTERNAL_ERROR', 'Something went wrong');
+      expect(result.error.traceId).toBeNull();
+    });
+
+    it('should prefer explicit traceId over meta.requestId', () => {
+      const result = fail('VALIDATION_ERROR', 'Bad input', { requestId: 'req-1' }, 'explicit-trace');
+      expect(result.error.traceId).toBe('explicit-trace');
+    });
   });
 });

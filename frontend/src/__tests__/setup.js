@@ -16,6 +16,26 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock IntersectionObserver for Framer Motion animations
+class MockIntersectionObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+Object.defineProperty(window, 'IntersectionObserver', {
+  writable: true,
+  value: MockIntersectionObserver,
+});
+
+// Mock IntersectionObserver for Framer Motion (used by BookshelfGrid)
+if (!globalThis.IntersectionObserver) {
+  globalThis.IntersectionObserver = vi.fn(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+}
+
 // Mock react-i18next globally — translation key passthrough
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key, options) => {

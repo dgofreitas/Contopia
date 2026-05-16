@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import pino from 'pino';
 import redis from '../../config/redis.js';
 import { hashToken } from '../auth/auth-manager.js';
+import { fail } from './response-envelope.js';
 
 /**
  * Wrap async Express middleware so rejected promises are forwarded to next(err).
@@ -30,10 +31,7 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'You need to sign in first' },
-        meta: { requestId: req.id },
-      });
+      return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in first', { requestId: req.id }, req.id));
     }
 
     const token = authHeader.slice(7); // Remove "Bearer "
@@ -43,22 +41,13 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
       decoded = jwt.verify(token, JWT_SECRET);
     } catch (jwtErr) {
       if (jwtErr.name === 'TokenExpiredError') {
-        return res.status(401).json({
-          error: { code: 'TOKEN_EXPIRED', message: 'Your session expired — please sign in again' },
-          meta: { requestId: req.id },
-        });
+        return res.status(401).json(fail('TOKEN_EXPIRED', 'Your session expired — please sign in again', { requestId: req.id }, req.id));
       }
-      return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'You need to sign in first' },
-        meta: { requestId: req.id },
-      });
+      return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in first', { requestId: req.id }, req.id));
     }
 
     if (decoded.type !== 'access') {
-      return res.status(401).json({
-        error: { code: 'INVALID_TOKEN_TYPE', message: 'You need to sign in first' },
-        meta: { requestId: req.id },
-      });
+      return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in first', { requestId: req.id }, req.id));
     }
 
     const childId = decoded.sub;
@@ -68,10 +57,7 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
       const tokenHash = hashToken(token);
         const blacklisted = await redis.exists(`bl:${tokenHash}`);
       if (blacklisted === 1) {
-        return res.status(401).json({
-          error: { code: 'TOKEN_REVOKED', message: 'Your session was signed out — please sign in again' },
-          meta: { requestId: req.id },
-        });
+        return res.status(401).json(fail('TOKEN_REVOKED', 'Your session was signed out — please sign in again', { requestId: req.id }, req.id));
       }
 
       if (sessionId) {
@@ -79,10 +65,7 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
         const sessionData = await redis.get(sessionKey);
 
         if (!sessionData) {
-          return res.status(401).json({
-            error: { code: 'SESSION_EXPIRED', message: 'Session has expired' },
-            meta: { requestId: req.id },
-          });
+          return res.status(401).json(fail('SESSION_EXPIRED', 'Session has expired', { requestId: req.id }, req.id));
         }
 
         const session = JSON.parse(sessionData);
@@ -98,14 +81,11 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
       return next();
     } catch (redisErr) {
       logger.warn({ err: redisErr, childId }, 'Redis unavailable — returning 503');
-      return res.status(503).json({
-        error: { code: 'SERVICE_UNAVAILABLE', message: 'Authentication service temporarily unavailable' },
-        meta: { requestId: req.id },
-      });
+      return res.status(503).json(fail('SERVICE_UNAVAILABLE', 'Authentication service temporarily unavailable', { requestId: req.id }, req.id));
     }
   } catch (syncErr) {
     logger.error({ err: syncErr }, 'authMiddleware sync error');
-    return res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
+    return res.status(500).json(fail('INTERNAL_ERROR', 'Something went wrong — please try again later', { requestId: req.id }, req.id));
   }
 });
 
@@ -124,10 +104,7 @@ export const sessionTimeoutMiddleware = asyncHandler(async function sessionTimeo
     try {
       const sessionData = await redis.get(`session:${childId}:${sessionId}`);
       if (!sessionData) {
-        return res.status(401).json({
-          error: { code: 'SESSION_EXPIRED', message: 'Session has expired' },
-          meta: { requestId: req.id },
-        });
+        return res.status(401).json(fail('SESSION_EXPIRED', 'Session has expired', { requestId: req.id }, req.id));
       }
 
       const session = JSON.parse(sessionData);
@@ -136,29 +113,20 @@ export const sessionTimeoutMiddleware = asyncHandler(async function sessionTimeo
       const idleMin = idleMs / 60000;
 
       if (idleMin > 30) {
-        return res.status(401).json({
-          error: { code: 'SESSION_EXPIRED', message: 'Session expired due to inactivity' },
-          meta: { requestId: req.id },
-        });
+        return res.status(401).json(fail('SESSION_EXPIRED', 'Session has expired', { requestId: req.id }, req.id));
       }
 
       if (idleMin > 25) {
-        return res.status(419).json({
-          error: { code: 'SESSION_TIMEOUT_WARNING', message: 'Session is about to expire due to inactivity' },
-          meta: { requestId: req.id },
-        });
+        return res.status(419).json(fail('SESSION_TIMEOUT', 'Your session is about to expire due to inactivity', { requestId: req.id }, req.id));
       }
 
       return next();
     } catch (redisErr) {
       logger.warn({ err: redisErr, childId }, 'Redis unavailable — session timeout check skipped');
-      return res.status(503).json({
-        error: { code: 'SERVICE_UNAVAILABLE', message: 'Authentication service temporarily unavailable' },
-        meta: { requestId: req.id },
-      });
+      return res.status(503).json(fail('SERVICE_UNAVAILABLE', 'Authentication service temporarily unavailable', { requestId: req.id }, req.id));
     }
   } catch (syncErr) {
     logger.error({ err: syncErr }, 'sessionTimeoutMiddleware sync error');
-    return res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
+    return res.status(500).json(fail('INTERNAL_ERROR', 'Something went wrong — please try again later', { requestId: req.id }, req.id));
   }
 });

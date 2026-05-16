@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint src/",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -17,6 +19,7 @@
     "@tiptap/react": "^2.8.0",
     "@tiptap/starter-kit": "^2.8.0",
     "axios": "^1.7.7",
+    "dompurify": "^3.4.3",
     "fabric": "^6.4.0",
     "flowbite-react": "^0.10.2",
     "framer-motion": "^11.11.0",
@@ -39,6 +42,7 @@
     "@vitejs/plugin-react": "^4.3.2",
     "@vitest/coverage-v8": "^2.1.9",
     "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.47",
     "vite": "^5.4.9",

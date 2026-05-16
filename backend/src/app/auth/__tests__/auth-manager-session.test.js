@@ -50,7 +50,7 @@ vi.mock('bcryptjs', () => ({
   compare: vi.fn(),
 }));
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+const _JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 
 // Helper: create an async generator from an array of keys (for scanIterator mock)
 function mockScanIterator(keys) {

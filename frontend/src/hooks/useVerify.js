@@ -6,7 +6,6 @@ import useAuthStore from '../stores/auth-store';
 
 export default function useVerify() {
   const { t } = useTranslation('auth');
-  const setToken = useAuthStore((s) => s.setToken);
   const setUser = useAuthStore((s) => s.setUser);
   const setOnboardingComplete = useAuthStore((s) => s.setOnboardingComplete);
 
