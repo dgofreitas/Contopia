@@ -25,7 +25,7 @@ try {
   RateLimitStore = undefined;
 }
 
-function createLimiter({ windowMs, max, message, keyGenerator }) {
+function createLimiter({ windowMs, max, message: _message, keyGenerator }) {
   const opts = {
     windowMs,
     max,
@@ -247,21 +247,17 @@ router.post('/login', loginLimiter, async (req, res) => {
         return res.status(429).json(fail('RATE_LIMITED', 'Too many login attempts.', { requestId }));
       }
 
-      try {
-        const result = await authManager.loginWithPassword({ childId, password, ip, deviceHint });
-        return res.status(200).json(ok({
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-          childId: result.childId,
-          childFirstName: result.childFirstName,
-          isOnboardingComplete: result.isOnboardingComplete,
-          method: result.method,
-          sessionId: result.sessionId,
-        }, { requestId }));
-      } catch (loginErr) {
-        // Don't reset attempts on failure — let rate limiter handle it
-        throw loginErr;
-      }
+      // Don't reset attempts on failure — let rate limiter handle it
+      const result = await authManager.loginWithPassword({ childId, password, ip, deviceHint });
+      return res.status(200).json(ok({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        childId: result.childId,
+        childFirstName: result.childFirstName,
+        isOnboardingComplete: result.isOnboardingComplete,
+        method: result.method,
+        sessionId: result.sessionId,
+      }, { requestId }));
     }
 
     if (method === 'magic-link') {
@@ -355,7 +351,7 @@ router.delete('/account', authMiddleware, async (req, res) => {
   const requestId = req.id;
 
   try {
-    const result = await authManager.deleteAccountManager({ childId: req.childId });
+    const _result = await authManager.deleteAccountManager({ childId: req.childId });
 
     return res.status(200).json(ok({ deleted: true }, { requestId }));
   } catch (err) {
@@ -376,7 +372,7 @@ function handleError(err, req, res) {
     message = 'Something went wrong — please try again later';
   }
 
-  return res.status(status).json(fail(code, message, { requestId }));
+  return res.status(status).json(fail(code, message, { requestId }, requestId));
 }
 
 export default router;

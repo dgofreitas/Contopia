@@ -1,0 +1,22 @@
+{
+  "VALIDATION_ERROR": "That doesn't look right — please try again",
+  "VALIDATION_ERROR.title": "Your book needs a title — what will you call it?",
+  "UNAUTHORIZED": "You need to sign in first",
+  "TOKEN_EXPIRED": "Your session expired — please sign in again",
+  "TOKEN_REVOKED": "Your session was signed out — please sign in again",
+  "FORBIDDEN": "You don't have permission to do that",
+  "NOT_FOUND": "We couldn't find that — try going back",
+  "RATE_LIMITED": "Slow down — try again in a minute",
+  "PAYLOAD_TOO_LARGE": "This file is too big! Try a smaller picture.",
+  "SESSION_EXPIRED": "Your session has expired",
+  "SESSION_TIMEOUT": "Your session is about to expire due to inactivity",
+  "SERVICE_UNAVAILABLE": "Something's not working right now — try again soon",
+  "INTERNAL_ERROR": "Something went wrong — please try again later",
+  "NETWORK_ERROR": "No internet — your work is safe! Try again.",
+  "TIMEOUT_ERROR": "It's taking too long to respond — try again.",
+  "OFFLINE": "No internet — your work is safe!",
+  "BACK_ONLINE": "You're back! Connected again.",
+  "TRY_AGAIN": "Try Again",
+  "GOT_IT": "Got it",
+  "MULTIPLE_ERRORS": "{{count}} things went wrong — try again."
+}

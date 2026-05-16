@@ -21,12 +21,14 @@ export function paginated(data, pagination) {
 }
 
 /**
- * Error envelope.
+ * Error envelope with optional trace ID for support correlation.
  * @param {string} code - Error code (e.g. 'VALIDATION_ERROR')
  * @param {string} message - Child-friendly error message
- * @param {object} meta - Additional metadata
- * @returns {{ error: { code, message }, meta }}
+ * @param {object} meta - Additional metadata (may include requestId)
+ * @param {string|null} traceId - Request trace ID (defaults to meta?.requestId)
+ * @returns {{ error: { code, message, traceId }, meta }}
  */
-export function fail(code, message, meta = {}) {
-  return { error: { code, message }, meta };
+export function fail(code, message, meta = {}, traceId = null) {
+  const id = traceId ?? meta?.requestId ?? null;
+  return { error: { code, message, traceId: id }, meta };
 }

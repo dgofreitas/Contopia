@@ -13,6 +13,8 @@ import storageRouter from './app/storage/storage-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
 import { rateLimitMiddleware } from './app/common/rate-limit-middleware.js';
 import { fail } from './app/common/response-envelope.js';
+import { getErrorMessage } from './app/common/error-codes.js';
+import { readyHandler } from './app/ready-route.js';
 
 const logger = pino({
   name: 'app',
@@ -52,6 +54,9 @@ app.use(pinoHttp({ logger, reqIdExpr: 'id' }));
 // Auth routes (handle their own auth/rate-limiting)
 app.use('/api/auth', authRouter);
 
+// Readiness probe — public, no auth required (mounted BEFORE auth middleware)
+app.get('/api/v1/ready', readyHandler);
+
 // V1 API routes — auth + per-user rate limiting applied at mount level
 app.use('/api/v1', authMiddleware, rateLimitMiddleware);
 app.use('/api/v1/books', bookRouter);
@@ -60,11 +65,11 @@ app.use('/api/v1', storageRouter);
 
 // Protected placeholder routes (auth required)
 app.use('/api/shelf', authMiddleware);
-app.use('/api/shelf', (_req, res) => res.status(404).json({ error: 'Not found' }));
+app.use('/api/shelf', (_req, res) => res.status(404).json(fail('NOT_FOUND', getErrorMessage('NOT_FOUND'), { requestId: _req.id }, _req.id)));
 
 // Sensitive routes: also require sessionTimeoutMiddleware
 app.use('/api/settings', authMiddleware, sessionTimeoutMiddleware);
-app.use('/api/settings', (_req, res) => res.status(404).json({ error: 'Not found' }));
+app.use('/api/settings', (_req, res) => res.status(404).json(fail('NOT_FOUND', getErrorMessage('NOT_FOUND'), { requestId: _req.id }, _req.id)));
 
 // ── Global Rate Limiting ──────────────────────────────────────────────────
 app.use(
@@ -74,6 +79,7 @@ app.use(
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests — try again later' },
+    handler: (req, res) => res.status(429).json(fail('RATE_LIMITED', getErrorMessage('RATE_LIMITED'), { requestId: req.id }, req.id)),
   })
 );
 
@@ -87,7 +93,7 @@ app.get('/health', (_req, res) => {
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
-  res.status(404).json({ error: 'Not found' });
+  res.status(404).json(fail('NOT_FOUND', getErrorMessage('NOT_FOUND'), { requestId: _req.id }, _req.id));
 });
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
@@ -99,7 +105,7 @@ app.use((err, req, res, _next) => {
     url: req.originalUrl,
   }, 'Unhandled error');
 
-  res.status(500).json(fail('INTERNAL_ERROR', 'Something went wrong — please try again later', { requestId: req.id }));
+  res.status(500).json(fail('INTERNAL_ERROR', getErrorMessage('INTERNAL_ERROR'), { requestId: req.id }, req.id));
 });
 
 export default app;
