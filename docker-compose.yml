@@ -8,7 +8,7 @@ networks:
   backend:
     driver: bridge
     name: contopia_backend
-    internal: false        # internal but isolated — only backend containers join
+    internal: true          # DBs & cache never exposed externally
 
 volumes:
   mongodb_data:

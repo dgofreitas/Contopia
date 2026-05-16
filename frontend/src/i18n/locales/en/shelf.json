@@ -7,5 +7,12 @@
   "editBook": "Write",
   "deleteBook": "Delete",
   "confirmDelete": "Are you sure you want to delete this story?",
-  "lastEdited": "Edited {{date}}"
+  "lastEdited": "Edited {{date}}",
+  "loading": "Loading your bookshelf…",
+  "errorTitle": "Oops!",
+  "errorMessage": "Something went wrong loading your bookshelf.",
+  "retryButton": "Try again",
+  "ariaShelfLabel": "Bookshelf with {{count}} books",
+  "ariaSpineLabel": "{{title}}",
+  "emptyTitle": "No stories yet"
 }

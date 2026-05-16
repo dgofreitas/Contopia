@@ -97,7 +97,7 @@ describe('Asset DAO', () => {
     });
 
     it('should not return soft-deleted assets', async () => {
-      const a1 = await bookDao.createAsset(assetData({ url: 'https://example.com/keep.jpg' }));
+      const _a1 = await bookDao.createAsset(assetData({ url: 'https://example.com/keep.jpg' }));
       const a2 = await bookDao.createAsset(assetData({ url: 'https://example.com/remove.jpg' }));
       await bookDao.softDeleteAsset(a2._id);
 

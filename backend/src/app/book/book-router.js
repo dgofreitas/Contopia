@@ -35,7 +35,7 @@ router.post('/', validate(bookCreateSchemaV2, 'body'), async (req, res) => {
 
 // ── GET / — List books by author (paginated) ─────────────────────────────────
 router.get('/', validate(bookListQuerySchema, 'query'), async (req, res) => {
-  const requestId = req.id;
+  const _requestId = req.id;
 
   try {
     const { status, page, pageSize } = req._query;
@@ -204,10 +204,7 @@ function handleError(err, req, res) {
     logger.error({ err, requestId }, 'Unhandled book error');
   }
 
-  return res.status(status).json({
-    error: { code, message },
-    meta: { requestId },
-  });
+  return res.status(status).json(fail(code, message, { requestId }, requestId));
 }
 
 export default router;

@@ -90,7 +90,7 @@ describe('Book DAO', () => {
     });
 
     it('should not return soft-deleted books', async () => {
-      const b1 = await bookDao.createBook({ authorId, title: 'Keep' });
+      const _b1 = await bookDao.createBook({ authorId, title: 'Keep' });
       const b2 = await bookDao.createBook({ authorId, title: 'Remove' });
       await bookDao.softDeleteBook(b2._id);
 

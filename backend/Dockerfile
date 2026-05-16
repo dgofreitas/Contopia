@@ -23,6 +23,8 @@ COPY shared/ /shared/
 
 EXPOSE 8000
 
+  # /health  → liveness probe  (process alive, always 200)
+  # /api/v1/ready → readiness probe (dependencies connected, 200 or 503)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
 
@@ -47,6 +49,8 @@ USER nodejs
 
 EXPOSE 8000
 
+  # /health  → liveness probe  (process alive, always 200)
+  # /api/v1/ready → readiness probe (dependencies connected, 200 or 503)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
 

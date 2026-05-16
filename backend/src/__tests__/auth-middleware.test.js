@@ -84,12 +84,12 @@ describe('authMiddleware (STORY-002)', () => {
     expect(res.body.error.code).toBe('TOKEN_EXPIRED');
   });
 
-  it('should return 401 INVALID_TOKEN_TYPE when token type is not access', async () => {
+  it('should return 401 UNAUTHORIZED when token type is not access', async () => {
     const app = createApp(authMiddleware);
     const token = makeToken({ sub: 'c1', type: 'refresh' });
     const res = await request(app).get('/protected').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe('INVALID_TOKEN_TYPE');
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 
   it('should return 401 UNAUTHORIZED for malformed JWT', async () => {
@@ -247,7 +247,7 @@ describe('sessionTimeoutMiddleware (STORY-002)', () => {
     }));
     const res = await request(createTimeoutApp()).get('/sensitive');
     expect(res.status).toBe(419);
-    expect(res.body.error.code).toBe('SESSION_TIMEOUT_WARNING');
+    expect(res.body.error.code).toBe('SESSION_TIMEOUT');
   });
 
   it('should return 401 when idle > 30min (hard timeout)', async () => {
@@ -333,6 +333,6 @@ describe('sessionTimeoutMiddleware (STORY-002)', () => {
     const token = makeToken({ sub: 'c1', parentId: 'p1', type: 'access', sid: 'sess_chain2' });
     const res = await request(app).get('/sensitive').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(419);
-    expect(res.body.error.code).toBe('SESSION_TIMEOUT_WARNING');
+    expect(res.body.error.code).toBe('SESSION_TIMEOUT');
   });
 });

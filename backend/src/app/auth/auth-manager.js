@@ -18,10 +18,10 @@ import {
   activateChild,
   findPendingChildByParent,
   findChildByIdWithPassword,
-  updateChildPassword,
+  _updateChildPassword,
   createAuditLog,
   softDeleteChildById,
-  hardDeleteChildById,
+  _hardDeleteChildById,
 } from './auth-dao.js';
 import { purgeAssetsByAuthorManager } from '../storage/storage-manager.js';
 
@@ -98,7 +98,7 @@ export function hashToken(jwtString) {
  * Stores new session with TTL 1800s and refresh hash with TTL 604800s.
  * Returns { sessionId }.
  */
-export async function createSession({ childId, parentId, accessToken, refreshToken, ip, deviceHint }) {
+export async function createSession({ childId, parentId, accessToken: _accessToken, refreshToken, ip, deviceHint }) {
   const sessionId = `sess_${crypto.randomBytes(8).toString('hex')}`;
   const childIdStr = childId.toString();
 

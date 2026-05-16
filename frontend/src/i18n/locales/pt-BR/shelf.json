@@ -7,5 +7,12 @@
   "editBook": "Escrever",
   "deleteBook": "Apagar",
   "confirmDelete": "Tem certeza que quer apagar esta história?",
-  "lastEdited": "Editada {{date}}"
+  "lastEdited": "Editada {{date}}",
+  "loading": "Carregando sua estante…",
+  "errorTitle": "Ops!",
+  "errorMessage": "Algo deu errado ao carregar sua estante.",
+  "retryButton": "Tentar novamente",
+  "ariaShelfLabel": "Estante com {{count}} livros",
+  "ariaSpineLabel": "{{title}}",
+  "emptyTitle": "Nenhuma história ainda"
 }

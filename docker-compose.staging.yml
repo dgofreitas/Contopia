@@ -1,0 +1,51 @@
+# Contopia — Staging Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.staging.yml up
+#
+# Staging mirrors production settings but with:
+# - Relaxed resource limits (non-HA)
+# - Staging-specific environment
+# - More verbose logging for debugging
+
+services:
+  nginx:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  frontend:
+    build:
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_ENVIRONMENT: staging
+
+  backend:
+    environment:
+      - NODE_ENV=staging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  mongodb:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  redis:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  minio:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

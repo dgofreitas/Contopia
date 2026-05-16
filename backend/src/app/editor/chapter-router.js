@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import pino from 'pino';
 import { validate } from '../common/validation-middleware.js';
-import { ok } from '../common/response-envelope.js';
+import { ok, fail } from '../common/response-envelope.js';
 import { chapterPutSchema, chapterPutBodySchema } from '../common/validation-schemas.js';
 import * as chapterManager from './chapter-manager.js';
 
@@ -42,10 +42,7 @@ function handleError(err, req, res) {
     logger.error({ err, requestId }, 'Unhandled chapter error');
   }
 
-  return res.status(status).json({
-    error: { code, message },
-    meta: { requestId },
-  });
+  return res.status(status).json(fail(code, message, { requestId }, requestId));
 }
 
 export default router;

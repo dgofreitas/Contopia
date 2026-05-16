@@ -130,7 +130,7 @@ export default function useAuth() {
       if (expireTimerRef.current) clearTimeout(expireTimerRef.current);
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-  }, [isAuthenticated, lastActivity]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, lastActivity]);
 
   const logout = useCallback(async () => {
     await useAuthStore.getState().logout();

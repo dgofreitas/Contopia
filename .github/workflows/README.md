@@ -1,6 +1,6 @@
 # GitHub Actions
 
-Workflows estão temporariamente desabilitados porque a conta do GitHub e basica (Free).
+Workflows estão temporariamente desabilitados porque a conta do GitHub e básica (Free).
 
 Para reativar, renomeie `ci-cd.yml.disabled` de volta para `ci-cd.yml`.
 
@@ -24,4 +24,4 @@ Para reativar, renomeie `ci-cd.yml.disabled` de volta para `ci-cd.yml`.
    git push
    ```
 
-3. Certifique-se de que GitHub Actions esteja habilitado nas configuracoes do repositorio (requer conta Pro ou superior).
+3. Certifique-se de que GitHub Actions esteja habilitado nas configurações do repositório (requer conta Pro ou superior).

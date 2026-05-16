@@ -1,7 +1,7 @@
 // Contopia — Vitest Global Setup
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import pino from 'pino';
+
 
 // Suppress logging in tests
 process.env.JWT_SECRET = 'test-secret';

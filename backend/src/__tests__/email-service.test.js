@@ -14,7 +14,7 @@ vi.mock('pino', () => ({
 import { sendVerificationEmail } from '../app/common/email-service.js';
 
 // Helper to swap transport at runtime via module re-evaluation
-async function setTransport(t) {
+async function _setTransport(t) {
   vi.doMock('../config/email.js', () => ({
     transport: t,
     FROM_ADDRESS: 'noreply@contopia.com',
