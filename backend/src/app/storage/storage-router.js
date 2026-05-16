@@ -57,7 +57,7 @@ router.get(
   '/assets/:assetId',
   validate(assetIdParamSchema, 'params'),
   async (req, res) => {
-    const requestId = req.id;
+    const _requestId = req.id;
 
     try {
       const { url } = await storageManager.getSignedUrlManager({
@@ -76,7 +76,7 @@ router.get(
 function handleMulterError(err, req, res, next) {
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json(
-      fail('PAYLOAD_TOO_LARGE', 'This file is too big! Try a smaller picture.', { requestId: req.id }),
+      fail('PAYLOAD_TOO_LARGE', 'This file is too big! Try a smaller picture.', { requestId: req.id }, req.id),
     );
   }
   next(err);
@@ -96,10 +96,7 @@ function handleError(err, req, res) {
     logger.error({ err, requestId }, 'Unhandled storage error');
   }
 
-  return res.status(status).json({
-    error: { code, message },
-    meta: { requestId },
-  });
+  return res.status(status).json(fail(code, message, { requestId }, requestId));
 }
 
 export default router;
