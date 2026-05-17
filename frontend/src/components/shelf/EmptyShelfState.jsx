@@ -42,7 +42,7 @@ export default function EmptyShelfState() {
       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
         <Button
           onClick={() => navigate('/editor/new')}
-          className="bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold py-3 px-6 rounded-xl flex items-center gap-2 min-h-[48px] min-w-[48px]"
+          className="bg-amber-600 hover:bg-amber-700 focus:ring-amber-300 text-white font-semibold py-3 px-6 rounded-xl flex items-center gap-2 min-h-[48px] min-w-[48px]"
           aria-label={t('writeFirstBook')}
         >
           <HiPlus className="w-5 h-5" />
