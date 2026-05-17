@@ -2,7 +2,7 @@
   "title": "Estante",
   "subtitle": "Sua estante digital de histórias!",
   "createBook": "Criar história",
-  "emptyHint": "Sua estante está vazia. Crie sua primeira história!",
+  "emptyHint": "Todo grande autor começa com sua primeira história. Vamos começar a sua!",
   "openBook": "Ler",
   "editBook": "Escrever",
   "deleteBook": "Apagar",
@@ -14,5 +14,6 @@
   "retryButton": "Tentar novamente",
   "ariaShelfLabel": "Estante com {{count}} livros",
   "ariaSpineLabel": "{{title}}",
-  "emptyTitle": "Nenhuma história ainda"
+  "emptyTitle": "Sua estante está esperando!",
+  "writeFirstBook": "Escrever Meu Primeiro Livro"
 }
