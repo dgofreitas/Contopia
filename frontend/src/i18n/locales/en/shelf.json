@@ -21,5 +21,12 @@
   "pullOut.designCover": "Design Cover",
   "pullOut.summary": "Summary",
   "pullOut.ariaActions": "Book actions",
-  "pullOut.ariaDismiss": "Dismiss"
+  "pullOut.ariaDismiss": "Dismiss",
+  "coverOverlay.title": "Cover View",
+  "coverOverlay.readBook": "Read Book",
+  "coverOverlay.close": "Close",
+  "coverOverlay.viewCover": "View Cover",
+  "coverOverlay.defaultCover": "Default cover for {{title}}",
+  "coverOverlay.ariaLabel": "Cover view for {{title}}",
+  "coverOverlay.authorBy": "by {{name}}"
 }

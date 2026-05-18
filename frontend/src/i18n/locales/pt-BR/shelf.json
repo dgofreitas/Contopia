@@ -21,5 +21,12 @@
   "pullOut.designCover": "Capa",
   "pullOut.summary": "Resumo",
   "pullOut.ariaActions": "Ações do livro",
-  "pullOut.ariaDismiss": "Fechar"
+  "pullOut.ariaDismiss": "Fechar",
+  "coverOverlay.title": "Ver Capa",
+  "coverOverlay.readBook": "Ler Livro",
+  "coverOverlay.close": "Fechar",
+  "coverOverlay.viewCover": "Ver Capa",
+  "coverOverlay.defaultCover": "Capa padrão para {{title}}",
+  "coverOverlay.ariaLabel": "Visualização da capa de {{title}}",
+  "coverOverlay.authorBy": "por {{name}}"
 }

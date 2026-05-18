@@ -1,4 +1,4 @@
-// Contopia — PulledOutBookCard Component Tests (STORY-011)
+// Contopia — PulledOutBookCard Component Tests (STORY-011 + STORY-012)
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PulledOutBookCard from '../components/shelf/PulledOutBookCard';
@@ -11,10 +11,23 @@ const baseBook = {
   summary: 'This is a very long summary that exceeds one hundred twenty characters and should be truncated in the card display with an ellipsis.',
 };
 
+// Helper to render with all required props (STORY-012: onViewCover added)
+function renderPulledOutCard(book = baseBook, overrides = {}) {
+  const props = {
+    onRead: vi.fn(),
+    onEdit: vi.fn(),
+    onDesignCover: vi.fn(),
+    onViewCover: vi.fn(),
+    book,
+    ...overrides,
+  };
+  return { ...render(<PulledOutBookCard {...props} />), props };
+}
+
 describe('PulledOutBookCard', () => {
   describe('rendering', () => {
     it('renders the book title', () => {
-      render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard();
       expect(screen.getByText('My Little Pony')).toBeInTheDocument();
     });
 
@@ -24,7 +37,7 @@ describe('PulledOutBookCard', () => {
         title: '<script>alert("xss")</script>',
         summary: 'Test summary',
       };
-      render(<PulledOutBookCard book={bookWithXSS} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard(bookWithXSS);
       // The sanitizeText function removes script tags
       expect(document.querySelector('script')).not.toBeInTheDocument();
       // The title h3 may be empty or contain sanitized text
@@ -35,7 +48,7 @@ describe('PulledOutBookCard', () => {
     });
 
     it('renders summary excerpt truncated at 120 characters', () => {
-      render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard();
       // Find the paragraph with the summary
       const summaryPara = screen.getByText((content) => {
         return content.startsWith('This is a very long summary') && content.endsWith('…');
@@ -51,7 +64,7 @@ describe('PulledOutBookCard', () => {
         title: 'Short Book',
         summary: 'A short summary',
       };
-      render(<PulledOutBookCard book={shortBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard(shortBook);
       expect(screen.getByText('A short summary')).toBeInTheDocument();
     });
 
@@ -60,33 +73,53 @@ describe('PulledOutBookCard', () => {
         _id: 'book-no-summary',
         title: 'No Summary',
       };
-      render(<PulledOutBookCard book={noSummaryBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard(noSummaryBook);
       expect(screen.queryByText((text) => text.includes('…'))).not.toBeInTheDocument();
     });
 
-    it('renders cover placeholder div with aria-hidden', () => {
-      const { container } = render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
-      const placeholder = container.querySelector('[aria-hidden="true"]');
-      expect(placeholder).toBeInTheDocument();
+    it('renders cover area as a button with view cover label', () => {
+      renderPulledOutCard();
+      const coverButtons = screen.getAllByLabelText('coverOverlay.viewCover');
+      expect(coverButtons.length).toBeGreaterThanOrEqual(1);
+      expect(coverButtons[0].tagName).toBe('BUTTON');
     });
 
     it('has role="group" for a11y', () => {
-      const { container } = render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      const { container } = renderPulledOutCard();
       const group = container.querySelector('[role="group"]');
       expect(group).toBeInTheDocument();
     });
   });
 
   describe('action buttons', () => {
-    it('renders 3 action buttons', () => {
-      render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+    it('renders 5 action buttons (1 cover area + 4 in row)', () => {
+      renderPulledOutCard();
       const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBe(3);
+      expect(buttons.length).toBe(5);
+    });
+
+    it('"View Cover" button in button row fires onViewCover callback', () => {
+      const { props } = renderPulledOutCard();
+      const viewCoverButtons = screen.getAllByLabelText('coverOverlay.viewCover');
+      // There are 2 buttons with this label - the cover area and the button in the row
+      // The one in the button row is the second one
+      const rowButton = viewCoverButtons[1];
+      fireEvent.click(rowButton);
+      expect(props.onViewCover).toHaveBeenCalledTimes(1);
+    });
+
+    it('Cover area button fires onViewCover callback', () => {
+      const { props } = renderPulledOutCard();
+      const coverButtons = screen.getAllByLabelText('coverOverlay.viewCover');
+      // The cover area button is the first one (h-16)
+      const areaButton = coverButtons[0];
+      fireEvent.click(areaButton);
+      expect(props.onViewCover).toHaveBeenCalledTimes(1);
     });
 
     it('button callbacks fire correctly for Read button', () => {
       const onRead = vi.fn();
-      render(<PulledOutBookCard book={baseBook} onRead={onRead} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard(undefined, { onRead });
       const readButton = screen.getByLabelText('pullOut.read');
       fireEvent.click(readButton);
       expect(onRead).toHaveBeenCalledTimes(1);
@@ -94,7 +127,7 @@ describe('PulledOutBookCard', () => {
 
     it('button callbacks fire correctly for Edit button', () => {
       const onEdit = vi.fn();
-      render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={onEdit} onDesignCover={vi.fn()} />);
+      renderPulledOutCard(undefined, { onEdit });
       const editButton = screen.getByLabelText('pullOut.edit');
       fireEvent.click(editButton);
       expect(onEdit).toHaveBeenCalledTimes(1);
@@ -102,7 +135,7 @@ describe('PulledOutBookCard', () => {
 
     it('button callbacks fire correctly for Design Cover button', () => {
       const onDesignCover = vi.fn();
-      render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={onDesignCover} />);
+      renderPulledOutCard(undefined, { onDesignCover });
       const designButton = screen.getByLabelText('pullOut.designCover');
       fireEvent.click(designButton);
       expect(onDesignCover).toHaveBeenCalledTimes(1);
@@ -111,16 +144,19 @@ describe('PulledOutBookCard', () => {
 
   describe('i18n integration', () => {
     it('uses i18n keys for aria-labels', () => {
-      const { container } = render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      const { container } = renderPulledOutCard();
       const group = container.querySelector('[role="group"]');
       expect(group).toHaveAttribute('aria-label', 'pullOut.ariaActions');
     });
 
     it('uses i18n keys for button labels', () => {
-      render(<PulledOutBookCard book={baseBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard();
       expect(screen.getByLabelText('pullOut.read')).toBeInTheDocument();
       expect(screen.getByLabelText('pullOut.edit')).toBeInTheDocument();
       expect(screen.getByLabelText('pullOut.designCover')).toBeInTheDocument();
+      // There are 2 "View Cover" buttons
+      const viewCoverBtns = screen.getAllByLabelText('coverOverlay.viewCover');
+      expect(viewCoverBtns).toHaveLength(2);
     });
   });
 
@@ -131,7 +167,7 @@ describe('PulledOutBookCard', () => {
         summary: 'Summary without title',
       };
       expect(() => {
-        render(<PulledOutBookCard book={noTitleBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+        renderPulledOutCard(noTitleBook);
       }).not.toThrow();
     });
 
@@ -141,7 +177,7 @@ describe('PulledOutBookCard', () => {
         title: 'Null Summary',
         summary: null,
       };
-      render(<PulledOutBookCard book={nullSummaryBook} onRead={vi.fn()} onEdit={vi.fn()} onDesignCover={vi.fn()} />);
+      renderPulledOutCard(nullSummaryBook);
       expect(screen.getByText('Null Summary')).toBeInTheDocument();
     });
   });
