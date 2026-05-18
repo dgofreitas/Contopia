@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import BookshelfGrid from '../components/shelf/BookshelfGrid';
 
 // setup.js already mocks react-i18next to pass through keys
@@ -14,6 +14,11 @@ vi.mock('react-router-dom', () => ({
 describe('BookshelfGrid', () => {
   beforeEach(() => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1200);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const books = Array.from({ length: 14 }, (_, i) => ({
@@ -215,6 +220,108 @@ describe('BookshelfGrid', () => {
       const coverCloseBtnAfter = screen.queryByLabelText('coverOverlay.close');
       expect(pulledOutBackdropAfter).not.toBeInTheDocument();
       expect(coverCloseBtnAfter).not.toBeInTheDocument();
+    });
+  });
+
+  describe('STORY-013: place-back flow', () => {
+    it('place-back button triggers place-back flow', () => {
+      const bookWithDetails = {
+        _id: '1',
+        title: 'Book A',
+        authorName: 'Author Name',
+        description: 'A description',
+        coverUrl: 'https://example.com/cover.jpg',
+      };
+      render(<BookshelfGrid books={[bookWithDetails]} onBookClick={vi.fn()} />);
+
+      // Pull out
+      const bookBtn = screen.getByText('Book A');
+      fireEvent.click(bookBtn);
+
+      // Verify pulled-out overlay is present
+      let pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+
+      // Click "Place Back" button
+      const placeBackBtn = screen.getByLabelText('placeBack');
+      fireEvent.click(placeBackBtn);
+
+      // Overlay should be gone
+      pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).not.toBeInTheDocument();
+    });
+
+    it('closing cover overlay does NOT trigger place-back', () => {
+      const bookWithDetails = {
+        _id: '1',
+        title: 'Book A',
+        authorName: 'Author Name',
+        description: 'A description',
+        coverUrl: 'https://example.com/cover.jpg',
+      };
+      render(<BookshelfGrid books={[bookWithDetails]} onBookClick={vi.fn()} />);
+
+      // Pull out
+      const bookBtn = screen.getByText('Book A');
+      fireEvent.click(bookBtn);
+
+      // Verify pulled-out overlay is present
+      let pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+
+      // Click "View Cover" button
+      const viewCoverBtns = screen.getAllByLabelText('coverOverlay.viewCover');
+      fireEvent.click(viewCoverBtns[0]);
+
+      // Cover overlay should be present
+      let coverCloseBtn = screen.getByLabelText('coverOverlay.close');
+      expect(coverCloseBtn).toBeInTheDocument();
+
+      // Click "Close" button in the cover overlay
+      const closeBtn = screen.getByLabelText('coverOverlay.close');
+      fireEvent.click(closeBtn);
+
+      // Cover overlay should be gone
+      coverCloseBtn = screen.queryByLabelText('coverOverlay.close');
+      expect(coverCloseBtn).not.toBeInTheDocument();
+
+      // But pulled-out overlay should still be present (book still pulled out)
+      pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+    });
+
+    it('rapid pull-out and place-back cycles do not stack', () => {
+      const book = { _id: '1', title: 'Book A' };
+      render(<BookshelfGrid books={[book]} onBookClick={vi.fn()} />);
+
+      const bookBtn = screen.getByText('Book A');
+
+      // Pull out
+      fireEvent.click(bookBtn);
+      let pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+
+      // Place back
+      const placeBackBtn = screen.getByLabelText('placeBack');
+      fireEvent.click(placeBackBtn);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).not.toBeInTheDocument();
+
+      // Pull out again after animation completes
+      fireEvent.click(bookBtn);
+      pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+
+      // Place back again
+      fireEvent.click(screen.getByLabelText('placeBack'));
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).not.toBeInTheDocument();
     });
   });
 });

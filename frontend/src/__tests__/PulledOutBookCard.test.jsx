@@ -11,13 +11,14 @@ const baseBook = {
   summary: 'This is a very long summary that exceeds one hundred twenty characters and should be truncated in the card display with an ellipsis.',
 };
 
-// Helper to render with all required props (STORY-012: onViewCover added)
+// Helper to render with all required props (STORY-012: onViewCover added; STORY-013: onPlaceBack added)
 function renderPulledOutCard(book = baseBook, overrides = {}) {
   const props = {
     onRead: vi.fn(),
     onEdit: vi.fn(),
     onDesignCover: vi.fn(),
     onViewCover: vi.fn(),
+    onPlaceBack: vi.fn(),
     book,
     ...overrides,
   };
@@ -92,10 +93,10 @@ describe('PulledOutBookCard', () => {
   });
 
   describe('action buttons', () => {
-    it('renders 5 action buttons (1 cover area + 4 in row)', () => {
+    it('renders 6 action buttons (1 cover area + 4 in row + 1 place back)', () => {
       renderPulledOutCard();
       const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBe(5);
+      expect(buttons.length).toBe(6);
     });
 
     it('"View Cover" button in button row fires onViewCover callback', () => {
@@ -139,6 +140,27 @@ describe('PulledOutBookCard', () => {
       const designButton = screen.getByLabelText('pullOut.designCover');
       fireEvent.click(designButton);
       expect(onDesignCover).toHaveBeenCalledTimes(1);
+    });
+
+    it('"Place Back" button renders with aria-label', () => {
+      renderPulledOutCard();
+      const placeBackBtn = screen.getByLabelText('placeBack');
+      expect(placeBackBtn).toBeInTheDocument();
+    });
+
+    it('"Place Back" button callback fires on click', () => {
+      const onPlaceBack = vi.fn();
+      renderPulledOutCard(undefined, { onPlaceBack });
+      const placeBackBtn = screen.getByLabelText('placeBack');
+      fireEvent.click(placeBackBtn);
+      expect(onPlaceBack).toHaveBeenCalledTimes(1);
+    });
+
+    it('"Place Back" button has correct styling classes', () => {
+      renderPulledOutCard();
+      const placeBackBtn = screen.getByLabelText('placeBack');
+      expect(placeBackBtn).toHaveClass('bg-amber-100');
+      expect(placeBackBtn).toHaveClass('text-amber-800');
     });
   });
 

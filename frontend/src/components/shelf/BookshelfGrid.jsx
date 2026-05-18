@@ -36,7 +36,7 @@ export default function BookshelfGrid({ books, onBookClick }) {
   const prefersReducedMotion = useReducedMotion();
   const [booksPerRow, setBooksPerRow] = useState(getBooksPerRow);
   const navigate = useNavigate();
-  const { pulledOutBookId, dismiss, toggle, isPulledOut } = usePulledOutBook();
+  const { pulledOutBookId, toggle, placeBack, isPlacingBack } = usePulledOutBook();
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
 
@@ -63,10 +63,10 @@ export default function BookshelfGrid({ books, onBookClick }) {
     setCoverOverlayOpen(false);
   }, []);
 
-  const handleDismiss = useCallback(() => {
-    dismiss();
+  const handlePlaceBack = useCallback(() => {
     setCoverOverlayOpen(false);
-  }, [dismiss]);
+    placeBack();
+  }, [placeBack]);
 
   const pulledBook = pulledOutBookId
     ? books.find((b) => b._id === pulledOutBookId)
@@ -110,21 +110,23 @@ export default function BookshelfGrid({ books, onBookClick }) {
               books={row}
               onBookClick={handleBookClick}
               pulledOutBookId={pulledOutBookId}
+              placingBackBookId={isPlacingBack ? pulledOutBookId : null}
             />
           </motion.div>
         ))}
       </motion.div>
 
       <AnimatePresence>
-        {pulledBook && (
+        {pulledBook && !isPlacingBack && (
           <PulledOutOverlay
             key="overlay"
             book={pulledBook}
-            onDismiss={handleDismiss}
+            onDismiss={handlePlaceBack}
             onRead={() => navigate(`/reader/${pulledBook._id}`)}
             onEdit={() => navigate(`/editor/${pulledBook._id}`)}
             onDesignCover={() => navigate(`/editor/${pulledBook._id}?tab=cover`)}
             onViewCover={handleViewCover}
+            onPlaceBack={handlePlaceBack}
             triggerRef={{ current: triggerRef }}
           />
         )}

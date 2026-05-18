@@ -75,4 +75,46 @@ describe('ShelfRow', () => {
     expect(buttons[1]).toHaveAttribute('aria-expanded', 'true');
     expect(buttons[2]).toHaveAttribute('aria-expanded', 'false');
   });
+
+  describe('STORY-013: shelf shadow during place-back', () => {
+    it('has darker shadow when placingBackBookId matches a book in the row', () => {
+      const { container } = render(
+        <ShelfRow books={books} onBookClick={vi.fn()} pulledOutBookId="2" placingBackBookId="2" />
+      );
+      const shelfBar = container.querySelector('.from-amber-900');
+      expect(shelfBar).toBeInTheDocument();
+      expect(shelfBar).toHaveClass('shadow-lg');
+      expect(shelfBar).not.toHaveClass('shadow-md');
+    });
+
+    it('has normal shadow when placingBackBookId is null', () => {
+      const { container } = render(
+        <ShelfRow books={books} onBookClick={vi.fn()} pulledOutBookId="2" placingBackBookId={null} />
+      );
+      const shelfBar = container.querySelector('.from-amber-800');
+      expect(shelfBar).toBeInTheDocument();
+      expect(shelfBar).toHaveClass('shadow-md');
+      expect(shelfBar).not.toHaveClass('shadow-lg');
+    });
+
+    it('has normal shadow when placingBackBookId does not match any book in row', () => {
+      const { container } = render(
+        <ShelfRow books={books} onBookClick={vi.fn()} pulledOutBookId="2" placingBackBookId="999" />
+      );
+      const shelfBar = container.querySelector('.from-amber-800');
+      expect(shelfBar).toBeInTheDocument();
+      expect(shelfBar).toHaveClass('shadow-md');
+      expect(shelfBar).not.toHaveClass('shadow-lg');
+    });
+
+    it('shelf bar has transition classes for shadow animation', () => {
+      const { container } = render(
+        <ShelfRow books={books} onBookClick={vi.fn()} pulledOutBookId="1" placingBackBookId="1" />
+      );
+      const shelfBar = container.querySelector('.h-3.rounded-b-sm');
+      expect(shelfBar).toBeInTheDocument();
+      expect(shelfBar).toHaveClass('transition-shadow');
+      expect(shelfBar).toHaveClass('duration-300');
+    });
+  });
 });
