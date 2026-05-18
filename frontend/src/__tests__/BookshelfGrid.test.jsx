@@ -88,4 +88,133 @@ describe('BookshelfGrid', () => {
     backdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
     expect(backdrop).not.toBeInTheDocument();
   });
+
+  describe('CoverOverlay integration (STORY-012)', () => {
+    it('cover overlay opens when onViewCover is triggered from pulled-out book', () => {
+      const bookWithDetails = {
+        _id: '1',
+        title: 'Book A',
+        authorName: 'Author Name',
+        description: 'A description',
+        coverUrl: 'https://example.com/cover.jpg',
+      };
+      render(<BookshelfGrid books={[bookWithDetails]} onBookClick={vi.fn()} />);
+
+      // Pull out
+      const bookBtn = screen.getByText('Book A');
+      fireEvent.click(bookBtn);
+
+      // Click first "View Cover" button (cover area button)
+      const viewCoverBtns = screen.getAllByLabelText('coverOverlay.viewCover');
+      fireEvent.click(viewCoverBtns[0]);
+
+      // Cover overlay should now be present (check for unique close button)
+      const coverCloseBtn = screen.getByLabelText('coverOverlay.close');
+      expect(coverCloseBtn).toBeInTheDocument();
+    });
+
+    it('cover overlay closes when onClose is called', () => {
+      const bookWithDetails = {
+        _id: '1',
+        title: 'Book A',
+        authorName: 'Author Name',
+        description: 'A description',
+        coverUrl: 'https://example.com/cover.jpg',
+      };
+      render(<BookshelfGrid books={[bookWithDetails]} onBookClick={vi.fn()} />);
+
+      // Pull out
+      const bookBtn = screen.getByText('Book A');
+      fireEvent.click(bookBtn);
+
+      // Click "View Cover" button
+      const viewCoverBtns = screen.getAllByLabelText('coverOverlay.viewCover');
+      fireEvent.click(viewCoverBtns[0]);
+
+      // Cover overlay should be present (check for unique close button)
+      let coverCloseBtn = screen.getByLabelText('coverOverlay.close');
+      expect(coverCloseBtn).toBeInTheDocument();
+
+      // Click "Close" button in the cover overlay
+      const closeBtn = screen.getByLabelText('coverOverlay.close');
+      fireEvent.click(closeBtn);
+
+      // Cover overlay should be gone (close button no longer in document)
+      coverCloseBtn = screen.queryByLabelText('coverOverlay.close');
+      expect(coverCloseBtn).not.toBeInTheDocument();
+    });
+
+    it('closing cover overlay returns to pulled-out state (book still pulled out)', () => {
+      const bookWithDetails = {
+        _id: '1',
+        title: 'Book A',
+        authorName: 'Author Name',
+        description: 'A description',
+        coverUrl: 'https://example.com/cover.jpg',
+      };
+      render(<BookshelfGrid books={[bookWithDetails]} onBookClick={vi.fn()} />);
+
+      // Pull out
+      const bookBtn = screen.getByText('Book A');
+      fireEvent.click(bookBtn);
+
+      // Verify pulled-out overlay is present
+      let pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+
+      // Click "View Cover" button
+      const viewCoverBtns = screen.getAllByLabelText('coverOverlay.viewCover');
+      fireEvent.click(viewCoverBtns[0]);
+
+      // Cover overlay should be present (check for unique close button)
+      let coverCloseBtn = screen.getByLabelText('coverOverlay.close');
+      expect(coverCloseBtn).toBeInTheDocument();
+
+      // Click "Close" button in the cover overlay
+      const closeBtn = screen.getByLabelText('coverOverlay.close');
+      fireEvent.click(closeBtn);
+
+      // Cover overlay should be gone (close button no longer in document)
+      coverCloseBtn = screen.queryByLabelText('coverOverlay.close');
+      expect(coverCloseBtn).not.toBeInTheDocument();
+
+      // But pulled-out overlay should still be present (book still pulled out)
+      pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+    });
+
+    it('dismissing pulled-out overlay also closes cover overlay', () => {
+      const bookWithDetails = {
+        _id: '1',
+        title: 'Book A',
+        authorName: 'Author Name',
+        description: 'A description',
+        coverUrl: 'https://example.com/cover.jpg',
+      };
+      render(<BookshelfGrid books={[bookWithDetails]} onBookClick={vi.fn()} />);
+
+      // Pull out
+      const bookBtn = screen.getByText('Book A');
+      fireEvent.click(bookBtn);
+
+      // Click "View Cover" button
+      const viewCoverBtns = screen.getAllByLabelText('coverOverlay.viewCover');
+      fireEvent.click(viewCoverBtns[0]);
+
+      // Both overlays should be present
+      const pulledOutBackdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      const coverCloseBtn = screen.getByLabelText('coverOverlay.close');
+      expect(pulledOutBackdrop).toBeInTheDocument();
+      expect(coverCloseBtn).toBeInTheDocument();
+
+      // Dismiss pulled-out overlay (click its backdrop)
+      fireEvent.click(pulledOutBackdrop);
+
+      // Both overlays should be gone
+      const pulledOutBackdropAfter = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      const coverCloseBtnAfter = screen.queryByLabelText('coverOverlay.close');
+      expect(pulledOutBackdropAfter).not.toBeInTheDocument();
+      expect(coverCloseBtnAfter).not.toBeInTheDocument();
+    });
+  });
 });

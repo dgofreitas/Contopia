@@ -11,6 +11,7 @@ export default function PulledOutOverlay({
   onRead,
   onEdit,
   onDesignCover,
+  onViewCover,
   triggerRef,
 }) {
   const { t } = useTranslation('shelf');
@@ -90,6 +91,7 @@ export default function PulledOutOverlay({
               onRead={onRead}
               onEdit={onEdit}
               onDesignCover={onDesignCover}
+              onViewCover={onViewCover}
             />
             <button
               ref={firstBtnRef}

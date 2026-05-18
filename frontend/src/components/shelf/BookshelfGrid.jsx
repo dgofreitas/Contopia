@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import ShelfRow from './ShelfRow';
 import PulledOutOverlay from './PulledOutOverlay';
+import CoverOverlay from './CoverOverlay';
 import usePulledOutBook from '../../hooks/usePulledOutBook';
 
 const BREAKPOINTS = {
@@ -37,6 +38,7 @@ export default function BookshelfGrid({ books, onBookClick }) {
   const navigate = useNavigate();
   const { pulledOutBookId, dismiss, toggle, isPulledOut } = usePulledOutBook();
   const spineRefs = useRef({});
+  const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
 
   useEffect(() => {
     function handleResize() {
@@ -52,6 +54,19 @@ export default function BookshelfGrid({ books, onBookClick }) {
     toggle(bookId);
     onBookClick?.(bookId);
   }, [onBookClick, toggle]);
+
+  const handleViewCover = useCallback(() => {
+    setCoverOverlayOpen(true);
+  }, []);
+
+  const handleCloseCover = useCallback(() => {
+    setCoverOverlayOpen(false);
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    dismiss();
+    setCoverOverlayOpen(false);
+  }, [dismiss]);
 
   const pulledBook = pulledOutBookId
     ? books.find((b) => b._id === pulledOutBookId)
@@ -105,14 +120,24 @@ export default function BookshelfGrid({ books, onBookClick }) {
           <PulledOutOverlay
             key="overlay"
             book={pulledBook}
-            onDismiss={dismiss}
+            onDismiss={handleDismiss}
             onRead={() => navigate(`/reader/${pulledBook._id}`)}
             onEdit={() => navigate(`/editor/${pulledBook._id}`)}
             onDesignCover={() => navigate(`/editor/${pulledBook._id}?tab=cover`)}
+            onViewCover={handleViewCover}
             triggerRef={{ current: triggerRef }}
           />
         )}
       </AnimatePresence>
+
+      {coverOverlayOpen && pulledBook && (
+        <CoverOverlay
+          isOpen={coverOverlayOpen}
+          book={pulledBook}
+          onClose={handleCloseCover}
+          onRead={() => navigate(`/reader/${pulledBook._id}`)}
+        />
+      )}
     </section>
   );
 }
