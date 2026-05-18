@@ -6,24 +6,42 @@ import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 import { getTextColor, spineColorFromId } from '../../lib/spine-colors';
 
-function BookSpine({ book, onClick }) {
+const BookSpine = React.forwardRef(function BookSpine(
+  { book, onClick, isPulledOut, onPullOut },
+  ref,
+) {
   const { t } = useTranslation('shelf');
   const spineColor = book.spineColor || spineColorFromId(book._id);
   const textColor = getTextColor(spineColor);
   const title = sanitizeText(book.title);
 
+  const pulledStyle = isPulledOut
+    ? { zIndex: 50, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', transform: 'translateY(-4px) scale(1.05)', willChange: 'transform' }
+    : {};
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && onPullOut) {
+      e.preventDefault();
+      onPullOut();
+    }
+  }
+
   return (
     <motion.button
+      ref={ref}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       aria-label={t('ariaSpineLabel', { title })}
+      aria-expanded={isPulledOut}
       className="flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[44px] min-h-[44px] select-none"
       style={{
         backgroundColor: spineColor,
         color: textColor,
         width: `${Math.max(44, Math.min(120, 36 + title.length * 2))}px`,
         height: '140px',
+        ...pulledStyle,
       }}
     >
       <span
@@ -39,6 +57,6 @@ function BookSpine({ book, onClick }) {
       </span>
     </motion.button>
   );
-}
+});
 
 export default React.memo(BookSpine);
