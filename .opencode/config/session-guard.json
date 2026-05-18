@@ -1,0 +1,9 @@
+{
+    "enabled": true,
+    "logLevel": "info",
+    "firstPromptWatchdogMs": 90000,
+    "writeGuard": {
+        "enabled": true,
+        "allowNewFiles": true
+    }
+}
