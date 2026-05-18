@@ -15,5 +15,11 @@
   "ariaShelfLabel": "Bookshelf with {{count}} books",
   "ariaSpineLabel": "{{title}}",
   "emptyTitle": "Your bookshelf is waiting!",
-  "writeFirstBook": "Write My First Book"
+  "writeFirstBook": "Write My First Book",
+  "pullOut.read": "Read",
+  "pullOut.edit": "Edit",
+  "pullOut.designCover": "Design Cover",
+  "pullOut.summary": "Summary",
+  "pullOut.ariaActions": "Book actions",
+  "pullOut.ariaDismiss": "Dismiss"
 }

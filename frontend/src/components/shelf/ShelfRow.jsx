@@ -2,7 +2,7 @@
 // Single shelf row with books spines and wooden bar below
 import BookSpine from './BookSpine';
 
-export default function ShelfRow({ books, onBookClick }) {
+export default function ShelfRow({ books, onBookClick, pulledOutBookId }) {
   return (
     <div className="flex flex-col">
       <div className="flex items-end gap-1 px-2">
@@ -11,6 +11,8 @@ export default function ShelfRow({ books, onBookClick }) {
             key={book._id}
             book={book}
             onClick={() => onBookClick(book._id)}
+            isPulledOut={book._id === pulledOutBookId}
+            onPullOut={() => onBookClick(book._id)}
           />
         ))}
       </div>

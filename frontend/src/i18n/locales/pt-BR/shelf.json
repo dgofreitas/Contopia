@@ -15,5 +15,11 @@
   "ariaShelfLabel": "Estante com {{count}} livros",
   "ariaSpineLabel": "{{title}}",
   "emptyTitle": "Sua estante está esperando!",
-  "writeFirstBook": "Escrever Meu Primeiro Livro"
+  "writeFirstBook": "Escrever Meu Primeiro Livro",
+  "pullOut.read": "Ler",
+  "pullOut.edit": "Editar",
+  "pullOut.designCover": "Capa",
+  "pullOut.summary": "Resumo",
+  "pullOut.ariaActions": "Ações do livro",
+  "pullOut.ariaDismiss": "Fechar"
 }

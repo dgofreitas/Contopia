@@ -1,9 +1,12 @@
 // Contopia — BookshelfGrid
 // Distributes books into shelf rows based on viewport width
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import ShelfRow from './ShelfRow';
+import PulledOutOverlay from './PulledOutOverlay';
+import usePulledOutBook from '../../hooks/usePulledOutBook';
 
 const BREAKPOINTS = {
   mobile: 3,   // < 640px
@@ -31,6 +34,9 @@ export default function BookshelfGrid({ books, onBookClick }) {
   const { t } = useTranslation('shelf');
   const prefersReducedMotion = useReducedMotion();
   const [booksPerRow, setBooksPerRow] = useState(getBooksPerRow);
+  const navigate = useNavigate();
+  const { pulledOutBookId, dismiss, toggle, isPulledOut } = usePulledOutBook();
+  const spineRefs = useRef({});
 
   useEffect(() => {
     function handleResize() {
@@ -43,8 +49,15 @@ export default function BookshelfGrid({ books, onBookClick }) {
   const rows = useMemo(() => chunkArray(books, booksPerRow), [books, booksPerRow]);
 
   const handleBookClick = useCallback((bookId) => {
+    toggle(bookId);
     onBookClick?.(bookId);
-  }, [onBookClick]);
+  }, [onBookClick, toggle]);
+
+  const pulledBook = pulledOutBookId
+    ? books.find((b) => b._id === pulledOutBookId)
+    : null;
+
+  const triggerRef = spineRefs.current[pulledOutBookId];
 
   const containerVariants = prefersReducedMotion
     ? {}
@@ -78,10 +91,28 @@ export default function BookshelfGrid({ books, onBookClick }) {
       >
         {rows.map((row, index) => (
           <motion.div key={index} variants={spineVariants}>
-            <ShelfRow books={row} onBookClick={handleBookClick} />
+            <ShelfRow
+              books={row}
+              onBookClick={handleBookClick}
+              pulledOutBookId={pulledOutBookId}
+            />
           </motion.div>
         ))}
       </motion.div>
+
+      <AnimatePresence>
+        {pulledBook && (
+          <PulledOutOverlay
+            key="overlay"
+            book={pulledBook}
+            onDismiss={dismiss}
+            onRead={() => navigate(`/reader/${pulledBook._id}`)}
+            onEdit={() => navigate(`/editor/${pulledBook._id}`)}
+            onDesignCover={() => navigate(`/editor/${pulledBook._id}?tab=cover`)}
+            triggerRef={{ current: triggerRef }}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }

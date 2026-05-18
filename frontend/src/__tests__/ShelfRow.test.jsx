@@ -34,4 +34,45 @@ describe('ShelfRow', () => {
     const buttons = container.querySelectorAll('button');
     expect(buttons.length).toBe(0);
   });
+
+  it('passes isPulledOut=true only to the matching book', () => {
+    const { container } = render(
+      <ShelfRow books={books} onBookClick={vi.fn()} pulledOutBookId="2" />
+    );
+    const buttons = container.querySelectorAll('button');
+    expect(buttons.length).toBe(3);
+    // Only book 2 should have aria-expanded="true"
+    expect(buttons[0]).toHaveAttribute('aria-expanded', 'false');
+    expect(buttons[1]).toHaveAttribute('aria-expanded', 'true');
+    expect(buttons[2]).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('passes onBookClick to each BookSpine', () => {
+    const onClick = vi.fn();
+    render(<ShelfRow books={books} onBookClick={onClick} />);
+    const buttons = screen.getAllByRole('button');
+    fireEvent.click(buttons[0]);
+    expect(onClick).toHaveBeenCalledWith('1');
+    fireEvent.click(buttons[1]);
+    expect(onClick).toHaveBeenCalledWith('2');
+    fireEvent.click(buttons[2]);
+    expect(onClick).toHaveBeenCalledWith('3');
+  });
+
+  it('only one book is pulled out at a time', () => {
+    const { container, rerender } = render(
+      <ShelfRow books={books} onBookClick={vi.fn()} pulledOutBookId="1" />
+    );
+    let buttons = container.querySelectorAll('button');
+    expect(buttons[0]).toHaveAttribute('aria-expanded', 'true');
+    expect(buttons[1]).toHaveAttribute('aria-expanded', 'false');
+    expect(buttons[2]).toHaveAttribute('aria-expanded', 'false');
+
+    // Switch to book 2
+    rerender(<ShelfRow books={books} onBookClick={vi.fn()} pulledOutBookId="2" />);
+    buttons = container.querySelectorAll('button');
+    expect(buttons[0]).toHaveAttribute('aria-expanded', 'false');
+    expect(buttons[1]).toHaveAttribute('aria-expanded', 'true');
+    expect(buttons[2]).toHaveAttribute('aria-expanded', 'false');
+  });
 });
