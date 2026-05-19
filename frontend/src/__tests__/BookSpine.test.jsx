@@ -4,6 +4,15 @@ import BookSpine from '../components/shelf/BookSpine';
 
 // setup.js already mocks react-i18next to pass through keys
 
+// Mock framer-motion's useReducedMotion hook
+const mockUseReducedMotion = vi.fn();
+vi.mock('framer-motion', () => ({
+  useReducedMotion: () => mockUseReducedMotion(),
+  motion: {
+    button: ({ children, ...props }) => <button {...props}>{children}</button>,
+  },
+}));
+
 const baseBook = { _id: 'abc123', title: 'My Little Pony', spineColor: '#4ECDC4' };
 
 describe('BookSpine', () => {
@@ -99,5 +108,41 @@ describe('BookSpine', () => {
     const btn = screen.getByRole('button');
     expect(btn.style.zIndex).not.toBe('50');
     expect(btn.style.boxShadow).toBeFalsy();
+  });
+
+  describe('STORY-013: settle-back transition', () => {
+    it('has CSS transition when not pulled out', () => {
+      mockUseReducedMotion.mockReturnValue(false);
+      const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
+      const btn = screen.getByRole('button');
+      // Should have transition property when not pulled out
+      expect(btn.style.transition).toContain('transform');
+      expect(btn.style.transition).toContain('box-shadow');
+    });
+
+    it('has no CSS transition when pulled out', () => {
+      mockUseReducedMotion.mockReturnValue(false);
+      const { container } = render(<BookSpine book={baseBook} isPulledOut={true} />);
+      const btn = screen.getByRole('button');
+      // Should NOT have transition property when pulled out
+      expect(btn.style.transition).not.toContain('transform');
+      expect(btn.style.transition).not.toContain('box-shadow');
+    });
+
+    it('transition is "none" when reduced motion is enabled', () => {
+      mockUseReducedMotion.mockReturnValue(true);
+      const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
+      const btn = screen.getByRole('button');
+      // When reduced motion is enabled, duration is 0ms, so transition is instant
+      expect(btn.style.transition).toContain('0ms');
+    });
+
+    it('transition has 300ms duration when reduced motion is disabled', () => {
+      mockUseReducedMotion.mockReturnValue(false);
+      const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
+      const btn = screen.getByRole('button');
+      // When reduced motion is disabled, duration is 300ms
+      expect(btn.style.transition).toContain('300ms');
+    });
   });
 });

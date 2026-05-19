@@ -28,5 +28,6 @@
   "coverOverlay.viewCover": "Ver Capa",
   "coverOverlay.defaultCover": "Capa padrão para {{title}}",
   "coverOverlay.ariaLabel": "Visualização da capa de {{title}}",
-  "coverOverlay.authorBy": "por {{name}}"
+  "coverOverlay.authorBy": "por {{name}}",
+  "placeBack": "Colocar de volta"
 }

@@ -1,7 +1,7 @@
 // Contopia — BookSpine
 // Individual book spine rendered as a button with vertical text
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 import { getTextColor, spineColorFromId } from '../../lib/spine-colors';
@@ -11,12 +11,18 @@ const BookSpine = React.forwardRef(function BookSpine(
   ref,
 ) {
   const { t } = useTranslation('shelf');
+  const prefersReducedMotion = useReducedMotion();
   const spineColor = book.spineColor || spineColorFromId(book._id);
   const textColor = getTextColor(spineColor);
   const title = sanitizeText(book.title);
 
   const pulledStyle = isPulledOut
     ? { zIndex: 50, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', transform: 'translateY(-4px) scale(1.05)', willChange: 'transform' }
+    : {};
+
+  const animDuration = prefersReducedMotion ? 0 : 300;
+  const settleTransition = !isPulledOut
+    ? { transition: `transform ${animDuration}ms cubic-bezier(0.25,0.1,0.25,1), box-shadow ${animDuration}ms cubic-bezier(0.25,0.1,0.25,1)` }
     : {};
 
   function handleKeyDown(e) {
@@ -42,6 +48,7 @@ const BookSpine = React.forwardRef(function BookSpine(
         width: `${Math.max(44, Math.min(120, 36 + title.length * 2))}px`,
         height: '140px',
         ...pulledStyle,
+        ...settleTransition,
       }}
     >
       <span

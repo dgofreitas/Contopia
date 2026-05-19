@@ -12,22 +12,29 @@ export default function PulledOutOverlay({
   onEdit,
   onDesignCover,
   onViewCover,
+  onPlaceBack,
   triggerRef,
 }) {
   const { t } = useTranslation('shelf');
   const prefersReducedMotion = useReducedMotion();
-  const duration = prefersReducedMotion ? 0 : 0.25;
+  const duration = prefersReducedMotion ? 0 : 0.3;
   const overlayRef = useRef(null);
   const firstBtnRef = useRef(null);
+  const dismissedRef = useRef(false);
 
   useEffect(() => {
     firstBtnRef.current?.focus();
   }, []);
 
   const handleDismiss = useCallback(() => {
+    dismissedRef.current = true;
     onDismiss();
-    triggerRef?.current?.focus();
-  }, [onDismiss, triggerRef]);
+  }, [onDismiss]);
+
+  const handlePlaceBackFromCard = useCallback(() => {
+    dismissedRef.current = true;
+    onPlaceBack();
+  }, [onPlaceBack]);
 
   useEffect(() => {
     function handleKey(e) {
@@ -83,6 +90,11 @@ export default function PulledOutOverlay({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.95 }}
             transition={{ duration, ease: EASE_OUT }}
+            onAnimationComplete={() => {
+              if (dismissedRef.current) {
+                triggerRef?.current?.focus();
+              }
+            }}
             style={{ willChange: 'transform' }}
             className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
           >
@@ -92,6 +104,7 @@ export default function PulledOutOverlay({
               onEdit={onEdit}
               onDesignCover={onDesignCover}
               onViewCover={onViewCover}
+              onPlaceBack={handlePlaceBackFromCard}
             />
             <button
               ref={firstBtnRef}

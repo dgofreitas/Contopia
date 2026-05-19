@@ -32,6 +32,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -46,6 +48,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -60,6 +64,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -75,6 +81,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -90,6 +98,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -105,6 +115,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -123,6 +135,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -139,6 +153,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -147,17 +163,17 @@ describe('PulledOutOverlay', () => {
       expect(dismissBtn).toHaveFocus();
     });
 
-    it('focus returns to trigger on dismiss', async () => {
-      const onDismiss = vi.fn(() => {
-        // Simulate the overlay being dismissed
-      });
-      render(
+    it('focus returns to trigger after dismiss triggers exit', async () => {
+      const onDismiss = vi.fn();
+      const { rerender } = render(
         <PulledOutOverlay
           book={baseBook}
           onDismiss={onDismiss}
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -165,6 +181,23 @@ describe('PulledOutOverlay', () => {
       const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
       await act(async () => {
         fireEvent.click(backdrop);
+      });
+
+      expect(onDismiss).toHaveBeenCalled();
+
+      await act(async () => {
+        rerender(
+          <PulledOutOverlay
+            book={null}
+            onDismiss={onDismiss}
+            onRead={vi.fn()}
+            onEdit={vi.fn()}
+            onDesignCover={vi.fn()}
+            onViewCover={vi.fn()}
+            onPlaceBack={vi.fn()}
+            triggerRef={triggerRef}
+          />
+        );
       });
 
       expect(triggerRef.current.focus).toHaveBeenCalled();
@@ -179,6 +212,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={null}
         />
       );
@@ -199,6 +234,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -215,6 +252,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -241,6 +280,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -268,6 +309,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -287,6 +330,8 @@ describe('PulledOutOverlay', () => {
           onRead={onRead}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -304,6 +349,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={onEdit}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -321,6 +368,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={onDesignCover}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -338,6 +387,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -356,6 +407,8 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
@@ -371,12 +424,139 @@ describe('PulledOutOverlay', () => {
           onRead={vi.fn()}
           onEdit={vi.fn()}
           onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
           triggerRef={triggerRef}
         />
       );
       const dismissBtn = screen.getByLabelText('pullOut.ariaDismiss');
       dismissBtn.focus();
       expect(dismissBtn).toHaveClass('focus:not-sr-only');
+    });
+  });
+
+  describe('STORY-013: place-back integration', () => {
+    it('"Place Back" button in card fires onPlaceBack callback', () => {
+      const onPlaceBack = vi.fn();
+      render(
+        <PulledOutOverlay
+          book={baseBook}
+          onDismiss={vi.fn()}
+          onRead={vi.fn()}
+          onEdit={vi.fn()}
+          onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={onPlaceBack}
+          triggerRef={triggerRef}
+        />
+      );
+      const placeBackBtn = screen.getByLabelText('placeBack');
+      fireEvent.click(placeBackBtn);
+      expect(onPlaceBack).toHaveBeenCalledTimes(1);
+    });
+
+    it('focus returns to trigger after backdrop click (dismiss)', async () => {
+      const onDismiss = vi.fn();
+      const { rerender } = render(
+        <PulledOutOverlay
+          book={baseBook}
+          onDismiss={onDismiss}
+          onRead={vi.fn()}
+          onEdit={vi.fn()}
+          onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
+          triggerRef={triggerRef}
+        />
+      );
+
+      const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/30');
+      await act(async () => {
+        fireEvent.click(backdrop);
+      });
+
+      expect(onDismiss).toHaveBeenCalled();
+
+      await act(async () => {
+        rerender(
+          <PulledOutOverlay
+            book={null}
+            onDismiss={onDismiss}
+            onRead={vi.fn()}
+            onEdit={vi.fn()}
+            onDesignCover={vi.fn()}
+            onViewCover={vi.fn()}
+            onPlaceBack={vi.fn()}
+            triggerRef={triggerRef}
+          />
+        );
+      });
+
+      expect(triggerRef.current.focus).toHaveBeenCalled();
+    });
+
+    it('focus returns to trigger when "Place Back" button is clicked', async () => {
+      const onPlaceBack = vi.fn();
+      const { rerender } = render(
+        <PulledOutOverlay
+          book={baseBook}
+          onDismiss={vi.fn()}
+          onRead={vi.fn()}
+          onEdit={vi.fn()}
+          onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={onPlaceBack}
+          triggerRef={triggerRef}
+        />
+      );
+
+      const placeBackBtn = screen.getByLabelText('placeBack');
+      await act(async () => {
+        fireEvent.click(placeBackBtn);
+      });
+
+      expect(onPlaceBack).toHaveBeenCalled();
+
+      await act(async () => {
+        rerender(
+          <PulledOutOverlay
+            book={null}
+            onDismiss={vi.fn()}
+            onRead={vi.fn()}
+            onEdit={vi.fn()}
+            onDesignCover={vi.fn()}
+            onViewCover={vi.fn()}
+            onPlaceBack={onPlaceBack}
+            triggerRef={triggerRef}
+          />
+        );
+      });
+
+      // Focus returns because handlePlaceBackFromCard sets dismissedRef = true
+      expect(triggerRef.current.focus).toHaveBeenCalled();
+    });
+
+    it('focus does NOT return to trigger if not dismissed', async () => {
+      const onRead = vi.fn();
+      render(
+        <PulledOutOverlay
+          book={baseBook}
+          onDismiss={vi.fn()}
+          onRead={onRead}
+          onEdit={vi.fn()}
+          onDesignCover={vi.fn()}
+          onViewCover={vi.fn()}
+          onPlaceBack={vi.fn()}
+          triggerRef={triggerRef}
+        />
+      );
+
+      const readBtn = screen.getByLabelText('pullOut.read');
+      fireEvent.click(readBtn);
+      expect(onRead).toHaveBeenCalledTimes(1);
+
+      // Focus should NOT return to trigger when not dismissed
+      expect(triggerRef.current.focus).not.toHaveBeenCalled();
     });
   });
 });

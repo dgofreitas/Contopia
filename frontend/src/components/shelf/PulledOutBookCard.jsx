@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 
-function PulledOutBookCard({ book, onRead, onEdit, onDesignCover, onViewCover }) {
+function PulledOutBookCard({ book, onRead, onEdit, onDesignCover, onViewCover, onPlaceBack }) {
   const { t } = useTranslation('shelf');
   const title = sanitizeText(book.title);
   const summary = book.summary ? sanitizeText(book.summary) : '';
@@ -55,6 +55,13 @@ function PulledOutBookCard({ book, onRead, onEdit, onDesignCover, onViewCover })
           {t('pullOut.designCover')}
         </button>
       </div>
+      <button
+        onClick={onPlaceBack}
+        aria-label={t('placeBack')}
+        className="w-full text-xs font-semibold py-1.5 px-2 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 focus:ring-2 focus:ring-amber-300 focus:outline-none"
+      >
+        {t('placeBack')}
+      </button>
     </div>
   );
 }
