@@ -92,7 +92,7 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead }) {
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: EASE_OUT }}
             style={{ willChange: 'transform' }}
-            className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-80 max-h-[90vh] overflow-y-auto"
+            className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-[90vw] max-w-sm max-h-[90vh] overflow-y-auto"
           >
             <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">
               {t('coverOverlay.title')}

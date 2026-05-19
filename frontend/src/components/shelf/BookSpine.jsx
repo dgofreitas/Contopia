@@ -41,12 +41,12 @@ const BookSpine = React.forwardRef(function BookSpine(
       onKeyDown={handleKeyDown}
       aria-label={t('ariaSpineLabel', { title })}
       aria-expanded={isPulledOut}
-      className="flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[44px] min-h-[44px] select-none"
+      className="flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[48px] min-h-[48px] select-none"
       style={{
         backgroundColor: spineColor,
         color: textColor,
-        width: `${Math.max(44, Math.min(120, 36 + title.length * 2))}px`,
-        height: '140px',
+        width: '100%',
+        height: 'var(--spine-height)',
         ...pulledStyle,
         ...settleTransition,
       }}

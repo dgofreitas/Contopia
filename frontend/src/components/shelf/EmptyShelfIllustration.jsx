@@ -7,10 +7,8 @@ export default function EmptyShelfIllustration({ className }) {
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 400 300"
-      width="400"
-      height="300"
       aria-hidden="true"
-      className={className}
+      className={`w-full max-w-[280px] md:max-w-xs ${className || ''}`}
     >
       <ellipse cx="200" cy="284" rx="170" ry="8" fill="#f3f4f6" />
 

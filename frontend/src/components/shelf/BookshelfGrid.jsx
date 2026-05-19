@@ -1,6 +1,4 @@
-// Contopia — BookshelfGrid
-// Distributes books into shelf rows based on viewport width
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -8,20 +6,7 @@ import ShelfRow from './ShelfRow';
 import PulledOutOverlay from './PulledOutOverlay';
 import CoverOverlay from './CoverOverlay';
 import usePulledOutBook from '../../hooks/usePulledOutBook';
-
-const BREAKPOINTS = {
-  mobile: 3,   // < 640px
-  tablet: 5,   // 640–1024px
-  desktop: 7,  // > 1024px
-};
-
-function getBooksPerRow() {
-  if (typeof window === 'undefined') return BREAKPOINTS.desktop;
-  const width = window.innerWidth;
-  if (width < 640) return BREAKPOINTS.mobile;
-  if (width < 1024) return BREAKPOINTS.tablet;
-  return BREAKPOINTS.desktop;
-}
+import useDebouncedResize from '../../hooks/useDebouncedResize';
 
 function chunkArray(arr, size) {
   const chunks = [];
@@ -31,24 +16,31 @@ function chunkArray(arr, size) {
   return chunks;
 }
 
+function computeItemsPerRow(viewportWidth) {
+  if (!viewportWidth) return 7;
+  const isDesktop = viewportWidth >= 1024;
+  const isTablet = viewportWidth >= 768;
+  const padding = isDesktop ? 64 : isTablet ? 48 : 32;
+  const gap = isDesktop ? 8 : isTablet ? 6 : 4;
+  const minCol = isDesktop ? 64 : isTablet ? 56 : 48;
+  const maxWidth = isDesktop ? 1024 : viewportWidth;
+  const available = Math.min(viewportWidth, maxWidth) - padding;
+  return Math.max(1, Math.floor((available + gap) / (minCol + gap)));
+}
+
 export default function BookshelfGrid({ books, onBookClick }) {
   const { t } = useTranslation('shelf');
   const prefersReducedMotion = useReducedMotion();
-  const [booksPerRow, setBooksPerRow] = useState(getBooksPerRow);
   const navigate = useNavigate();
   const { pulledOutBookId, toggle, placeBack, isPlacingBack } = usePulledOutBook();
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
+  const { width: viewportWidth } = useDebouncedResize();
 
-  useEffect(() => {
-    function handleResize() {
-      setBooksPerRow(getBooksPerRow());
-    }
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const rows = useMemo(() => chunkArray(books, booksPerRow), [books, booksPerRow]);
+  const rows = useMemo(() => {
+    const itemsPerRow = computeItemsPerRow(viewportWidth);
+    return chunkArray(books, itemsPerRow);
+  }, [books, viewportWidth]);
 
   const handleBookClick = useCallback((bookId) => {
     toggle(bookId);
@@ -96,7 +88,7 @@ export default function BookshelfGrid({ books, onBookClick }) {
   return (
     <section
       aria-label={t('ariaShelfLabel', { count: books.length })}
-      className="py-6 space-y-2"
+      className="w-full px-4 md:px-6 lg:px-8 lg:max-w-5xl lg:mx-auto py-6"
     >
       <motion.div
         variants={containerVariants}

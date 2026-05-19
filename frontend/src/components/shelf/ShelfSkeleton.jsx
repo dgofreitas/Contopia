@@ -1,23 +1,17 @@
-// Contopia — ShelfSkeleton
-// Loading placeholder with animated skeleton spines
 import { useTranslation } from 'react-i18next';
 
 const SKELETON_ROWS = 3;
-const SKELETONS_PER_ROW = 5;
+const SKELETONS_PER_ROW = 12;
 
 function SkeletonRow() {
   return (
     <div className="flex flex-col">
-      <div className="flex items-end gap-1 px-2">
+      <div className="shelf-row-grid px-2">
         {Array.from({ length: SKELETONS_PER_ROW }, (_, i) => (
           <div
             key={i}
             aria-hidden="true"
-            className="animate-pulse bg-gray-300 rounded-t-sm min-w-[44px] min-h-[44px]"
-            style={{
-              width: `${44 + Math.random() * 40}px`,
-              height: `${80 + Math.random() * 60}px`,
-            }}
+            className="animate-pulse bg-gray-300 rounded-t-sm min-h-[48px] aspect-[3/5]"
           />
         ))}
       </div>
@@ -33,7 +27,7 @@ export default function ShelfSkeleton() {
     <div
       aria-busy="true"
       aria-label={t('loading')}
-      className="space-y-2 py-6"
+      className="w-full px-4 md:px-6 lg:px-8 lg:max-w-5xl lg:mx-auto space-y-2 py-6"
     >
       {Array.from({ length: SKELETON_ROWS }, (_, i) => (
         <SkeletonRow key={i} />

@@ -415,4 +415,19 @@ describe('CoverOverlay', () => {
       expect(screen.getByText('My Little Pony')).toBeInTheDocument();
     });
   });
+
+  describe('STORY-014: Responsive Layout', () => {
+    it('has responsive width (w-[90vw] max-w-sm)', () => {
+      render(
+        <CoverOverlay
+          isOpen={true}
+          book={baseBook}
+          onClose={vi.fn()}
+          onRead={vi.fn()}
+        />
+      );
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveClass('w-[90vw]', 'max-w-sm');
+    });
+  });
 });
