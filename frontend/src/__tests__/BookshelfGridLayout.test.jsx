@@ -89,4 +89,31 @@ describe('BookshelfGridLayout', () => {
     expect(screen.getByText('Story One')).toBeInTheDocument();
     expect(screen.getByText('Story Two')).toBeInTheDocument();
   });
+
+  it('has no sort UI controls (AC-3: no sort UI in MVP)', () => {
+    useBooksQueryModule.default.mockReturnValue({
+      data: {
+        data: [
+          { _id: '1', title: 'Story One' },
+          { _id: '2', title: 'Story Two' },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithProviders(<BookshelfGridLayout />);
+
+    const sortSelect = container.querySelector('select');
+    expect(sortSelect).toBeNull();
+
+    const sortButtons = screen.queryAllByRole('button');
+    for (const btn of sortButtons) {
+      const text = btn.textContent.toLowerCase();
+      expect(text).not.toContain('sort');
+      expect(text).not.toContain('ordenar');
+      expect(text).not.toContain('order');
+    }
+  });
 });
