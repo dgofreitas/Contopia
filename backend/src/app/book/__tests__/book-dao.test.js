@@ -123,6 +123,73 @@ describe('Book DAO', () => {
       expect(books[0].title).toBe('Third');
       expect(books[2].title).toBe('First');
     });
+
+    it('should sort published books by publishedAt descending', async () => {
+      const now = new Date();
+      const b1 = await bookDao.createBook({ authorId, title: 'Pub First', status: 'published', publishedAt: new Date(now.getTime() - 2000) });
+      const b2 = await bookDao.createBook({ authorId, title: 'Pub Second', status: 'published', publishedAt: new Date(now.getTime() - 1000) });
+      const b3 = await bookDao.createBook({ authorId, title: 'Pub Third', status: 'published', publishedAt: now });
+
+      const books = await bookDao.findBooksByAuthor(authorId, { status: 'published' });
+      expect(books[0].title).toBe('Pub Third');
+      expect(books[1].title).toBe('Pub Second');
+      expect(books[2].title).toBe('Pub First');
+    });
+
+    it('should use _id as stable fallback sort for same publishedAt', async () => {
+      const sameDate = new Date();
+      const b1 = await bookDao.createBook({ authorId, title: 'Earlier ID', status: 'published', publishedAt: sameDate });
+      await new Promise((r) => setTimeout(r, 10));
+      const b2 = await bookDao.createBook({ authorId, title: 'Later ID', status: 'published', publishedAt: sameDate });
+
+      const books = await bookDao.findBooksByAuthor(authorId, { status: 'published' });
+      expect(books[0].title).toBe('Later ID');
+      expect(books[1].title).toBe('Earlier ID');
+    });
+
+    it('should sort draft books by createdAt descending (not publishedAt)', async () => {
+      const now = new Date();
+      await Book.create({ authorId, title: 'Oldest Draft', status: 'draft', createdAt: new Date(now.getTime() - 4000) });
+      await Book.create({ authorId, title: 'Mid Draft', status: 'draft', createdAt: new Date(now.getTime() - 2000) });
+      await Book.create({ authorId, title: 'Newest Draft', status: 'draft', createdAt: now });
+
+      const books = await bookDao.findBooksByAuthor(authorId, { status: 'draft' });
+      expect(books).toHaveLength(3);
+      expect(books[0].title).toBe('Newest Draft');
+      expect(books[1].title).toBe('Mid Draft');
+      expect(books[2].title).toBe('Oldest Draft');
+      // Verify publishedAt is null — drafts are not sorted by publishedAt
+      expect(books[0].publishedAt).toBeNull();
+      expect(books[1].publishedAt).toBeNull();
+      expect(books[2].publishedAt).toBeNull();
+    });
+
+    it('should sort archived books by createdAt descending', async () => {
+      const now = new Date();
+      await Book.create({ authorId, title: 'Oldest Archived', status: 'archived', createdAt: new Date(now.getTime() - 4000) });
+      await Book.create({ authorId, title: 'Mid Archived', status: 'archived', createdAt: new Date(now.getTime() - 2000) });
+      await Book.create({ authorId, title: 'Newest Archived', status: 'archived', createdAt: now });
+
+      const books = await bookDao.findBooksByAuthor(authorId, { status: 'archived' });
+      expect(books).toHaveLength(3);
+      expect(books[0].title).toBe('Newest Archived');
+      expect(books[1].title).toBe('Mid Archived');
+      expect(books[2].title).toBe('Oldest Archived');
+    });
+
+    it('should return books in stable order when no status filter', async () => {
+      const now = new Date();
+      await Book.create({ authorId, title: 'Draft Book', status: 'draft', createdAt: new Date(now.getTime() - 3000) });
+      await Book.create({ authorId, title: 'Published Book', status: 'published', publishedAt: new Date(now.getTime() - 1000), createdAt: new Date(now.getTime() - 2000) });
+      await Book.create({ authorId, title: 'Archived Book', status: 'archived', createdAt: now });
+
+      const books = await bookDao.findBooksByAuthor(authorId);
+      expect(books).toHaveLength(3);
+      // No status filter → sort by createdAt DESC regardless of status
+      expect(books[0].title).toBe('Archived Book');
+      expect(books[1].title).toBe('Published Book');
+      expect(books[2].title).toBe('Draft Book');
+    });
   });
 
   describe('updateBookById', () => {

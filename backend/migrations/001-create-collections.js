@@ -35,6 +35,10 @@ async function up(db, client) {
     { status: 1, publishedAt: -1, deletedAt: 1 },
     { partialFilterExpression: { deletedAt: null } }
   );
+  await books.createIndex(
+    { authorId: 1, status: 1, publishedAt: -1, deletedAt: 1 },
+    { partialFilterExpression: { deletedAt: null } }
+  );
   await books.createIndex({ title: 'text' }, { language_override: 'searchLanguage', collation: { locale: 'simple' } });
 
   // ── Chapters Indexes ──────────────────────────────────────────────────────────

@@ -15,7 +15,10 @@ export async function findBookById(id) {
 export async function findBooksByAuthor(authorId, { status, limit = 50, skip = 0 } = {}) {
   const filter = { authorId, deletedAt: null };
   if (status) filter.status = status;
-  return Book.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean({ virtuals: true }).exec();
+  const sort = status === 'published'
+    ? { publishedAt: -1, _id: -1 }
+    : { createdAt: -1 };
+  return Book.find(filter).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }).exec();
 }
 
 export async function updateBookById(id, update) {

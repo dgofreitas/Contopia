@@ -72,6 +72,10 @@ bookSchema.index(
   { status: 1, publishedAt: -1, deletedAt: 1 },
   { partialFilterExpression: { deletedAt: null } }
 );
+bookSchema.index(
+  { authorId: 1, status: 1, publishedAt: -1, deletedAt: 1 },
+  { partialFilterExpression: { deletedAt: null } }
+);
 bookSchema.index({ title: 'text' }, { language_override: 'searchLanguage', collation: { locale: 'simple' } });
 
 // ── Spine Color Virtual ──────────────────────────────────────────────────────

@@ -199,6 +199,64 @@ describe('Book Router', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
+  // ── GET /?status=published — Returns published books sorted by publishedAt DESC ──
+  it('GET /api/v1/books?status=published — returns books sorted by publishedAt descending', async () => {
+    const now = new Date();
+    await Book.create({ authorId: CHILD_ID, title: 'Old Pub', status: 'published', publishedAt: new Date(now.getTime() - 2000) });
+    await Book.create({ authorId: CHILD_ID, title: 'New Pub', status: 'published', publishedAt: now });
+    await Book.create({ authorId: CHILD_ID, title: 'Draft', status: 'draft' });
+
+    const res = await request(testApp)
+      .get('/api/v1/books?status=published')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.data[0].title).toBe('New Pub');
+    expect(res.body.data[1].title).toBe('Old Pub');
+    expect(res.body.meta.pagination.total).toBe(2);
+  });
+
+  // ── GET /?sort=createdAt — ignores unknown sort param (NFR-SEC-04) ──
+  it('GET /api/v1/books?sort=createdAt — ignores unknown sort param, returns default order', async () => {
+    // Arrange: create 2 books with explicit createdAt to define order
+    const now = new Date();
+    await Book.create({ authorId: CHILD_ID, title: 'First Book', createdAt: new Date(now.getTime() - 2000) });
+    await Book.create({ authorId: CHILD_ID, title: 'Second Book', createdAt: now });
+
+    // Act: pass unknown "sort" param — Zod strips unknown keys by default
+    const res = await request(testApp)
+      .get('/api/v1/books?sort=createdAt')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert: 200 OK, unknown param stripped, default sort (createdAt DESC) still applies
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    // Default sort is createdAt DESC — newest first
+    expect(res.body.data[0].title).toBe('Second Book');
+    expect(res.body.data[1].title).toBe('First Book');
+    // Verify sort param did NOT affect ordering or cause errors
+    expect(res.body.meta.pagination.total).toBe(2);
+  });
+
+  // ── GET /?status=published — verify exact order matches publish date (3 books) ──
+  it('GET /api/v1/books?status=published — verify exact order matches publishedAt descending (3 books)', async () => {
+    const now = new Date();
+    await Book.create({ authorId: CHILD_ID, title: 'Oldest Pub', status: 'published', publishedAt: new Date(now.getTime() - 4000) });
+    await Book.create({ authorId: CHILD_ID, title: 'Mid Pub', status: 'published', publishedAt: new Date(now.getTime() - 2000) });
+    await Book.create({ authorId: CHILD_ID, title: 'Newest Pub', status: 'published', publishedAt: now });
+
+    const res = await request(testApp)
+      .get('/api/v1/books?status=published')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(3);
+    expect(res.body.data[0].title).toBe('Newest Pub');
+    expect(res.body.data[1].title).toBe('Mid Pub');
+    expect(res.body.data[2].title).toBe('Oldest Pub');
+  });
+
   // ── GET / — 401 without auth header ─────────────────────────────────────
   it('GET /api/v1/books — 401 without Authorization header', async () => {
     // Act
@@ -296,6 +354,41 @@ describe('Book Router', () => {
     // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  // ── GET /?sort=createdAt — strips unknown param (NFR-SEC-04) ──────────
+  it('GET /api/v1/books?sort=createdAt — ignores unknown sort param [NFR-SEC-04]', async () => {
+    // Arrange: create a book so list isn't empty
+    await Book.create({ authorId: CHILD_ID, title: 'Book With Sort' });
+
+    // Act: pass unknown `sort` query param — Zod strips it (no passthrough)
+    const res = await request(testApp)
+      .get('/api/v1/books?sort=createdAt')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert: endpoint returns 200, ignores the unknown param
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.meta.pagination).toBeDefined();
+  });
+
+  // ── GET /?status=published — verify response order matches publish date ─
+  it('GET /api/v1/books?status=published — verify response order matches publish date', async () => {
+    // Arrange: create two published books with different publishedAt
+    const now = new Date();
+    await Book.create({ authorId: CHILD_ID, title: 'Older Published', status: 'published', publishedAt: new Date(now.getTime() - 3000) });
+    await Book.create({ authorId: CHILD_ID, title: 'Newer Published', status: 'published', publishedAt: now });
+
+    // Act
+    const res = await request(testApp)
+      .get('/api/v1/books?status=published')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.data[0].title).toBe('Newer Published');
+    expect(res.body.data[1].title).toBe('Older Published');
   });
 
   // ── PUT /:bookId/progress — 200 updates reading progress ───────────────

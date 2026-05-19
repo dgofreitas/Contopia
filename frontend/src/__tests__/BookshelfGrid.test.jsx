@@ -325,6 +325,50 @@ describe('BookshelfGrid', () => {
     });
   });
 
+  describe('STORY-015: Default Sorting & Book Placement', () => {
+    it('renders books in API response order without re-sorting (AC-5)', () => {
+      const unorderedBooks = [
+        { _id: 'g', title: 'Gamma' },
+        { _id: 'a', title: 'Alpha' },
+        { _id: 'b', title: 'Beta' },
+      ];
+      const { container } = render(
+        <BookshelfGrid books={unorderedBooks} onBookClick={vi.fn()} />
+      );
+      const spineTexts = Array.from(
+        container.querySelectorAll('.shelf-spine-cell')
+      ).map((cell) => cell.textContent.trim());
+      expect(spineTexts).toEqual(['Gamma', 'Alpha', 'Beta']);
+    });
+
+    it('has no sort UI controls (AC-3)', () => {
+      const testBooks = [
+        { _id: '1', title: 'Book A' },
+        { _id: '2', title: 'Book B' },
+      ];
+      render(<BookshelfGrid books={testBooks} onBookClick={vi.fn()} />);
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /sort/i })).not.toBeInTheDocument();
+      expect(screen.queryByText(/sort/i)).not.toBeInTheDocument();
+    });
+
+    it('renders books in API response order (AC-5: no client-side re-sort)', () => {
+      const booksInReverseApiOrder = [
+        { _id: 'z', title: 'Zebra' },
+        { _id: 'a', title: 'Alpha' },
+        { _id: 'm', title: 'Middle' },
+      ];
+      const { container } = render(
+        <BookshelfGrid books={booksInReverseApiOrder} onBookClick={vi.fn()} />
+      );
+      const spineTexts = Array.from(
+        container.querySelectorAll('.shelf-spine-cell')
+      ).map((cell) => cell.textContent.trim());
+      expect(spineTexts).toEqual(['Zebra', 'Alpha', 'Middle']);
+    });
+  });
+
   describe('STORY-014: Responsive Layout', () => {
     it('container has responsive padding classes', () => {
       const { container } = render(<BookshelfGrid books={[]} onBookClick={vi.fn()} />);
