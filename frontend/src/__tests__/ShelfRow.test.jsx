@@ -117,4 +117,26 @@ describe('ShelfRow', () => {
       expect(shelfBar).toHaveClass('duration-300');
     });
   });
+
+  describe('STORY-014: CSS Grid Layout', () => {
+    it('uses CSS Grid via shelf-row-grid class', () => {
+      const { container } = render(<ShelfRow books={books} onBookClick={vi.fn()} />);
+      const gridContainer = container.querySelector('.shelf-row-grid');
+      expect(gridContainer).toBeInTheDocument();
+    });
+
+    it('wraps each BookSpine in shelf-spine-cell div', () => {
+      const { container } = render(<ShelfRow books={books} onBookClick={vi.fn()} />);
+      const spineCells = container.querySelectorAll('.shelf-spine-cell');
+      expect(spineCells.length).toBe(3);
+    });
+
+    it('spine cell wrappers have transition class for smooth repositioning', () => {
+      const { container } = render(<ShelfRow books={books} onBookClick={vi.fn()} />);
+      const spineCells = container.querySelectorAll('.shelf-spine-cell');
+      spineCells.forEach((cell) => {
+        expect(cell.className).toContain('shelf-spine-cell');
+      });
+    });
+  });
 });

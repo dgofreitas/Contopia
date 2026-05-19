@@ -1,3 +1,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --spine-height: clamp(100px, 18vw, 150px);
+    --shelf-col-min: 48px;
+    --shelf-gap: 4px;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --spine-height: clamp(120px, 14vw, 170px);
+      --shelf-col-min: 56px;
+      --shelf-gap: 6px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --spine-height: clamp(140px, 12vw, 180px);
+      --shelf-col-min: 64px;
+      --shelf-gap: 8px;
+    }
+  }
+}
+
+@layer utilities {
+  .shelf-row-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--shelf-col-min), 1fr));
+    gap: var(--shelf-gap);
+    align-items: end;
+    container-type: inline-size;
+  }
+}
+
+.shelf-spine-cell {
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-spine-cell {
+    transition: none;
+  }
+}

@@ -98,4 +98,29 @@ describe('EmptyShelfState', () => {
     // No explicit overflow-hidden needed, but ensure it renders cleanly
     expect(container).toBeInTheDocument();
   });
+
+  describe('STORY-014: Responsive Layout', () => {
+    it('has responsive padding classes (py-12 md:py-16)', () => {
+      renderWithRouter(<EmptyShelfState />);
+      const container = screen.getByRole('status');
+      expect(container).toHaveClass('py-12', 'md:py-16');
+    });
+
+    it('has responsive text sizing (text-xl md:text-2xl)', () => {
+      renderWithRouter(<EmptyShelfState />);
+      const heading = screen.getByText('emptyTitle');
+      expect(heading).toHaveClass('text-xl', 'md:text-2xl');
+    });
+
+    it('SVG has no fixed width/height attributes', () => {
+      renderWithRouter(<EmptyShelfState />);
+      const { container } = renderWithRouter(<EmptyShelfState />);
+      const svg = container.querySelector('svg');
+      // SVG should not have explicit width/height attributes
+      expect(svg).not.toHaveAttribute('width');
+      expect(svg).not.toHaveAttribute('height');
+      // But should have viewBox
+      expect(svg).toHaveAttribute('viewBox');
+    });
+  });
 });

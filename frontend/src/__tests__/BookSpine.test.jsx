@@ -47,11 +47,11 @@ describe('BookSpine', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('has WCAG min-width/height via className', () => {
+  it('has WCAG min-width/height via className (48px for touch targets)', () => {
     render(<BookSpine book={baseBook} />);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('min-w-[44px]');
-    expect(btn.className).toContain('min-h-[44px]');
+    expect(btn.className).toContain('min-w-[48px]');
+    expect(btn.className).toContain('min-h-[48px]');
   });
 
   it('has focus ring classes for a11y', () => {

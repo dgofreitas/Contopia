@@ -1,5 +1,3 @@
-// Contopia — ShelfRow
-// Single shelf row with books spines and wooden bar below
 import BookSpine from './BookSpine';
 
 export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId }) {
@@ -7,15 +5,16 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-end gap-1 px-2">
+      <div className="shelf-row-grid px-2">
         {books.map((book) => (
-          <BookSpine
-            key={book._id}
-            book={book}
-            onClick={() => onBookClick(book._id)}
-            isPulledOut={book._id === pulledOutBookId}
-            onPullOut={() => onBookClick(book._id)}
-          />
+          <div key={book._id} className="shelf-spine-cell">
+            <BookSpine
+              book={book}
+              onClick={() => onBookClick(book._id)}
+              isPulledOut={book._id === pulledOutBookId}
+              onPullOut={() => onBookClick(book._id)}
+            />
+          </div>
         ))}
       </div>
       <div className={`h-3 rounded-b-sm transition-shadow duration-300 ${
