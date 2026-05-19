@@ -7,5 +7,22 @@
   "addChapter": "Add chapter",
   "saveDraft": "Save",
   "preview": "Preview",
-  "lastSaved": "Saved at {{time}}"
+  "lastSaved": "Saved at {{time}}",
+  "createBook.title": "Create Your Book",
+  "createBook.subtitle": "Every great story starts with a name!",
+  "createBook.titleLabel": "Book Title",
+  "createBook.titlePlaceholder": "What's your story called?",
+  "createBook.summaryLabel": "Summary (optional)",
+  "createBook.summaryPlaceholder": "Tell us a little about your story...",
+  "createBook.startWriting": "Start Writing",
+  "createBook.cancel": "Cancel",
+  "createBook.charCount": "{{count}}/{{max}} characters",
+  "createBook.charCountWarn": "{{count}}/{{max}} characters — almost there!",
+  "createBook.charCountOver": "{{count}}/{{max}} characters — that's too long!",
+  "createBook.errorTitleRequired": "Give your book a name — every story needs one!",
+  "createBook.errorTitleTooLong": "That's a long title! Try something under 120 characters.",
+  "createBook.errorSummaryTooLong": "Keep it short and sweet — under 500 characters works best!",
+  "createBook.errorBookLimit": "You've written so many stories! You'll need to finish one before starting another.",
+  "createBook.formLabel": "Book creation form",
+  "createBook.newBook": "New Book"
 }

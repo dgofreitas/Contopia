@@ -11,7 +11,7 @@ const FRIENDLY_MESSAGES = {
     number: 'That doesn\'t look right — please try again',
   },
   too_big: {
-    string: 'Title must be under 200 characters',
+    string: 'Sorry, that\'s too long — try a shorter one!',
     number: 'That doesn\'t look right — please try again',
   },
   invalid_string: 'That doesn\'t look right — please try again',
@@ -36,6 +36,9 @@ function mapZodIssue(issue) {
   if (msg.includes('invalid') && msg.includes('id')) return 'That doesn\'t look right — please try again';
   if (msg.includes('invalid book id')) return 'That doesn\'t look right — please try again';
   if (msg.includes('invalid chapter id')) return 'That doesn\'t look right — please try again';
+  if (msg.includes('title') && msg.includes('120')) return 'Try a shorter title — under 120 characters works best!';
+  if (msg.includes('summary') && msg.includes('500')) return 'Keep your summary under 500 characters — short and sweet!';
+  if (msg.includes('description') && msg.includes('500')) return 'Keep your summary under 500 characters — short and sweet!';
 
   // Type-specific mapping
   const typeMap = FRIENDLY_MESSAGES[issue.code];

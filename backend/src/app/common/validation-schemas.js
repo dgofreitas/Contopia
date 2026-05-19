@@ -72,14 +72,14 @@ export const bookIdSchema = z.object({
 });
 
 export const bookCreateSchema = z.object({
-  title: z.string().min(1).max(200).trim(),
-  description: z.string().max(2000).trim().optional().default(''),
+  title: z.string().min(1).max(120).trim(),
+  description: z.string().max(500).trim().optional().default(''),
   language: z.string().max(5).optional().default('pt-BR'),
 });
 
 export const bookUpdateSchema = z.object({
-  title: z.string().min(1).max(200).trim().optional(),
-  description: z.string().max(2000).trim().optional(),
+  title: z.string().min(1).max(120).trim().optional(),
+  description: z.string().max(500).trim().optional(),
   language: z.string().max(5).optional(),
 });
 
@@ -146,9 +146,9 @@ export const chapterPutBodySchema = z.object({
  * Normalizes summary → description.
  */
 export const bookCreateSchemaV2 = z.object({
-  title: z.string().min(1).max(200).trim(),
-  summary: z.string().max(2000).trim().optional().default(''),
-  description: z.string().max(2000).trim().optional(),
+  title: z.string().min(1).max(120).trim(),
+  summary: z.string().max(500).trim().optional().default(''),
+  description: z.string().max(500).trim().optional(),
   language: z.string().max(5).optional().default('pt-BR'),
 }).transform((data) => ({
   title: data.title,

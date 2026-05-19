@@ -29,5 +29,6 @@
   "coverOverlay.defaultCover": "Default cover for {{title}}",
   "coverOverlay.ariaLabel": "Cover view for {{title}}",
   "coverOverlay.authorBy": "by {{name}}",
-  "placeBack": "Place Back"
+  "placeBack": "Place Back",
+  "newBookButton": "New Book"
 }
