@@ -149,6 +149,40 @@ export const SessionGuardPlugin: Plugin = async ({ client, directory, worktree }
             else if (params.path) params.path = corrected;
           }
         }
+
+        if (filePath.startsWith('/home/') && !existsSync(filePath)) {
+          const homeDir = homedir();
+          const slashAfterUser = filePath.indexOf('/', 6);
+          if (slashAfterUser > 0 && !filePath.startsWith(homeDir)) {
+            const relativePart = filePath.substring(slashAfterUser);
+            const correctedPath = homeDir + relativePart;
+            if (existsSync(correctedPath)) {
+              log("warn", "PATH_WRONG_USER_CORRECTED", {
+                tool: actualToolName,
+                original: filePath,
+                corrected: correctedPath,
+                sessionID: sid,
+                agent: activeAgent,
+              });
+              if (params.filePath) params.filePath = correctedPath;
+              else if (params.path) params.path = correctedPath;
+            } else {
+              log("warn", "PATH_NOT_FOUND_HOME", {
+                tool: actualToolName,
+                path: filePath,
+                sessionID: sid,
+                agent: activeAgent,
+              });
+            }
+          } else {
+            log("warn", "PATH_NOT_FOUND_HOME", {
+              tool: actualToolName,
+              path: filePath,
+              sessionID: sid,
+              agent: activeAgent,
+            });
+          }
+        }
       }
 
       if (actualToolName === "todowrite" && params?.items && sid) {

@@ -3,5 +3,5 @@
     "fetchTimeoutMs": 600000,
     "fetchTimeoutEnabled": true,
     "streamChunkTimeoutMs": 180000,
-    "logLevel": "debug"
+    "logLevel": "info"
 }

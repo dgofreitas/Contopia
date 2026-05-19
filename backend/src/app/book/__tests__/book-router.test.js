@@ -391,6 +391,91 @@ describe('Book Router', () => {
     expect(res.body.data[1].title).toBe('Older Published');
   });
 
+  // ── STORY-016: POST / — Title > 120 chars → 400 VALIDATION_ERROR ────────
+  it('POST /api/v1/books — 400 VALIDATION_ERROR for title longer than 120 chars', async () => {
+    // Arrange: title with 121 characters
+    const payload = { title: 'a'.repeat(121) };
+
+    // Act
+    const res = await request(testApp)
+      .post('/api/v1/books')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send(payload);
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  // ── STORY-016: POST / — Summary > 500 chars → 400 VALIDATION_ERROR ─────
+  it('POST /api/v1/books — 400 VALIDATION_ERROR for summary longer than 500 chars', async () => {
+    // Arrange: summary with 501 characters
+    const payload = { title: 'Valid Title', summary: 'a'.repeat(501) };
+
+    // Act
+    const res = await request(testApp)
+      .post('/api/v1/books')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send(payload);
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  // ── STORY-016: POST / — Only title, no summary → 201, description '' ────
+  it('POST /api/v1/books — 201 with empty description when only title provided', async () => {
+    // Arrange: only title, no summary or description
+    const payload = { title: 'Title Only Book' };
+
+    // Act
+    const res = await request(testApp)
+      .post('/api/v1/books')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send(payload);
+
+    // Assert
+    expect(res.status).toBe(201);
+    expect(res.body.data).toBeDefined();
+    expect(res.body.data.title).toBe('Title Only Book');
+    expect(res.body.data.description).toBe('');
+  });
+
+  // ── STORY-016: POST / — XSS payload in title and summary → 201, stored as text ──
+  it('POST /api/v1/books — 201 stores XSS payload as literal text in title', async () => {
+    // Arrange: XSS script payload in title
+    const xssPayload = '<script>alert(1)</script>';
+    const payload = { title: xssPayload, summary: 'A safe summary' };
+
+    // Act
+    const res = await request(testApp)
+      .post('/api/v1/books')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send(payload);
+
+    // Assert: status 201 and the literal XSS text is stored
+    expect(res.status).toBe(201);
+    expect(res.body.data).toBeDefined();
+    expect(res.body.data.title).toBe(xssPayload);
+  });
+
+  it('POST /api/v1/books — 201 stores XSS payload as literal text in description', async () => {
+    // Arrange: XSS script payload in summary
+    const xssPayload = '<script>alert(1)</script>';
+    const payload = { title: 'Safe Title', summary: xssPayload };
+
+    // Act
+    const res = await request(testApp)
+      .post('/api/v1/books')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send(payload);
+
+    // Assert: status 201 and the literal XSS text is stored in description
+    expect(res.status).toBe(201);
+    expect(res.body.data).toBeDefined();
+    expect(res.body.data.description).toBe(xssPayload);
+  });
+
   // ── PUT /:bookId/progress — 200 updates reading progress ───────────────
   it('PUT /api/v1/books/:bookId/progress — 200 updates and returns reading progress', async () => {
     // Arrange: create a book + reading progress
