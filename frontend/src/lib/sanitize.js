@@ -1,5 +1,7 @@
 import DOMPurify from 'dompurify';
 
+export const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'h2', 'hr', 'span'];
+
 export function sanitizeText(text) {
   if (!text) return '';
   return DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
@@ -12,4 +14,13 @@ export function sanitizeImageUrl(url) {
     return DOMPurify.sanitize(trimmed, { ALLOWED_TAGS: [] });
   }
   return '';
+}
+
+export function sanitizeRichContent(html) {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR: ['class'],
+    ALLOW_DATA_ATTR: false,
+  });
 }

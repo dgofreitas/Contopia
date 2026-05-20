@@ -60,6 +60,13 @@ export default function EditorPage() {
     [deleteChapter, activeChapterIdFinal, chapters]
   );
 
+  const handleContentChange = useCallback(
+    ({ chapterId, content }) => {
+      return updateChapter.mutateAsync({ chapterId, content });
+    },
+    [updateChapter]
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-teal-50">
@@ -80,7 +87,7 @@ export default function EditorPage() {
         onDeleteChapter={handleDeleteChapter}
         isCreatingChapter={createChapter.isPending}
       />
-      <ChapterEditor chapter={activeChapter} />
+      <ChapterEditor chapter={activeChapter} onContentChange={handleContentChange} />
     </div>
   );
 }
