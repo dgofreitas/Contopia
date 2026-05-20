@@ -73,6 +73,67 @@ export async function hardDeleteChapter(id) {
   return Chapter.findByIdAndDelete(id).lean().exec();
 }
 
+export async function countChaptersByBook(bookId) {
+  return Chapter.countDocuments({ bookId, deletedAt: null }).exec();
+}
+
+export async function findMaxOrderByBook(bookId) {
+  const result = await Chapter
+    .find({ bookId, deletedAt: null })
+    .sort({ order: -1 })
+    .limit(1)
+    .select('order')
+    .lean()
+    .exec();
+  return result.length > 0 ? result[0].order : 0;
+}
+
+export async function updateManyChapterOrders(bookId, updates) {
+  // updates: array of { _id, order }
+  // Two-phase update to avoid unique constraint violations on {bookId, order, deletedAt}:
+  // Phase 1: Set all orders to negative temporary values (guaranteed unique)
+  // Phase 2: Set all orders to their final values
+  const tempOps = updates.map((u, i) => ({
+    updateOne: {
+      filter: { _id: u._id, bookId, deletedAt: null },
+      update: { $set: { order: -(i + 1) } },
+    },
+  }));
+  await Chapter.bulkWrite(tempOps);
+
+  const finalOps = updates.map((u) => ({
+    updateOne: {
+      filter: { _id: u._id, bookId, deletedAt: null },
+      update: { $set: { order: u.order } },
+    },
+  }));
+  return Chapter.bulkWrite(finalOps);
+}
+
+export async function pushChapterIdToBook(bookId, chapterId) {
+  return Book.findOneAndUpdate(
+    { _id: bookId, deletedAt: null },
+    { $push: { chapterIds: chapterId } },
+    { new: true },
+  ).lean({ virtuals: true }).exec();
+}
+
+export async function pullChapterIdFromBook(bookId, chapterId) {
+  return Book.findOneAndUpdate(
+    { _id: bookId, deletedAt: null },
+    { $pull: { chapterIds: chapterId } },
+    { new: true },
+  ).lean({ virtuals: true }).exec();
+}
+
+export async function updateBookChapterIdsOrder(bookId, chapterIds) {
+  return Book.findOneAndUpdate(
+    { _id: bookId, deletedAt: null },
+    { $set: { chapterIds } },
+    { new: true },
+  ).lean({ virtuals: true }).exec();
+}
+
 // ── Asset DAO ─────────────────────────────────────────────────────────────────
 
 export async function createAsset(data) {
