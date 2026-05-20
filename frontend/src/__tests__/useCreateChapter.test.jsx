@@ -56,6 +56,22 @@ describe('useCreateChapter', () => {
     expect(mockPost).toHaveBeenCalledWith(`/v1/books/${bookId}/chapters`, {});
   });
 
+  it('sends payload with content when provided', async () => {
+    // Covers the `if (content) payload.content = content` branch (line 11)
+    mockPost.mockResolvedValue({ data: { data: { _id: 'c4' } } });
+
+    const { result } = renderHook(() => useCreateChapter(bookId), { wrapper });
+
+    await waitFor(async () => {
+      await result.current.mutateAsync({ title: 'Ch', content: '# Hello' });
+    });
+
+    expect(mockPost).toHaveBeenCalledWith(`/v1/books/${bookId}/chapters`, {
+      title: 'Ch',
+      content: '# Hello',
+    });
+  });
+
   it('invalidates chapters query on success', async () => {
     mockPost.mockResolvedValue({ data: { data: { _id: 'c3' } } });
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
@@ -69,7 +85,7 @@ describe('useCreateChapter', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['chapters', bookId] });
   });
 
-  it('propagates error from apiClient', async () => {
+  it('propagates error from apiClient (onError path)', async () => {
     const apiError = new Error('Chapter limit reached');
     mockPost.mockRejectedValue(apiError);
 
@@ -80,5 +96,18 @@ describe('useCreateChapter', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
+  });
+
+  it('calls mutateAsync with no arguments (default empty object)', async () => {
+    // Covers the default parameter `{ title, content } = {}`
+    mockPost.mockResolvedValue({ data: { data: { _id: 'c5' } } });
+
+    const { result } = renderHook(() => useCreateChapter(bookId), { wrapper });
+
+    await waitFor(async () => {
+      await result.current.mutateAsync();
+    });
+
+    expect(mockPost).toHaveBeenCalledWith(`/v1/books/${bookId}/chapters`, {});
   });
 });

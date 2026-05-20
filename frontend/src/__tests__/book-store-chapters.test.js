@@ -120,4 +120,138 @@ describe('bookStore — Chapter Actions', () => {
       expect(state.isLoadingBooks).toBe(false);
     });
   });
+
+  // === Loading/error setters (uncovered functions) ===
+
+  describe('setLoadingBooks', () => {
+    it('sets isLoadingBooks to true', () => {
+      useBookStore.getState().setLoadingBooks(true);
+      expect(useBookStore.getState().isLoadingBooks).toBe(true);
+    });
+
+    it('sets isLoadingBooks to false', () => {
+      useBookStore.getState().setLoadingBooks(true);
+      useBookStore.getState().setLoadingBooks(false);
+      expect(useBookStore.getState().isLoadingBooks).toBe(false);
+    });
+  });
+
+  describe('setBooksError', () => {
+    it('sets booksError to an error message', () => {
+      useBookStore.getState().setBooksError('Failed to load books');
+      expect(useBookStore.getState().booksError).toBe('Failed to load books');
+    });
+
+    it('clears booksError with null', () => {
+      useBookStore.getState().setBooksError('Some error');
+      useBookStore.getState().setBooksError(null);
+      expect(useBookStore.getState().booksError).toBeNull();
+    });
+  });
+
+  describe('setLoadingBook', () => {
+    it('sets isLoadingBook to true', () => {
+      useBookStore.getState().setLoadingBook(true);
+      expect(useBookStore.getState().isLoadingBook).toBe(true);
+    });
+
+    it('sets isLoadingBook to false', () => {
+      useBookStore.getState().setLoadingBook(false);
+      expect(useBookStore.getState().isLoadingBook).toBe(false);
+    });
+  });
+
+  describe('setBookError', () => {
+    it('sets bookError to an error message', () => {
+      useBookStore.getState().setBookError('Book not found');
+      expect(useBookStore.getState().bookError).toBe('Book not found');
+    });
+
+    it('clears bookError with null', () => {
+      useBookStore.getState().setBookError(null);
+      expect(useBookStore.getState().bookError).toBeNull();
+    });
+  });
+
+  describe('setLoadingChapters', () => {
+    it('sets isLoadingChapters to true', () => {
+      useBookStore.getState().setLoadingChapters(true);
+      expect(useBookStore.getState().isLoadingChapters).toBe(true);
+    });
+
+    it('sets isLoadingChapters to false', () => {
+      useBookStore.getState().setLoadingChapters(false);
+      expect(useBookStore.getState().isLoadingChapters).toBe(false);
+    });
+  });
+
+  describe('setChaptersError', () => {
+    it('sets chaptersError to an error message', () => {
+      useBookStore.getState().setChaptersError('Failed to load chapters');
+      expect(useBookStore.getState().chaptersError).toBe('Failed to load chapters');
+    });
+
+    it('clears chaptersError with null', () => {
+      useBookStore.getState().setChaptersError(null);
+      expect(useBookStore.getState().chaptersError).toBeNull();
+    });
+  });
+
+  // === Draft actions (uncovered functions) ===
+
+  describe('setDraftLastSavedAt', () => {
+    it('sets draftLastSavedAt to a timestamp', () => {
+      const timestamp = Date.now();
+      useBookStore.getState().setDraftLastSavedAt(timestamp);
+      expect(useBookStore.getState().draftLastSavedAt).toBe(timestamp);
+    });
+
+    it('sets draftLastSavedAt to null', () => {
+      useBookStore.getState().setDraftLastSavedAt(Date.now());
+      useBookStore.getState().setDraftLastSavedAt(null);
+      expect(useBookStore.getState().draftLastSavedAt).toBeNull();
+    });
+  });
+
+  describe('setDraftSaving', () => {
+    it('sets isDraftSaving to true', () => {
+      useBookStore.getState().setDraftSaving(true);
+      expect(useBookStore.getState().isDraftSaving).toBe(true);
+    });
+
+    it('sets isDraftSaving to false', () => {
+      useBookStore.getState().setDraftSaving(false);
+      expect(useBookStore.getState().isDraftSaving).toBe(false);
+    });
+  });
+
+  describe('saveDraft', () => {
+    it('saves draft content with timestamp', () => {
+      useBookStore.getState().saveDraft('My draft content');
+      const state = useBookStore.getState();
+      expect(state.draft).toBe('My draft content');
+      expect(state.draftLastSavedAt).toBeGreaterThan(0);
+    });
+
+    it('overwrites previous draft', () => {
+      useBookStore.getState().saveDraft('Old content');
+      useBookStore.getState().saveDraft('New content');
+      expect(useBookStore.getState().draft).toBe('New content');
+    });
+  });
+
+  describe('clearDraft', () => {
+    it('clears draft and draftLastSavedAt', () => {
+      useBookStore.getState().saveDraft('Some draft');
+      useBookStore.getState().clearDraft();
+      const state = useBookStore.getState();
+      expect(state.draft).toBeNull();
+      expect(state.draftLastSavedAt).toBeNull();
+    });
+
+    it('is idempotent when already cleared', () => {
+      useBookStore.getState().clearDraft();
+      expect(useBookStore.getState().draft).toBeNull();
+    });
+  });
 });

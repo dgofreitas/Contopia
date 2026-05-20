@@ -85,7 +85,6 @@ describe('ChapterListItem', () => {
     const user = userEvent.setup();
     render(<ChapterListItem {...defaultProps} />);
     await user.click(screen.getByLabelText('chapterDelete'));
-    // Dialog should open (checked via presence of warning text in dialog body)
     expect(screen.getByText('chapterDeleteConfirm')).toBeInTheDocument();
   });
 
@@ -127,5 +126,114 @@ describe('ChapterListItem', () => {
     render(<ChapterListItem {...defaultProps} />);
     const handle = screen.getByLabelText('chapterReorder');
     expect(handle).toBeInTheDocument();
+  });
+
+  // === NEW TESTS for uncovered lines ===
+
+  // Covers line 42-43: handleRename calls onRename with { chapterId, title }
+  it('calls onRename with chapterId and new title when InlineEditTitle saves', async () => {
+    const onRename = vi.fn();
+    const user = userEvent.setup();
+    render(<ChapterListItem {...defaultProps} onRename={onRename} />);
+
+    // InlineEditTitle renders a button showing the title. Click to enter edit mode.
+    const titleBtn = screen.getByLabelText('chapterRename');
+    await user.click(titleBtn);
+
+    // Now an input appears with the current title value
+    const input = screen.getByRole('textbox');
+    // Clear all text and type new one (use tripple-click + type to avoid space issues)
+    await user.tripleClick(input);
+    await user.keyboard('RenamedChapter');
+
+    // Press Enter to save
+    await user.keyboard('{Enter}');
+
+    // onRename should be called with { chapterId: 'c1', title: 'RenamedChapter' }
+    expect(onRename).toHaveBeenCalledWith({
+      chapterId: 'c1',
+      title: 'RenamedChapter',
+    });
+  });
+
+  // Covers lines 46-48: handleConfirmDelete calls onDelete and closes dialog
+  it('calls onDelete with chapterId when delete is confirmed in dialog', async () => {
+    const onDelete = vi.fn();
+    const user = userEvent.setup();
+    render(<ChapterListItem {...defaultProps} onDelete={onDelete} />);
+
+    // Open delete dialog
+    await user.click(screen.getByLabelText('chapterDelete'));
+
+    // Confirm dialog — find the Button with color="failure" (the confirm button)
+    // Use getAllByText and find the one inside a button element
+    const confirmBtn = screen.getByRole('button', { name: 'chapterDelete' });
+    await user.click(confirmBtn);
+
+    // onDelete should be called with { chapterId: 'c1' }
+    expect(onDelete).toHaveBeenCalledWith({ chapterId: 'c1' });
+  });
+
+  // Covers lines 46-48: dialog is closed after confirm (setShowDeleteDialog(false))
+  it('closes delete dialog after confirming deletion', async () => {
+    const user = userEvent.setup();
+    render(<ChapterListItem {...defaultProps} />);
+
+    // Open dialog
+    await user.click(screen.getByLabelText('chapterDelete'));
+    expect(screen.getByText('chapterDeleteConfirm')).toBeInTheDocument();
+
+    // Confirm deletion
+    const confirmBtn = screen.getByRole('button', { name: 'chapterDelete' });
+    await user.click(confirmBtn);
+
+    // Dialog should be closed now
+    expect(screen.queryByText('chapterDeleteConfirm')).not.toBeInTheDocument();
+  });
+
+  // Covers line 42-43: handleRename called with empty title should not trigger onRename
+  it('does not call onRename when title is empty after save', async () => {
+    const onRename = vi.fn();
+    const user = userEvent.setup();
+    render(<ChapterListItem {...defaultProps} onRename={onRename} />);
+
+    // Click to enter edit mode
+    const titleBtn = screen.getByLabelText('chapterRename');
+    await user.click(titleBtn);
+
+    // Clear the input
+    const input = screen.getByRole('textbox');
+    await user.clear(input);
+
+    // Press Enter with empty value
+    await user.keyboard('{Enter}');
+
+    // onRename should NOT be called (empty title is not saved)
+    expect(onRename).not.toHaveBeenCalled();
+  });
+
+  // Covers isDragging style
+  it('has full opacity when not dragging', () => {
+    const { container } = render(<ChapterListItem {...defaultProps} />);
+    const listItem = container.querySelector('li');
+    expect(listItem.style.opacity).toBe('1');
+  });
+
+  // Covers keyboard Space key handler (line 67-70)
+  it('calls onSelect on Space key', async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    render(<ChapterListItem {...defaultProps} onSelect={onSelect} />);
+    const listItem = screen.getByRole('listitem');
+    listItem.focus();
+    await user.keyboard(' ');
+    expect(onSelect).toHaveBeenCalledWith('c1');
+  });
+
+  // Covers canMoveUp/canMoveDown boundary cases
+  it('disables move up and move down for single item', () => {
+    render(<ChapterListItem {...defaultProps} position={0} totalCount={1} />);
+    expect(screen.getByLabelText('chapterMoveUp')).toBeDisabled();
+    expect(screen.getByLabelText('chapterMoveDown')).toBeDisabled();
   });
 });
