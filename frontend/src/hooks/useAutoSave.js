@@ -40,7 +40,7 @@ export default function useAutoSave({
   onServerSave,
   enabled = true,
 }) {
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, wasOffline } = useNetworkStatus();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isLocalSaving, setIsLocalSaving] = useState(false);
@@ -105,7 +105,6 @@ export default function useAutoSave({
       setIsOffline(true);
       setSaveStatus('offline');
       await doLocalSave(html);
-      dirtyContentRef.current = null;
       return;
     }
 
@@ -137,7 +136,6 @@ export default function useAutoSave({
       setIsOffline(true);
       setSaveStatus('offline');
       await doLocalSave(html);
-      dirtyContentRef.current = null;
     } finally {
       setIsSaving(false);
     }
@@ -149,7 +147,7 @@ export default function useAutoSave({
       return;
     }
 
-    const html = contentRef.current;
+    const html = dirtyContentRef.current || contentRef.current;
     if (!html) return;
 
     const attempt = retryAttemptRef.current;
@@ -198,11 +196,11 @@ export default function useAutoSave({
   }, [chapterId, onServerSave, bookId]);
 
   useEffect(() => {
-    if (isOnline && isOffline && dirtyContentRef.current && !isUnmountedRef.current) {
+    if (isOnline && wasOffline && dirtyContentRef.current && !isUnmountedRef.current) {
       retryAttemptRef.current = 0;
       retryServerSave();
     }
-  }, [isOnline, isOffline, retryServerSave]);
+  }, [isOnline, wasOffline, retryServerSave]);
 
   useEffect(() => {
     serverVersionRef.current = serverVersion;

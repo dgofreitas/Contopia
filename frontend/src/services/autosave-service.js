@@ -17,7 +17,7 @@ function openDB() {
 
     request.onsuccess = (event) => {
       const db = event.target.result;
-      cleanupOldDrafts(db).then(() => resolve(db)).catch(() => resolve(db));
+      _cleanupWithDB(db, 7, 50).then(() => resolve(db)).catch(() => resolve(db));
     };
 
     request.onerror = (event) => reject(event.target.error);

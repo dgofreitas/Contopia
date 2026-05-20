@@ -198,12 +198,12 @@ describe('ChapterEditor', () => {
     expect(mockUseAutoSave).toHaveBeenCalled();
   });
 
-  it('shows draft recovery banner when hasDraft is true and no restored content', () => {
+  it('shows draft recovery banner when hasDraft is true and not auto-restored', () => {
     mockUseDraftRecovery.mockReturnValue({
       ...defaultDraftRecoveryReturn,
       hasDraft: true,
       draftContent: '<p>Saved content</p>',
-      shouldRestore: true,
+      shouldRestore: false, // Not auto-restoring, so banner should show
     });
 
     const chapter = { _id: 'c1', title: 'Test', content: '' };
@@ -253,11 +253,6 @@ describe('ChapterEditor', () => {
     expect(liveRegions.some(el => el.textContent.includes('boldApplied'))).toBe(true);
   });
 
-    const liveRegions = screen.getAllByRole('status');
-    expect(liveRegions.length).toBeGreaterThanOrEqual(1);
-    expect(liveRegions.some(el => el.textContent.includes('boldApplied'))).toBe(true);
-  });
-
   it('cleans up announcement timer on unmount', () => {
     const chapter = { _id: 'c1', title: 'Test', content: '' };
     const { unmount } = render(<ChapterEditor chapter={chapter} bookId="b1" />);
@@ -272,5 +267,108 @@ describe('ChapterEditor', () => {
     act(() => {
       vi.advanceTimersByTime(2000);
     });
+  });
+
+  it('shows draft recovery banner with conflict warning', () => {
+    mockUseDraftRecovery.mockReturnValue({
+      ...defaultDraftRecoveryReturn,
+      hasDraft: true,
+      draftContent: '<p>Draft content</p>',
+      shouldRestore: false,
+      conflictWarning: 'Your offline changes may differ',
+    });
+
+    const chapter = { _id: 'c1', title: 'Test', content: '' };
+    render(<ChapterEditor chapter={chapter} bookId="b1" />);
+
+    expect(screen.getByText('unsavedChanges')).toBeInTheDocument();
+    expect(screen.getByText(/Your offline changes/)).toBeInTheDocument();
+  });
+
+  it('calls restoreDraft when "Restore" button is clicked', async () => {
+    const mockRestoreDraft = vi.fn().mockResolvedValue('<p>Restored content</p>');
+    mockUseDraftRecovery.mockReturnValue({
+      ...defaultDraftRecoveryReturn,
+      hasDraft: true,
+      draftContent: '<p>Draft content</p>',
+      shouldRestore: false,
+      restoreDraft: mockRestoreDraft,
+    });
+
+    const chapter = { _id: 'c1', title: 'Test', content: '' };
+    render(<ChapterEditor chapter={chapter} bookId="b1" />);
+
+    const restoreBtn = screen.getByText('saveDraft');
+    await act(async () => {
+      restoreBtn.click();
+    });
+
+    expect(mockRestoreDraft).toHaveBeenCalled();
+  });
+
+  it('calls discardDraft when "Discard" button is clicked', async () => {
+    const mockDiscardDraft = vi.fn().mockResolvedValue(undefined);
+    mockUseDraftRecovery.mockReturnValue({
+      ...defaultDraftRecoveryReturn,
+      hasDraft: true,
+      draftContent: '<p>Draft content</p>',
+      shouldRestore: false,
+      discardDraft: mockDiscardDraft,
+    });
+
+    const chapter = { _id: 'c1', title: 'Test', content: '' };
+    render(<ChapterEditor chapter={chapter} bookId="b1" />);
+
+    const discardBtn = screen.getByText('preview');
+    await act(async () => {
+      discardBtn.click();
+    });
+
+    expect(mockDiscardDraft).toHaveBeenCalled();
+  });
+
+  it('shows restored content in editor when restoreDraft returns content', async () => {
+    const mockRestoreDraft = vi.fn().mockResolvedValue('<p>Restored content</p>');
+    mockUseDraftRecovery.mockReturnValue({
+      ...defaultDraftRecoveryReturn,
+      hasDraft: true,
+      draftContent: '<p>Draft content</p>',
+      shouldRestore: false,
+      restoreDraft: mockRestoreDraft,
+    });
+
+    const chapter = { _id: 'c1', title: 'Test', content: '' };
+    render(<ChapterEditor chapter={chapter} bookId="b1" />);
+
+    const restoreBtn = screen.getByText('saveDraft');
+    await act(async () => {
+      restoreBtn.click();
+    });
+
+    // After restore, editor content should update
+    const editor = screen.getByTestId('tiptap-editor');
+    expect(editor).toHaveAttribute('data-content', '<p>Restored content</p>');
+  });
+
+  it('uses serverVersion in autosave from chapter.updatedAt', () => {
+    const chapter = {
+      _id: 'c1',
+      title: 'Test',
+      content: '',
+      updatedAt: '2025-06-15T14:00:00Z',
+    };
+    render(<ChapterEditor chapter={chapter} bookId="b1" />);
+
+    expect(mockUseAutoSave).toHaveBeenCalled();
+    const args = mockUseAutoSave.mock.calls[0][0];
+    expect(args.serverVersion).toBe('2025-06-15T14:00:00Z');
+  });
+
+  it('disables autosave when chapter is null', () => {
+    render(<ChapterEditor chapter={null} bookId="b1" />);
+
+    expect(mockUseAutoSave).toHaveBeenCalled();
+    const args = mockUseAutoSave.mock.calls[0][0];
+    expect(args.enabled).toBe(false);
   });
 });

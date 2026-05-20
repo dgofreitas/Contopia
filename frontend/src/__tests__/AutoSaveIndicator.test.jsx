@@ -106,4 +106,49 @@ describe('AutoSaveIndicator', () => {
     render(<AutoSaveIndicator saveStatus="conflict" conflictInfo="Local draft is newer" />);
     expect(screen.getAllByText('localChangesKept').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('reserves space in indicator wrapper to prevent CLS', () => {
+    const { container } = render(<AutoSaveIndicator saveStatus="saving" />);
+    const wrapper = container.querySelector('.autosave-indicator-wrapper');
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper.className).toContain('min-h');
+  });
+
+  it('renders indicator wrapper with reserved min-height for no CLS', () => {
+    const { container } = render(<AutoSaveIndicator saveStatus="saving" />);
+    const wrapper = container.querySelector('.autosave-indicator-wrapper');
+    expect(wrapper).toHaveAttribute('aria-hidden', 'true');
+    expect(wrapper.className).toContain('min-h');
+  });
+
+  it('renders proper idle state with lastSavedAt time', () => {
+    const savedAt = new Date('2025-06-15T14:30:00').getTime();
+    const { container } = render(<AutoSaveIndicator saveStatus="idle" lastSavedAt={savedAt} />);
+    const wrapper = container.querySelector('.autosave-indicator-wrapper');
+    expect(wrapper).toBeInTheDocument();
+    expect(container.querySelectorAll('[aria-live="polite"]').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('handles undefined conflictInfo gracefully', () => {
+    render(<AutoSaveIndicator saveStatus="conflict" />);
+    expect(screen.getAllByText('localChangesKept').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders indicator in saved state with fade-in animation', () => {
+    const { container } = render(<AutoSaveIndicator saveStatus="saved" />);
+    const indicator = container.querySelector('.autosave-saved');
+    expect(indicator).toBeInTheDocument();
+  });
+
+  it('renders indicator with online offline class', () => {
+    const { container } = render(<AutoSaveIndicator saveStatus="offline" />);
+    const indicator = container.querySelector('.autosave-offline');
+    expect(indicator).toBeInTheDocument();
+  });
+
+  it('renders indicator with conflict class', () => {
+    const { container } = render(<AutoSaveIndicator saveStatus="conflict" />);
+    const indicator = container.querySelector('.autosave-conflict');
+    expect(indicator).toBeInTheDocument();
+  });
 });
