@@ -9,9 +9,13 @@ import {
   bookUpdateSchema,
   bookListQuerySchema,
   bookChaptersParamsSchema,
+  chapterCreateBodySchema,
+  chapterDeleteParamsSchema,
+  chapterReorderSchema,
   progressUpdateSchema,
 } from '../common/validation-schemas.js';
 import * as bookManager from './book-manager.js';
+import * as chapterManager from '../editor/chapter-manager.js';
 
 const logger = pino({ name: 'book-router', level: process.env.LOG_LEVEL || 'info' });
 
@@ -121,28 +125,38 @@ router.get('/:bookId/chapters', validate(bookChaptersParamsSchema, 'params'), as
   }
 });
 
-// ── POST /:bookId/chapters — Create a chapter (placeholder) ───────────────────
-router.post('/:bookId/chapters', async (req, res) => {
-  return res.status(200).json({
-    data: { message: 'Chapter creation endpoint — editor story implementation pending' },
-    meta: { requestId: req.id },
-  });
+// ── POST /:bookId/chapters — Create a chapter ──────────────────────────────────
+router.post('/:bookId/chapters', validate(bookChaptersParamsSchema, 'params'), validate(chapterCreateBodySchema, 'body'), async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const chapter = await chapterManager.createChapterManager(req.childId, req._params.bookId, req._body);
+    return res.status(201).json(ok(chapter, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
 });
 
-// ── PATCH /:bookId/chapters/:chapterId — Update a chapter (placeholder) ──────
-router.patch('/:bookId/chapters/:chapterId', async (req, res) => {
-  return res.status(200).json({
-    data: { message: 'Chapter update endpoint — editor story implementation pending' },
-    meta: { requestId: req.id },
-  });
+// ── DELETE /:bookId/chapters/:chapterId — Delete a chapter ──────────────────────
+router.delete('/:bookId/chapters/:chapterId', validate(chapterDeleteParamsSchema, 'params'), async (req, res) => {
+  try {
+    await chapterManager.deleteChapterManager(req.childId, req._params.bookId, req._params.chapterId);
+    return res.status(204).end();
+  } catch (err) {
+    return handleError(err, req, res);
+  }
 });
 
-// ── DELETE /:bookId/chapters/:chapterId — Delete a chapter (placeholder) ──────
-router.delete('/:bookId/chapters/:chapterId', async (req, res) => {
-  return res.status(200).json({
-    data: { message: 'Chapter delete endpoint — editor story implementation pending' },
-    meta: { requestId: req.id },
-  });
+// ── PATCH /:bookId/chapters/reorder — Reorder chapters ─────────────────────────
+router.patch('/:bookId/chapters/reorder', validate(bookChaptersParamsSchema, 'params'), validate(chapterReorderSchema, 'body'), async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const chapters = await chapterManager.reorderChaptersManager(req.childId, req._params.bookId, req._body.chapters);
+    return res.status(200).json(ok(chapters, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
 });
 
 // ── GET /:bookId/progress — Get reading progress ─────────────────────────────

@@ -37,6 +37,20 @@ const useBookStore = create((set, _get) => ({
   setChapters: (chapters) => set({ chapters, chaptersError: null }),
   setLoadingChapters: (isLoadingChapters) => set({ isLoadingChapters }),
   setChaptersError: (chaptersError) => set({ chaptersError }),
+  addChapter: (chapter) =>
+    set((state) => ({ chapters: [...state.chapters, chapter] })),
+  removeChapter: (chapterId) =>
+    set((state) => ({
+      chapters: state.chapters.filter((c) => c._id !== chapterId),
+    })),
+  updateChapter: (chapterId, updates) =>
+    set((state) => ({
+      chapters: state.chapters.map((c) =>
+        c._id === chapterId ? { ...c, ...updates } : c
+      ),
+    })),
+  reorderChapters: (reorderedList) =>
+    set({ chapters: reorderedList }),
 
   // Draft actions
   setDraft: (draft) => set({ draft }),

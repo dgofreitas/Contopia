@@ -90,6 +90,36 @@ export const chapterCreateSchema = z.object({
   content: z.string().optional().default(''),
 });
 
+/**
+ * Body schema for POST /api/v1/books/:bookId/chapters — create chapter.
+ * Title and content are optional; defaults are computed in the manager.
+ */
+export const chapterCreateBodySchema = z.object({
+  title: z.string().min(1).max(200).trim().optional(),
+  content: z.string().optional().default(''),
+});
+
+/**
+ * Params schema for DELETE /api/v1/books/:bookId/chapters/:chapterId.
+ */
+export const chapterDeleteParamsSchema = z.object({
+  bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
+  chapterId: z.string().regex(objectIdRegex, 'Invalid chapter ID format'),
+});
+
+/**
+ * Body schema for PATCH /api/v1/books/:bookId/chapters/reorder.
+ * Accepts an array of chapter IDs with their new order values.
+ */
+export const chapterReorderSchema = z.object({
+  chapters: z.array(
+    z.object({
+      id: z.string().regex(objectIdRegex, 'Invalid chapter ID format'),
+      order: z.number().int().min(0),
+    }),
+  ).min(1).max(50),
+});
+
 export const chapterUpdateSchema = z.object({
   title: z.string().min(1).max(200).trim().optional(),
   content: z.string().optional(),
