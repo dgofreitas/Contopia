@@ -5,24 +5,50 @@ import TipTapEditor from '../../components/editor/TipTapEditor';
 import EditorToolbar from '../../components/editor/EditorToolbar';
 import AutoSaveIndicator from '../../components/editor/AutoSaveIndicator';
 import { sanitizeRichContent } from '../../lib/sanitize';
-import useBookStore from '../../stores/book-store';
+import useAutoSave from '../../hooks/useAutoSave';
+import useDraftRecovery from '../../hooks/useDraftRecovery';
 
-const AUTO_SAVE_DELAY = 1500;
-
-export default function ChapterEditor({ chapter, onContentChange }) {
+export default function ChapterEditor({ chapter, onContentChange, bookId }) {
   const { t } = useTranslation('editor');
   const editorRef = useRef(null);
   const [editorInstance, setEditorInstance] = useState(null);
-  const dirtyRef = useRef(false);
-  const debounceTimerRef = useRef(null);
-  const announceTimerRef = useRef(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState(null);
-  const [isDirty, setIsDirty] = useState(false);
   const [formatAnnouncement, setFormatAnnouncement] = useState('');
-  const saveDraft = useBookStore((s) => s.saveDraft);
-  const clearDraft = useBookStore((s) => s.clearDraft);
-  const chapterIdRef = useRef(null);
+  const announceTimerRef = useRef(null);
+  const [restoredContent, setRestoredContent] = useState(null);
+
+  const {
+    isSaving,
+    isDirty,
+    saveStatus,
+    lastSavedAt,
+    isOffline,
+    conflictInfo,
+    saveNow,
+  } = useAutoSave({
+    bookId,
+    chapterId: chapter?._id,
+    content: restoredContent ?? (chapter?.content || ''),
+    serverVersion: chapter?.updatedAt || null,
+    onServerSave: onContentChange
+      ? ({ chapterId, content }) => onContentChange({ chapterId, content })
+      : null,
+    enabled: !!chapter,
+  });
+
+  const {
+    hasDraft,
+    draftContent,
+    conflictWarning,
+    shouldRestore,
+    restoreDraft,
+    discardDraft,
+  } = useDraftRecovery(bookId, chapter?._id, chapter?.updatedAt);
+
+  useEffect(() => {
+    if (shouldRestore && hasDraft && draftContent && !restoredContent) {
+      setRestoredContent(draftContent);
+    }
+  }, [shouldRestore, hasDraft, draftContent, restoredContent]);
 
   const handleEditorRef = useCallback((editor) => {
     editorRef.current = editor;
@@ -39,61 +65,14 @@ export default function ChapterEditor({ chapter, onContentChange }) {
 
   const handleUpdate = useCallback(
     (html) => {
-      dirtyRef.current = true;
-      setIsDirty(true);
-
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
-      debounceTimerRef.current = setTimeout(() => {
-        const sanitized = sanitizeRichContent(html);
-        if (onContentChange) {
-          setIsSaving(true);
-          const result = onContentChange({ chapterId: chapter._id, content: sanitized });
-          if (result && typeof result.then === 'function') {
-            result
-              .then(() => {
-                dirtyRef.current = false;
-                setIsDirty(false);
-                setLastSavedAt(Date.now());
-                clearDraft();
-              })
-              .catch(() => {
-                saveDraft(sanitized);
-              })
-              .finally(() => {
-                setIsSaving(false);
-              });
-          } else {
-            dirtyRef.current = false;
-            setIsDirty(false);
-            setIsSaving(false);
-            setLastSavedAt(Date.now());
-          }
-        }
-      }, AUTO_SAVE_DELAY);
+      const sanitized = sanitizeRichContent(html);
+      setRestoredContent(sanitized);
     },
-    [onContentChange, chapter, saveDraft, clearDraft]
+    []
   );
 
   useEffect(() => {
-    if (chapter?._id !== chapterIdRef.current) {
-      chapterIdRef.current = chapter?._id;
-      dirtyRef.current = false;
-      setIsDirty(false);
-      setLastSavedAt(null);
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    }
-  }, [chapter?._id]);
-
-  useEffect(() => {
     return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
       if (announceTimerRef.current) {
         clearTimeout(announceTimerRef.current);
       }
@@ -108,6 +87,20 @@ export default function ChapterEditor({ chapter, onContentChange }) {
     );
   }
 
+  const displayContent = restoredContent ?? (chapter.content || '');
+
+  const handleRestore = async () => {
+    const content = await restoreDraft();
+    if (content) {
+      setRestoredContent(content);
+    }
+  };
+
+  const handleDiscard = async () => {
+    await discardDraft();
+    setRestoredContent(null);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
@@ -117,17 +110,45 @@ export default function ChapterEditor({ chapter, onContentChange }) {
         </h2>
         <div className="ml-auto">
           <AutoSaveIndicator
-            isSaving={isSaving}
+            saveStatus={saveStatus}
             lastSavedAt={lastSavedAt}
             isDirty={isDirty}
+            conflictInfo={conflictInfo}
           />
         </div>
       </div>
+
+      {hasDraft && !restoredContent && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-amber-700">
+            <HiPencilAlt className="w-4 h-4" aria-hidden="true" />
+            <span>{t('unsavedChanges')}</span>
+            {conflictWarning && (
+              <span className="text-amber-600 text-xs">({conflictWarning})</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRestore}
+              className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors"
+            >
+              {t('saveDraft')}
+            </button>
+            <button
+              onClick={handleDiscard}
+              className="px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 rounded transition-colors"
+            >
+              {t('preview')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {editorInstance && <EditorToolbar editor={editorInstance} ariaLabel={t('formattingToolbar')} onAnnounce={handleAnnounce} />}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-2">
           <TipTapEditor
-            content={chapter.content || ''}
+            content={displayContent}
             onUpdate={handleUpdate}
             editorRef={handleEditorRef}
             placeholder={t('editorPlaceholder')}

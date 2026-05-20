@@ -1,5 +1,6 @@
 // Contopia — Book Store (Zustand)
-// Manages books list, current book, chapters, and draft preservation
+// Manages books list, current book, and chapters
+// Draft preservation removed in favor of IndexedDB autosave (STORY-019)
 import { create } from 'zustand';
 
 const useBookStore = create((set, _get) => ({
@@ -17,11 +18,6 @@ const useBookStore = create((set, _get) => ({
   chapters: [],
   isLoadingChapters: false,
   chaptersError: null,
-
-  // Draft preservation
-  draft: null,
-  draftLastSavedAt: null,
-  isDraftSaving: false,
 
   // Book list actions
   setBooks: (books) => set({ books, booksError: null }),
@@ -52,23 +48,10 @@ const useBookStore = create((set, _get) => ({
   reorderChapters: (reorderedList) =>
     set({ chapters: reorderedList }),
 
-  // Draft actions
-  setDraft: (draft) => set({ draft }),
-  setDraftLastSavedAt: (draftLastSavedAt) => set({ draftLastSavedAt }),
-  setDraftSaving: (isDraftSaving) => set({ isDraftSaving }),
-
-  saveDraft: (content) => {
-    set({ draft: content, draftLastSavedAt: Date.now() });
-  },
-
-  clearDraft: () => set({ draft: null, draftLastSavedAt: null }),
-
   clearCurrentBook: () =>
     set({
       currentBook: null,
       chapters: [],
-      draft: null,
-      draftLastSavedAt: null,
       bookError: null,
       chaptersError: null,
     }),
@@ -78,15 +61,12 @@ const useBookStore = create((set, _get) => ({
       books: [],
       currentBook: null,
       chapters: [],
-      draft: null,
-      draftLastSavedAt: null,
       isLoadingBooks: false,
       booksError: null,
       isLoadingBook: false,
       bookError: null,
       isLoadingChapters: false,
       chaptersError: null,
-      isDraftSaving: false,
     }),
 }));
 

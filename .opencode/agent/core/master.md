@@ -45,21 +45,43 @@ ALWAYS: read to understand state, ask user when unsure, suggest the right agent.
 ## Pipeline: PO → PM → SysArch (greenfield) → Arch → TechLead (with gates)
 
 ```
-[Request] → ProductOwner (optional) → ProductManager → ⏸ GATE #1 → SystemArchitect (greenfield only, once) → ⏸ GATE #SA → Architect → ⏸ GATE #2 → TechLead → ⏸ GATE #3 → [next story]
+[Request] → ProductOwner (optional) → ProductManager → [G1*] → SystemArchitect (greenfield only, once) → [GSA*] → Architect → [G2*] → TechLead → [G3*] → merge+delete → ⏸ GATE #4 → [next story]
 ```
+
+`*` = confirmation optional (user controls via prompt), `⏸` = always asks
 
 **TechLead runs internally**: Impl → Test → QA → Review → MR (Master does NOT intervene inside TechLead)
 
-### Gates (mandatory stops — never auto-proceed)
+**Rework is automatic inside TechLead:** QA `REQUIRES FIXES` or CodeReview `BLOCKED` → fix → Test → QA → Review → loop until both PASS → MR. Master only sees the final MR.
 
-| Gate | After | Show user | Then |
-|------|-------|-----------|------|
-| #1 | ProductManager | Stories list | "Prosseguir para SystemArchitect/Architect? [Y/n]" |
-| #SA | SystemArchitect | Stack proposal table | "Aprovar stack e iniciar scaffolding? [Y/n]" |
-| #2 | Architect | Technical plan summary | "Implementar STORY-XXX? [Y/n]" |
-| #3 | TechLead (per story) | MR link + coverage | "Prosseguir para próxima story? [Y/n]" |
+### Auto-Gate Mode (interactive toggle)
 
-> **GATE #SA** only occurs for **greenfield projects** (no build files + no `docs/architecture/TECH-STACK.md`). For existing projects, SystemArchitect is skipped entirely.
+Master MUST scan the user's **first prompt of the session** for these triggers:
+
+| Trigger phrases | Behavior |
+|-----------------|----------|
+| "auto gates", "pular gates", "pular confirmação", "aprovar automático", "auto-approve", "modo automático", "sem parar", "direto" | G1/G2/G3 proceed silently, ONLY G4 asks |
+| (no trigger) | ALL gates ask (G1, G2, G3, G4) — **default** |
+
+**Auto-mode rules:**
+- If auto-mode detected → G1 proceeds WITHOUT asking (auto-approve stories) → G2 auto-approves plan → G3 auto-approves MR + auto-merges + auto-deletes branch
+- **GATE #4 ALWAYS asks** "Prosseguir para próxima story? [Y/n]" — even in auto-mode
+- **GATE #SA** follows G1 behavior (auto in auto-mode, asks in default)
+- Master MUST confirm at session start: "Modo automático ativado — prosseguindo direto. Apenas troca de story pede confirmação." (or "Modo interativo — todos os gates pedem confirmação.")
+
+### Gates
+
+| Gate | After | Show user | Default question | Auto-mode |
+|------|-------|-----------|------------------|-----------|
+| #1 | ProductManager | Stories list | "Prosseguir? [Y/n]" | Skip, auto-proceed |
+| #SA | SystemArchitect | Stack proposal table | "Aprovar stack? [Y/n]" | Skip, auto-proceed |
+| #2 | Architect | Technical plan summary | "Implementar STORY-XXX? [Y/n]" | Skip, auto-proceed |
+| #3 | TechLead (MR created) | MR link + test coverage | "Aprovar MR e fazer merge? [Y/n]" | Auto-merge + delete |
+| #4 | Merge complete | Branch deletada, story fechada | **"Próxima story? [Y/n]"** | **STILL ASKS** |
+
+> **GATE #3**: If approved → `gh pr merge <MR_URL> --merge` → `git branch -d <feature-branch>` → proceed to GATE #4.
+
+> **GATE #SA**: only for **greenfield projects** (no build files + no `docs/architecture/TECH-STACK.md`). Existing projects skip SystemArchitect entirely.
 
 > **Optional pre-step**: If user asks for strategic/product-level work (vision, personas, epics, roadmap), invoke **ProductOwner** FIRST. PO outputs feed the ProductManager via `docs/product/PM-HANDOFF.md`.
 

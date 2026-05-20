@@ -51,3 +51,29 @@
 .ProseMirror em {
   font-style: italic;
 }
+
+/* Autosave indicator styles */
+.autosave-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+  min-height: 1.5rem;
+}
+
+.autosave-fade-out {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.autosave-saved {
+  color: #16a34a;
+}
+
+.autosave-offline {
+  color: #6b7280;
+}
+
+.autosave-conflict {
+  color: #d97706;
+}

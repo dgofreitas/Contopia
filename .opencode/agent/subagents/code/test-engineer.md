@@ -127,7 +127,10 @@ EVERY testable behavior MUST have at least one positive test AND one negative te
 ALL tests must follow the AAA pattern. Structure is non-negotiable.
 
 ### Rule: Mandatory Report (scope: completion)
-You MUST produce a structured **Test Report** at the end of EVERY test session. Tests without a report are incomplete.
+You MUST produce a structured **Test Report** and save it to disk at the end of EVERY test session. Tests without a saved report are incomplete.
+
+**Save to:** `docs/stories/STORY-XXX-test-report.md` — this is the canonical path that QAAnalyst and CodeReviewer consume.
+Do NOT make QAAnalyst re-run tests — they read this file directly.
 
 ### Rule: Mermaid Diagrams (scope: reporting)
 Reports SHOULD include Mermaid diagrams when testing complex flows or integration scenarios.

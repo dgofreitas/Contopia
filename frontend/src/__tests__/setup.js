@@ -1,5 +1,12 @@
 // Contopia — Test Setup
 import '@testing-library/jest-dom';
+import 'fake-indexeddb/auto';
+
+if (!globalThis.requestIdleCallback) {
+  globalThis.requestIdleCallback = (cb) => setTimeout(cb, 1);
+}
+
+Object.defineProperty(navigator, 'onLine', { writable: true, value: true });
 
 // Mock window.matchMedia for responsive components (Flowbite, etc.)
 Object.defineProperty(window, 'matchMedia', {

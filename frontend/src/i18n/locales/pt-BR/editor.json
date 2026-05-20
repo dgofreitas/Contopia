@@ -52,5 +52,12 @@
   "redoApplied": "Refazer aplicado",
   "unsavedChanges": "Alterações não salvas",
   "saving": "Salvando…",
-  "savedAt": "Salvo às {{time}}"
+  "savedAt": "Salvo às {{time}}",
+  "savingOffline": "Salvando offline…",
+  "savedExclamation": "Salvo!",
+  "offlineMessage": "Offline",
+  "conflictWarning": "Suas alterações offline podem diferir da versão do servidor. Suas alterações locais foram mantidas.",
+  "syncingMessage": "Sincronizando…",
+  "unableToSync": "Não foi possível sincronizar",
+  "localChangesKept": "Alterações locais mantidas"
 }
