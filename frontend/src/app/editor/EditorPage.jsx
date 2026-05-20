@@ -87,7 +87,7 @@ export default function EditorPage() {
         onDeleteChapter={handleDeleteChapter}
         isCreatingChapter={createChapter.isPending}
       />
-      <ChapterEditor chapter={activeChapter} onContentChange={handleContentChange} />
+      <ChapterEditor chapter={activeChapter} onContentChange={handleContentChange} bookId={bookId} />
     </div>
   );
 }

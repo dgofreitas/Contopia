@@ -98,25 +98,13 @@ After receiving QAAnalyst report, read the final **Status** line before doing AN
 
 **If `Status: REQUIRES FIXES`:**
 1. **STOP** — do NOT call CodeReviewer
-2. Present full QA Report to the human
-3. Ask EXACTLY:
-```
-⚠️ QA Analyst returned Status: REQUIRES FIXES
+2. Present full QA Report (as status update, no question)
+3. **Automatically** delegate fixes to appropriate agent (BugFixerNodejs or original developer)
+4. Wait for fix completion → TestEngineer → QAAnalyst → apply qa_gate again
+5. If PASSED → CodeReviewer. If REQUIRES FIXES again → repeat fix cycle automatically.
+6. **Do NOT ask the human.** The cycle restarts automatically. No A/B choice.
 
-Issues found:
-[paste Critical and Major issues]
-
-What would you like to do?
-A) Fix the issues — delegate fixes and re-run full cycle (Test → QA → Review → PR)
-B) Continue anyway — proceed to CodeReviewer without fixing (your responsibility)
-```
-4. Wait for human reply. Do NOT proceed until you receive a choice.
-
-**If A (Fix):** Delegate fixes → wait for completion → TestEngineer → QAAnalyst → apply qa_gate again → CodeReviewer → apply review_gate → MergeRequestCreator
-
-**If B (Continue):** Add warning note, proceed to CodeReviewer.
-
-> **NEVER skip or bypass this gate.** **NEVER auto-decide.** **NEVER jump from fix directly to CodeReviewer** — TestEngineer and QAAnalyst MUST run first.
+> **NEVER skip or bypass this gate.** **NEVER jump from fix directly to CodeReviewer** — TestEngineer and QAAnalyst MUST run first.
 
 ### Rule: Review Gate (scope: all_execution) — MANDATORY
 
@@ -125,12 +113,13 @@ After CodeReviewer report, read the `VERDICT` before doing ANYTHING else.
 **If `VERDICT: APPROVED`:** Proceed to MergeRequestCreator.
 
 **If `VERDICT: BLOCKED — requires rework`:**
-1. **STOP** — present full report
-2. Ask same A/B question
-3. If A: delegate fixes → TestEngineer → QAAnalyst → CodeReviewer → MergeRequestCreator
-4. If B: add warning, proceed
+1. **STOP** — present full review report (as status update, no question)
+2. **Automatically** delegate fixes to appropriate agent
+3. Wait for fix completion → TestEngineer → QAAnalyst → CodeReviewer → MergeRequestCreator
+4. If BLOCKED again → repeat fix cycle automatically.
+5. **Do NOT ask the human.** The cycle restarts automatically.
 
-> Same rules as qa_gate: **NEVER skip, auto-decide, or jump steps.**
+> Same rules as qa_gate: **NEVER skip, auto-decide human choice, or jump steps.**
 
 ### Rule: Approval Gate (scope: stage_transition)
 Approval gates between SDLC stages are handled by Master. Focus on orchestrating the full story cycle without individual approvals between sub-stages.
@@ -356,9 +345,9 @@ Coverage < 90% in ANY domain implemented in this story = incomplete delivery.
 5. **NEVER call TestEngineer before ALL domains [DONE]**
 6. **NEVER mark delegation as complete until agent confirms**
 7. **NEVER skip Frontend delegation** if technical-analysis mentions frontend
-8. **NEVER call CodeReviewer after QA REQUIRES FIXES** without human choice
-9. **NEVER call MergeRequestCreator after VERDICT: BLOCKED** without human choice
-10. **NEVER auto-decide when BLOCKED or REQUIRES FIXES**
+8. **NEVER call CodeReviewer after QA REQUIRES FIXES** before re-fixing
+9. **NEVER call MergeRequestCreator after VERDICT: BLOCKED** before re-fixing
+10. **NEVER ask the human** for A/B choice when blocked — restart cycle automatically
 11. **NEVER self-fix issues** — always delegate
 12. **NEVER skip TestEngineer during rework**
 13. **NEVER skip QAAnalyst during rework**

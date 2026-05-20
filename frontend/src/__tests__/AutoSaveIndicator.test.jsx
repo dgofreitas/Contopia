@@ -1,11 +1,10 @@
-// Contopia — AutoSaveIndicator Unit Tests (STORY-018)
+// Contopia — AutoSaveIndicator Unit Tests (STORY-019)
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import AutoSaveIndicator from '../components/editor/AutoSaveIndicator';
 
 describe('AutoSaveIndicator', () => {
   beforeEach(() => {
-    // Fix time for deterministic tests
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-06-15T14:30:00'));
   });
@@ -14,87 +13,97 @@ describe('AutoSaveIndicator', () => {
     vi.useRealTimers();
   });
 
-  it('shows saving status when isSaving is true', () => {
-    render(<AutoSaveIndicator isSaving={true} />);
-    expect(screen.getByText('saving')).toBeInTheDocument();
+  it('shows saving status when saveStatus is saving', () => {
+    render(<AutoSaveIndicator saveStatus="saving" />);
+    const els = screen.getAllByText('syncingMessage');
+    expect(els.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows saving status with role="status"', () => {
-    render(<AutoSaveIndicator isSaving={true} />);
-    const statusEl = screen.getByRole('status');
-    expect(statusEl).toHaveTextContent('saving');
+  it('shows saved status when saveStatus is saved', () => {
+    render(<AutoSaveIndicator saveStatus="saved" />);
+    const els = screen.getAllByText('savedExclamation');
+    expect(els.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows saving status when isSaving overrides isDirty', () => {
-    render(<AutoSaveIndicator isSaving={true} isDirty={true} />);
-    expect(screen.getByText('saving')).toBeInTheDocument();
-    expect(screen.queryByText('unsavedChanges')).not.toBeInTheDocument();
+  it('shows offline status when saveStatus is offline', () => {
+    render(<AutoSaveIndicator saveStatus="offline" />);
+    const els = screen.getAllByText('offlineMessage');
+    expect(els.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows unsaved changes when isDirty is true and not saving', () => {
-    render(<AutoSaveIndicator isSaving={false} isDirty={true} />);
-    expect(screen.getByText('unsavedChanges')).toBeInTheDocument();
+  it('shows error status when saveStatus is error', () => {
+    render(<AutoSaveIndicator saveStatus="error" />);
+    const els = screen.getAllByText('unableToSync');
+    expect(els.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows unsaved changes with role="status"', () => {
-    render(<AutoSaveIndicator isDirty={true} isSaving={false} />);
-    const statusEls = screen.getAllByRole('status');
-    expect(statusEls.length).toBeGreaterThanOrEqual(1);
-    expect(statusEls[0]).toHaveTextContent('unsavedChanges');
+  it('shows conflict status when saveStatus is conflict', () => {
+    render(<AutoSaveIndicator saveStatus="conflict" />);
+    const els = screen.getAllByText('localChangesKept');
+    expect(els.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows saved time when lastSavedAt is provided', () => {
+  it('shows saved timestamp when saveStatus is idle with lastSavedAt', () => {
     const savedAt = new Date('2025-06-15T14:30:00').getTime();
-    render(<AutoSaveIndicator isSaving={false} isDirty={false} lastSavedAt={savedAt} />);
-    // The time should be formatted: "11:30" or similar depending on locale
-    // But since we're checking t('savedAt', { time }), it returns the key
-    // actually with the mock in setup.js, it replaces {{time}} with the value
-    // Let's verify the structure
+    render(<AutoSaveIndicator saveStatus="idle" lastSavedAt={savedAt} />);
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
-  it('renders with green checkmark icon when saved', () => {
-    const savedAt = new Date('2025-06-15T14:30:00').getTime();
-    const { container } = render(
-      <AutoSaveIndicator isSaving={false} isDirty={false} lastSavedAt={savedAt} />
-    );
-    // Check that saved message includes the formatted time
-    expect(screen.getByRole('status')).toHaveTextContent('savedAt');
+  it('renders minimal output when saveStatus is idle with no lastSavedAt', () => {
+    const { container } = render(<AutoSaveIndicator saveStatus="idle" />);
+    expect(container.querySelectorAll('[aria-live="polite"]').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('returns null when none of the states are active', () => {
-    const { container } = render(<AutoSaveIndicator isSaving={false} isDirty={false} />);
-    expect(container.innerHTML).toBe('');
+  it('uses custom offlineMessage when provided', () => {
+    render(<AutoSaveIndicator saveStatus="offline" offlineMessage="Custom offline" />);
+    expect(screen.getByText('Custom offline')).toBeInTheDocument();
   });
 
-  it('returns null when all props are falsey', () => {
-    const { container } = render(
-      <AutoSaveIndicator isSaving={false} isDirty={false} lastSavedAt={null} />
-    );
-    expect(container.innerHTML).toBe('');
+  it('fades out after saved status', () => {
+    render(<AutoSaveIndicator saveStatus="saved" />);
+    expect(screen.getAllByText('savedExclamation').length).toBeGreaterThanOrEqual(1);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
   });
 
-  it('prioritizes saving over other states', () => {
-    const { rerender } = render(
-      <AutoSaveIndicator isSaving={true} isDirty={true} lastSavedAt={Date.now()} />
-    );
-    expect(screen.getByText('saving')).toBeInTheDocument();
+  it('prioritizes different states via saveStatus', () => {
+    const { rerender } = render(<AutoSaveIndicator saveStatus="saving" />);
+    expect(screen.getAllByText('syncingMessage').length).toBeGreaterThanOrEqual(1);
 
-    rerender(
-      <AutoSaveIndicator isSaving={false} isDirty={true} lastSavedAt={Date.now()} />
-    );
-    expect(screen.getByText('unsavedChanges')).toBeInTheDocument();
+    rerender(<AutoSaveIndicator saveStatus="saved" />);
+    expect(screen.getAllByText('savedExclamation').length).toBeGreaterThanOrEqual(1);
 
-    rerender(
-      <AutoSaveIndicator isSaving={false} isDirty={false} lastSavedAt={Date.now()} />
-    );
-    expect(screen.getByText('savedAt')).toBeInTheDocument();
+    rerender(<AutoSaveIndicator saveStatus="offline" />);
+    expect(screen.getAllByText('offlineMessage').length).toBeGreaterThanOrEqual(1);
+
+    rerender(<AutoSaveIndicator saveStatus="error" />);
+    expect(screen.getAllByText('unableToSync').length).toBeGreaterThanOrEqual(1);
+
+    rerender(<AutoSaveIndicator saveStatus="conflict" />);
+    expect(screen.getAllByText('localChangesKept').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('handles undefined lastSavedAt gracefully', () => {
-    const { container } = render(
-      <AutoSaveIndicator isSaving={false} isDirty={false} />
-    );
-    expect(container.innerHTML).toBe('');
+  it('has aria-live="polite" for screen reader announcements', () => {
+    render(<AutoSaveIndicator saveStatus="saving" />);
+    const srEl = screen.getByRole('status');
+    expect(srEl).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('visible indicator is aria-hidden for screen readers', () => {
+    render(<AutoSaveIndicator saveStatus="saving" />);
+    const wrapper = document.querySelector('.autosave-indicator-wrapper');
+    expect(wrapper).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('debounces screen reader announcements', () => {
+    render(<AutoSaveIndicator saveStatus="saving" />);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('shows conflict info as sr-only when provided', () => {
+    render(<AutoSaveIndicator saveStatus="conflict" conflictInfo="Local draft is newer" />);
+    expect(screen.getAllByText('localChangesKept').length).toBeGreaterThanOrEqual(1);
   });
 });

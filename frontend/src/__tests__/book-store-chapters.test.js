@@ -97,13 +97,11 @@ describe('bookStore — Chapter Actions', () => {
     it('clears chapters and currentBook', () => {
       useBookStore.getState().setCurrentBook({ _id: 'b1', title: 'My Book' });
       useBookStore.getState().setChapters(sampleChapters);
-      useBookStore.getState().setDraft('some content');
       useBookStore.getState().clearCurrentBook();
 
       const state = useBookStore.getState();
       expect(state.currentBook).toBeNull();
       expect(state.chapters).toEqual([]);
-      expect(state.draft).toBeNull();
     });
   });
 
@@ -197,61 +195,5 @@ describe('bookStore — Chapter Actions', () => {
     });
   });
 
-  // === Draft actions (uncovered functions) ===
-
-  describe('setDraftLastSavedAt', () => {
-    it('sets draftLastSavedAt to a timestamp', () => {
-      const timestamp = Date.now();
-      useBookStore.getState().setDraftLastSavedAt(timestamp);
-      expect(useBookStore.getState().draftLastSavedAt).toBe(timestamp);
-    });
-
-    it('sets draftLastSavedAt to null', () => {
-      useBookStore.getState().setDraftLastSavedAt(Date.now());
-      useBookStore.getState().setDraftLastSavedAt(null);
-      expect(useBookStore.getState().draftLastSavedAt).toBeNull();
-    });
-  });
-
-  describe('setDraftSaving', () => {
-    it('sets isDraftSaving to true', () => {
-      useBookStore.getState().setDraftSaving(true);
-      expect(useBookStore.getState().isDraftSaving).toBe(true);
-    });
-
-    it('sets isDraftSaving to false', () => {
-      useBookStore.getState().setDraftSaving(false);
-      expect(useBookStore.getState().isDraftSaving).toBe(false);
-    });
-  });
-
-  describe('saveDraft', () => {
-    it('saves draft content with timestamp', () => {
-      useBookStore.getState().saveDraft('My draft content');
-      const state = useBookStore.getState();
-      expect(state.draft).toBe('My draft content');
-      expect(state.draftLastSavedAt).toBeGreaterThan(0);
-    });
-
-    it('overwrites previous draft', () => {
-      useBookStore.getState().saveDraft('Old content');
-      useBookStore.getState().saveDraft('New content');
-      expect(useBookStore.getState().draft).toBe('New content');
-    });
-  });
-
-  describe('clearDraft', () => {
-    it('clears draft and draftLastSavedAt', () => {
-      useBookStore.getState().saveDraft('Some draft');
-      useBookStore.getState().clearDraft();
-      const state = useBookStore.getState();
-      expect(state.draft).toBeNull();
-      expect(state.draftLastSavedAt).toBeNull();
-    });
-
-    it('is idempotent when already cleared', () => {
-      useBookStore.getState().clearDraft();
-      expect(useBookStore.getState().draft).toBeNull();
-    });
-  });
+  // === Draft actions removed (STORY-019: replaced by IndexedDB autosave) ===
 });
