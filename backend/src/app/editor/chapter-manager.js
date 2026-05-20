@@ -15,6 +15,7 @@ import {
   updateBookChapterIdsOrder,
   createActivityLog,
 } from '../book/book-dao.js';
+import { sanitizeChapterContent } from '../../common/sanitize-content.js';
 
 const logger = pino({ name: 'chapter-manager', level: process.env.LOG_LEVEL || 'info' });
 
@@ -51,10 +52,13 @@ export async function updateChapterManager(childId, chapterId, updates) {
     throw err;
   }
 
-  // 3. Auto-compute wordCount if content is provided
+  // 3. Sanitize content and auto-compute wordCount if content is provided
   const cleanUpdates = { ...updates };
   if (updates.content !== undefined) {
-    cleanUpdates.wordCount = updates.content.split(/\s+/).filter((w) => w.length > 0).length;
+    const sanitized = sanitizeChapterContent(updates.content);
+    cleanUpdates.content = sanitized;
+    const plainText = sanitized.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    cleanUpdates.wordCount = plainText ? plainText.split(/\s+/).length : 0;
   }
 
   // 4. Persist update

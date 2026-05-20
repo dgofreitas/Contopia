@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeText, sanitizeImageUrl } from '../lib/sanitize';
+import { sanitizeText, sanitizeImageUrl, sanitizeRichContent, ALLOWED_TAGS } from '../lib/sanitize';
 
 describe('sanitizeText', () => {
   it('returns empty string for null or undefined', () => {
@@ -84,5 +84,67 @@ describe('sanitizeImageUrl (STORY-012)', () => {
   it('returns empty string for malformed URLs', () => {
     expect(sanitizeImageUrl('not-a-url')).toBe('');
     expect(sanitizeImageUrl('://bad-url')).toBe('');
+  });
+});
+
+describe('sanitizeRichContent (STORY-018)', () => {
+  it('returns empty string for null or undefined', () => {
+    expect(sanitizeRichContent(null)).toBe('');
+    expect(sanitizeRichContent(undefined)).toBe('');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(sanitizeRichContent('')).toBe('');
+  });
+
+  it('allows safe tags: p, br, strong, em, h2, hr, span', () => {
+    expect(sanitizeRichContent('<p>Hello</p>')).toBe('<p>Hello</p>');
+    expect(sanitizeRichContent('<strong>Bold</strong>')).toBe('<strong>Bold</strong>');
+    expect(sanitizeRichContent('<em>Italic</em>')).toBe('<em>Italic</em>');
+    expect(sanitizeRichContent('<h2>Heading</h2>')).toBe('<h2>Heading</h2>');
+    expect(sanitizeRichContent('<hr>')).toContain('hr');
+    expect(sanitizeRichContent('<span>text</span>')).toBe('<span>text</span>');
+  });
+
+  it('allows class attribute', () => {
+    expect(sanitizeRichContent('<p class="intro">Text</p>')).toBe('<p class="intro">Text</p>');
+  });
+
+  it('strips script tags', () => {
+    expect(sanitizeRichContent('<script>alert(1)</script>Hello')).not.toContain('<script>');
+  });
+
+  it('strips img tags with onerror', () => {
+    const result = sanitizeRichContent('<img src=x onerror=alert(1)>');
+    expect(result).not.toContain('onerror');
+  });
+
+  it('strips javascript URLs', () => {
+    const result = sanitizeRichContent('<a href="javascript:alert(1)">click</a>');
+    expect(result).not.toContain('javascript');
+  });
+
+  it('strips SVG with event handlers', () => {
+    const result = sanitizeRichContent('<svg onload=alert(1)>');
+    expect(result).not.toContain('onload');
+  });
+
+  it('strips inline styles', () => {
+    const result = sanitizeRichContent('<div style="background:url(javascript:alert(1))">Text</div>');
+    expect(result).not.toContain('style');
+    expect(result).not.toContain('javascript');
+  });
+
+  it('preserves combined rich content', () => {
+    const html = '<h2>Chapter Title</h2><p>Some <strong>bold</strong> and <em>italic</em> text.</p><hr><p>New section</p>';
+    const result = sanitizeRichContent(html);
+    expect(result).toContain('<h2>');
+    expect(result).toContain('<strong>');
+    expect(result).toContain('<em>');
+    expect(result).toContain('<p>');
+  });
+
+  it('exports ALLOWED_TAGS constant', () => {
+    expect(ALLOWED_TAGS).toEqual(['p', 'br', 'strong', 'em', 'h2', 'hr', 'span']);
   });
 });
