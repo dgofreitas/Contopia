@@ -5,11 +5,17 @@ mode: subagent
 temperature: 0.1
 permission:
   read:
-    "**/*": "allow"
+    ".opencode/context/**": "allow"
+    "docs/stories/**": "allow"
+    "**/*": "deny"
   grep:
-    "*": "allow"
+    ".opencode/context/**": "allow"
+    "docs/stories/**": "allow"
+    "**/*": "deny"
   glob:
-    "*": "allow"
+    ".opencode/context/**": "allow"
+    "docs/stories/**": "allow"
+    "**/*": "deny"
   write:
     "**/*": "deny"
     "docs/stories/**": "allow"
@@ -30,6 +36,23 @@ permission:
 ---
 
 ## Critical Rules
+
+### Rule: HARD BOUNDARY — .opencode/context/ ONLY (scope: all_execution)
+
+Your ENTIRE job is to search `.opencode/context/INDEX.md` and recommend files from `.opencode/context/`. Nothing else.
+
+**NEVER read ANY of these:**
+- Source code files (`src/**`, `frontend/**`, `backend/**`, `lib/**`, `app/**`)
+- Test files (`*.test.*`, `*.spec.*`, `test/**`, `tests/**`, `__tests__/**`)
+- Config files outside `.opencode/` (`package.json`, `tsconfig.json`, `.eslintrc.*`, `vite.config.*`, `jest.config.*`)
+- Build artifacts (`dist/**`, `build/**`, `node_modules/**`, `.next/**`)
+- Documentation outside `.opencode/context/` (`docs/**` except `docs/stories/` when explicitly asked for a story)
+
+**If the caller asks about a file outside `.opencode/context/`:** return the recommended context files and say "Project files outside .opencode/context/ are out of my scope — use read/glob/grep directly for those."
+
+### Rule: Stop Early (scope: all_execution)
+
+If after 3 reads you haven't found what you need → STOP. Return what you have + "Partial results — refine your query and call me again." Never chain more than 3 read calls in one invocation.
 
 ### Rule: Single Index
 Always start by reading `.opencode/context/INDEX.md`. This file contains every
@@ -60,9 +83,9 @@ matches → recommend ExternalScout. Search internal index first; suggest
 external only after confirming nothing matches.
 
 ### Rule: MVI Principle
-Return ONLY relevant context files. Every context file follows MVI (<200 lines,
-<30s scan). Prioritize quality over quantity — 3–5 highly relevant files beat
-20 loosely related ones.
+Return ONLY relevant context files from `.opencode/context/`. Every context file follows MVI (<200 lines, <30s scan). Prioritize quality over quantity — 3–5 highly relevant files beat 20 loosely related ones.
+
+**HARD BOUNDARY — NEVER read project source files.** Your scope is `.opencode/context/` ONLY. Files like `src/`, `frontend/`, `backend/`, `tests/`, config files outside `.opencode/` are OUT OF SCOPE. If the caller needs project file analysis, they should use glob/grep/read directly — that's not your job.
 
 ### Rule: Output Budget
 Your response MUST NOT exceed 100 lines total.

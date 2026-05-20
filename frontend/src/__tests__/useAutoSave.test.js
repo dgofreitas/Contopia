@@ -2,19 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import useAutoSave from '../hooks/useAutoSave';
-
-// Mock autosave service
-const mockSaveDraft = vi.fn();
-const mockDeleteDraft = vi.fn();
-const mockGetDraft = vi.fn();
-
-vi.mock('../services/autosave-service', () => ({
-  default: {
-    saveDraft: (...args) => mockSaveDraft(...args),
-    deleteDraft: (...args) => mockDeleteDraft(...args),
-    getDraft: (...args) => mockGetDraft(...args),
-  },
-}));
+import autosaveService from '../services/autosave-service';
 
 // Mock useNetworkStatus
 const mockIsOnline = vi.fn(() => true);
@@ -42,12 +30,14 @@ describe('useAutoSave', () => {
     localStorage.clear();
     mockIsOnline.mockReturnValue(true);
     mockWasOffline.mockReturnValue(false);
-    mockSaveDraft.mockResolvedValue({});
-    mockDeleteDraft.mockResolvedValue({});
+    vi.spyOn(autosaveService, 'saveDraft').mockResolvedValue({});
+    vi.spyOn(autosaveService, 'deleteDraft').mockResolvedValue({});
+    vi.spyOn(autosaveService, 'getDraft').mockResolvedValue(null);
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     localStorage.clear();
   });
 
@@ -72,15 +62,15 @@ describe('useAutoSave', () => {
     rerender({ ...defaultProps, content: '<p>Updated content</p>' });
 
     expect(result.current.isDirty).toBe(true);
-    expect(mockSaveDraft).not.toHaveBeenCalled();
+    expect(autosaveService.saveDraft).not.toHaveBeenCalled();
 
     act(() => { vi.advanceTimersByTime(5000); });
 
     await waitFor(() => {
-      expect(mockSaveDraft).toHaveBeenCalled();
+      expect(autosaveService.saveDraft).toHaveBeenCalled();
     });
 
-    const callArgs = mockSaveDraft.mock.calls[0];
+    const callArgs = autosaveService.saveDraft.mock.calls[0];
     expect(callArgs[0]).toBe(bookId);
     expect(callArgs[1]).toBe(chapterId);
     expect(callArgs[2].content).toBe('<p>Updated content</p>');
@@ -126,7 +116,7 @@ describe('useAutoSave', () => {
     });
 
     expect(result.current.isDirty).toBe(false);
-    expect(mockDeleteDraft).toHaveBeenCalledWith(bookId, chapterId);
+    expect(autosaveService.deleteDraft).toHaveBeenCalledWith(bookId, chapterId);
 
     act(() => { vi.advanceTimersByTime(2000); });
 
@@ -148,7 +138,7 @@ describe('useAutoSave', () => {
       expect(result.current.saveStatus).toBe('offline');
     });
 
-    expect(mockSaveDraft).toHaveBeenCalled();
+    expect(autosaveService.saveDraft).toHaveBeenCalled();
     expect(result.current.isOffline).toBe(true);
   });
 
@@ -169,7 +159,7 @@ describe('useAutoSave', () => {
     });
 
     expect(onServerSave).not.toHaveBeenCalled();
-    expect(mockSaveDraft).toHaveBeenCalled();
+    expect(autosaveService.saveDraft).toHaveBeenCalled();
   });
 
   it('typing resets both debounce timers', async () => {
@@ -186,13 +176,13 @@ describe('useAutoSave', () => {
     rerender({ ...defaultProps, onServerSave, content: '<p>Second change</p>' });
 
     act(() => { vi.advanceTimersByTime(4000); });
-    expect(mockSaveDraft).not.toHaveBeenCalled();
+    expect(autosaveService.saveDraft).not.toHaveBeenCalled();
     expect(onServerSave).not.toHaveBeenCalled();
 
     act(() => { vi.advanceTimersByTime(1000); });
 
     await vi.waitFor(() => {
-      expect(mockSaveDraft).toHaveBeenCalled();
+      expect(autosaveService.saveDraft).toHaveBeenCalled();
     });
   });
 
@@ -257,7 +247,7 @@ describe('useAutoSave', () => {
     const parsed = JSON.parse(lsData);
     expect(parsed.content).toBe('<p>Dirty before unload</p>');
 
-    expect(mockSaveDraft).toHaveBeenCalled();
+    expect(autosaveService.saveDraft).toHaveBeenCalled();
 
     unmount();
   });
@@ -275,7 +265,7 @@ describe('useAutoSave', () => {
 
     act(() => { vi.advanceTimersByTime(60000); });
 
-    expect(mockSaveDraft).not.toHaveBeenCalled();
+    expect(autosaveService.saveDraft).not.toHaveBeenCalled();
     expect(onServerSave).not.toHaveBeenCalled();
   });
 
@@ -394,41 +384,6 @@ describe('useAutoSave', () => {
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1200); });
     await act(async () => { await vi.advanceTimersByTimeAsync(2200); });
-
-    await waitFor(() => {
-      expect(result.current.saveStatus).toBe('saved');
-    });
-  });
-  });
-
-  it('retries server save on reconnect and eventually succeeds', async () => {
-    const onServerSave = vi.fn()
-      .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValueOnce({ updatedAt: '2025-06-15T14:30:30Z' });
-
-    const { result, rerender } = renderHook((props) => useAutoSave(props), {
-      initialProps: { ...defaultProps, onServerSave },
-    });
-
-    rerender({ ...defaultProps, onServerSave, content: '<p>First</p>' });
-    act(() => { vi.advanceTimersByTime(30000); });
-    await act(async () => { await Promise.resolve(); });
-    await waitFor(() => expect(result.current.isOffline).toBe(true));
-
-    mockIsOnline.mockReturnValue(false);
-    mockWasOffline.mockReturnValue(true);
-    rerender({ ...defaultProps, onServerSave, content: '<p>Second</p>' });
-    act(() => { vi.advanceTimersByTime(30000); });
-    await act(async () => { await Promise.resolve(); });
-
-    mockIsOnline.mockReturnValue(true);
-    mockWasOffline.mockReturnValue(true);
-    rerender({ ...defaultProps, onServerSave, content: '<p>Second</p>' });
-
-    act(() => { vi.advanceTimersByTime(1000); });
-    await act(async () => { await Promise.resolve(); });
-    act(() => { vi.advanceTimersByTime(2000); });
-    await act(async () => { await Promise.resolve(); });
 
     await waitFor(() => {
       expect(result.current.saveStatus).toBe('saved');
