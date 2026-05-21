@@ -20,6 +20,12 @@ vi.mock('../hooks/useLogout', () => ({
   default: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
@@ -54,6 +60,14 @@ describe('Navbar', () => {
     renderWithProviders();
     const draftsLink = screen.getByText((content) => content === 'nav.drafts');
     expect(draftsLink).toBeInTheDocument();
+  });
+
+  it('clicking My Drafts triggers navigation to /drafts', async () => {
+    mockNavigate.mockClear();
+    renderWithProviders();
+    const draftsLink = screen.getByText((content) => content === 'nav.drafts');
+    await draftsLink.click();
+    expect(mockNavigate).toHaveBeenCalledWith('/drafts');
   });
 
   it('renders Shelf link', () => {
