@@ -118,7 +118,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
             onDismiss={handlePlaceBack}
             onRead={() => navigate(`/reader/${pulledBook._id}`)}
             onEdit={() => navigate(`/editor/${pulledBook._id}`)}
-            onDesignCover={() => navigate(`/editor/${pulledBook._id}?tab=cover`)}
+            onDesignCover={() => navigate(`/cover/${pulledBook._id}`)}
             onViewCover={handleViewCover}
             onPlaceBack={handlePlaceBack}
             triggerRef={{ current: triggerRef }}

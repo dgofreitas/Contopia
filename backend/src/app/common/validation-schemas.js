@@ -81,6 +81,7 @@ export const bookUpdateSchema = z.object({
   title: z.string().min(1).max(120).trim().optional(),
   description: z.string().max(500).trim().optional(),
   language: z.string().max(5).optional(),
+  templateId: z.string().max(50).trim().optional().nullable(),
 });
 
 export const chapterCreateSchema = z.object({

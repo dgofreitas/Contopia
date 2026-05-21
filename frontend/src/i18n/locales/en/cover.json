@@ -1,0 +1,49 @@
+{
+  "title": "Design your cover",
+  "templates": {
+    "galaxy": "Galaxy",
+    "galaxyDesc": "Dark blue with stars",
+    "adventure": "Adventure",
+    "adventureDesc": "Warm orange with compass",
+    "nature": "Nature",
+    "natureDesc": "Green with leaves",
+    "stripes": "Stripes",
+    "stripesDesc": "Red and white stripes",
+    "ocean": "Ocean",
+    "oceanDesc": "Teal with waves",
+    "polka": "Polka Dots",
+    "polkaDesc": "Pink with polka dots",
+    "sunset": "Sunset",
+    "sunsetDesc": "Warm orange and pink with sun rays",
+    "castle": "Castle",
+    "castleDesc": "Purple with tower silhouette",
+    "rainbow": "Rainbow",
+    "rainbowDesc": "Colorful rainbow bands",
+    "forest": "Forest",
+    "forestDesc": "Dark green with trees",
+    "space": "Space",
+    "spaceDesc": "Black with planets and orbits",
+    "chevron": "Chevron",
+    "chevronDesc": "Mustard brown with chevron pattern",
+    "sparkles": "Sparkles",
+    "sparklesDesc": "Lavender with star sparkles",
+    "waves": "Waves",
+    "wavesDesc": "Blue with flowing waves",
+    "geometric": "Geometric",
+    "geometricDesc": "Coral and cyan with shapes"
+  },
+  "actions": {
+    "skip": "Skip",
+    "customize": "Customize",
+    "next": "Next"
+  },
+  "aria": {
+    "selectTemplate": "Select template",
+    "selected": "Selected"
+  },
+  "preview": {
+    "title": "Book Title",
+    "author": "Author Name",
+    "chooseTemplate": "Choose a template"
+  }
+}

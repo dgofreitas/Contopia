@@ -39,6 +39,12 @@ const bookSchema = new Schema(
       ref: 'Asset',
       default: null,
     },
+    templateId: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+      default: null,
+    },
     publishedAt: {
       type: Date,
       default: null,

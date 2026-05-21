@@ -113,6 +113,7 @@ export async function updateBookManager(bookId, authorId, updates) {
   if (updates.title !== undefined) allowedFields.title = updates.title;
   if (updates.description !== undefined) allowedFields.description = updates.description;
   if (updates.language !== undefined) allowedFields.language = updates.language;
+  if (updates.templateId !== undefined) allowedFields.templateId = updates.templateId;
 
   const updated = await updateBookById(bookId, allowedFields);
   logger.info({ bookId, authorId }, 'Book updated');

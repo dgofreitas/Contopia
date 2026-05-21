@@ -33,6 +33,7 @@ describe('Book Model', () => {
       expect(book.status).toBe('draft');
       expect(book.chapterIds).toEqual([]);
       expect(book.coverAssetId).toBeNull();
+      expect(book.templateId).toBeNull();
       expect(book.publishedAt).toBeNull();
       expect(book.language).toBe('pt-BR');
       expect(book.deletedAt).toBeNull();
@@ -150,6 +151,91 @@ describe('Book Model', () => {
         publishedAt: pubDate,
       });
       expect(book.publishedAt).toEqual(pubDate);
+    });
+
+    // ── STORY-022: templateId field ─────────────────────────────────────────
+    describe('templateId field', () => {
+      it('should default templateId to null', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const book = await Book.create({ authorId, title: 'No Template' });
+        expect(book.templateId).toBeNull();
+      });
+
+      it('should accept a valid templateId string', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const book = await Book.create({
+          authorId,
+          title: 'Galaxy Cover',
+          templateId: 'galaxy',
+        });
+        expect(book.templateId).toBe('galaxy');
+      });
+
+      it('should trim templateId', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const book = await Book.create({
+          authorId,
+          title: 'Spaced Template',
+          templateId: '  ocean  ',
+        });
+        expect(book.templateId).toBe('ocean');
+      });
+
+      it('should reject templateId exceeding 50 characters', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const longId = 'x'.repeat(51);
+        await expect(
+          Book.create({ authorId, title: 'Long Id', templateId: longId })
+        ).rejects.toThrow();
+      });
+
+      it('should accept templateId of exactly 50 characters', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const exactId = 'x'.repeat(50);
+        const book = await Book.create({
+          authorId,
+          title: 'Exact Template',
+          templateId: exactId,
+        });
+        expect(book.templateId).toBe(exactId);
+      });
+
+      it('should allow setting templateId to null explicitly', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const book = await Book.create({
+          authorId,
+          title: 'Null Template',
+          templateId: null,
+        });
+        expect(book.templateId).toBeNull();
+      });
+
+      it('should persist templateId update via save', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const book = await Book.create({ authorId, title: 'Update Template' });
+        expect(book.templateId).toBeNull();
+
+        book.templateId = 'adventure';
+        await book.save();
+
+        const found = await Book.findById(book._id);
+        expect(found.templateId).toBe('adventure');
+      });
+
+      it('should coexist with other fields when templateId is set', async () => {
+        const authorId = new mongoose.Types.ObjectId();
+        const book = await Book.create({
+          authorId,
+          title: 'Full Book',
+          description: 'A full book with template',
+          templateId: 'nature',
+          language: 'en-US',
+        });
+        expect(book.title).toBe('Full Book');
+        expect(book.description).toBe('A full book with template');
+        expect(book.templateId).toBe('nature');
+        expect(book.language).toBe('en-US');
+      });
     });
   });
 

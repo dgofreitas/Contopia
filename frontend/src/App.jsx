@@ -1,6 +1,6 @@
 // Contopia — Root Application Component
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useEffect } from 'react';
 import RegisterPage from './app/auth/RegisterPage';
 import VerifyPage from './app/auth/VerifyPage';
 import WelcomePage from './app/auth/WelcomePage';
@@ -9,6 +9,7 @@ import ShelfPage from './app/shelf/ShelfPage';
 import DraftsListPage from './app/drafts/DraftsListPage';
 import EditorPage from './app/editor/EditorPage';
 import NewBookPage from './app/editor/NewBookPage';
+const CoverDesignerPage = lazy(() => import('./app/cover/CoverDesignerPage'));
 import ReaderPage from './app/reader/ReaderPage';
 import SettingsPage from './app/settings/SettingsPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -18,6 +19,12 @@ import OfflineBanner from './components/common/OfflineBanner';
 import ToastContainer from './components/common/ToastContainer';
 import { useErrorStore } from './stores/error-store';
 import useAuthStore from './stores/auth-store';
+
+const CoverFallback = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent" />
+  </div>
+);
 
 function RootRedirect() {
   const token = useAuthStore((s) => s.token);
@@ -66,6 +73,8 @@ export default function App() {
           <Route path="/editor/new" element={<NewBookPage />} />
           <Route path="/editor/:bookId" element={<EditorPage />} />
           <Route path="/reader/:bookId" element={<ReaderPage />} />
+          <Route path="/cover/:bookId" element={<Suspense fallback={<CoverFallback />}><CoverDesignerPage /></Suspense>} />
+          <Route path="/cover/:bookId/customize" element={<Suspense fallback={<CoverFallback />}><CoverDesignerPage /></Suspense>} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/welcome" element={<WelcomePage />} />
         </Route>
