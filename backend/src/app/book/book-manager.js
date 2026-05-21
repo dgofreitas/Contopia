@@ -4,6 +4,8 @@ import {
   createBook,
   findBookById,
   findBooksByAuthor,
+  findBooksByAuthorWithWordCount,
+  findBookWithChapters,
   updateBookById,
   softDeleteBook,
   countBooksByAuthor,
@@ -214,6 +216,37 @@ export async function publishBookManager(bookId, authorId) {
 }
 
 /**
+ * Get a book with its chapters and total word count for editing.
+ * Ownership guard: only the author can view their book for editing.
+ */
+export async function getBookForEditManager(bookId, authorId) {
+  const result = await findBookWithChapters(bookId);
+
+  if (!result) {
+    const err = new Error("We couldn't find that book");
+    err.code = 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+
+  const { book, chapters, totalWordCount } = result;
+
+  if (book.authorId.toString() !== authorId.toString()) {
+    const err = new Error("That doesn't belong to you");
+    err.code = 'FORBIDDEN';
+    err.status = 403;
+    throw err;
+  }
+
+  return {
+    book,
+    chapters,
+    totalWordCount,
+    lastEditedAt: book.updatedAt,
+  };
+}
+
+/**
  * Get all books by an author, optionally filtered by status.
  * Returns pagination metadata.
  */
@@ -221,6 +254,22 @@ export async function getBooksByAuthorManager(authorId, { status, page = 1, page
   // Support both new (page/pageSize) and legacy (limit/skip) callers
   const effectiveLimit = limit || pageSize;
   const effectiveSkip = skip || (page > 0 ? (page - 1) * effectiveLimit : 0);
+
+  // For drafts, include totalWordCount per book via aggregation
+  if (status === 'draft') {
+    const [books, total] = await Promise.all([
+      findBooksByAuthorWithWordCount(authorId, { status, limit: effectiveLimit, skip: effectiveSkip }),
+      countBooksByAuthor(authorId, { status }),
+    ]);
+
+    return {
+      books,
+      total,
+      page,
+      pageSize: effectiveLimit,
+      totalPages: Math.ceil(total / effectiveLimit),
+    };
+  }
 
   const [books, total] = await Promise.all([
     findBooksByAuthor(authorId, { status, limit: effectiveLimit, skip: effectiveSkip }),

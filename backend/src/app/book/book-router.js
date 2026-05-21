@@ -9,6 +9,7 @@ import {
   bookUpdateSchema,
   bookListQuerySchema,
   bookChaptersParamsSchema,
+  bookEditParamsSchema,
   chapterCreateBodySchema,
   chapterDeleteParamsSchema,
   chapterReorderSchema,
@@ -16,6 +17,7 @@ import {
 } from '../common/validation-schemas.js';
 import * as bookManager from './book-manager.js';
 import * as chapterManager from '../editor/chapter-manager.js';
+import { createActivityLog } from './book-dao.js';
 
 const logger = pino({ name: 'book-router', level: process.env.LOG_LEVEL || 'info' });
 
@@ -51,6 +53,35 @@ router.get('/', validate(bookListQuerySchema, 'query'), async (req, res) => {
       pageSize: result.pageSize,
       totalPages: result.totalPages,
     }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── GET /:bookId/edit — Get book with chapters for editing ─────────────────────
+router.get('/:bookId/edit', validate(bookEditParamsSchema, 'params'), async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const result = await bookManager.getBookForEditManager(req._params.bookId, req.childId);
+
+    // Audit log (fire-and-forget)
+    createActivityLog({
+      actorId: req.childId,
+      actorType: 'child',
+      action: 'book.edit_start',
+      targetId: req._params.bookId,
+      targetType: 'book',
+    }).catch((err) => {
+      logger.error({ err }, 'Audit log failed for action book.edit_start');
+    });
+
+    return res.status(200).json(ok({
+      book: result.book,
+      chapters: result.chapters,
+      totalWordCount: result.totalWordCount,
+      lastEditedAt: result.lastEditedAt,
+    }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
