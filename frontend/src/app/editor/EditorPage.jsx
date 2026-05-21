@@ -190,9 +190,6 @@ export default function EditorPage() {
         bookId={bookId}
       />
       {showCelebration && <CelebrationOverlay />}
-      <span className="sr-only" aria-live="polite">
-        {showSuccessToast ? t('publishSuccessAnnouncement') : ''}
-      </span>
     </div>
   );
 }

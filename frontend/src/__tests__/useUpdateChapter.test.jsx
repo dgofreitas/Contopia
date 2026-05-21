@@ -55,7 +55,7 @@ describe('useUpdateChapter', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['chapters', bookId] });
   });
 
-  it('invalidates books query on success (STORY-021)', async () => {
+  it('invalidates bookEdit query on success (STORY-021)', async () => {
     mockPut.mockResolvedValue({ data: { data: { _id: 'c1' } } });
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
@@ -66,8 +66,7 @@ describe('useUpdateChapter', () => {
     });
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['chapters', bookId] });
-    // STORY-021: also invalidates ['books'] to refresh draft word counts
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['books'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['bookEdit', bookId] });
   });
 
   it('propagates error from apiClient', async () => {

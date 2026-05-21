@@ -60,14 +60,4 @@ describe('useDraftsQuery', () => {
     expect(result).toEqual(responseBody);
     expect(mockGet).toHaveBeenCalledWith('/v1/books', { params: { status: 'draft' } });
   });
-
-    useDraftsQuery();
-    expect(capturedFn).toBeDefined();
-
-    mockGet.mockResolvedValue({ data: { data: [{ _id: 'd1' }], meta: { pagination: { total: 1 } } } });
-
-    const result = await capturedFn();
-    expect(result).toEqual({ data: [{ _id: 'd1' }], meta: { pagination: { total: 1 } } });
-    expect(mockGet).toHaveBeenCalledWith('/v1/books', { params: { status: 'draft' } });
-  });
 });
