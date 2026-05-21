@@ -68,5 +68,7 @@
   "publishing": "Publishing…",
   "publishEmptyContent": "Write something first! Your book needs at least one chapter with content.",
   "publishError": "Something went wrong. Please try again.",
-  "publishSuccessAnnouncement": "Your book is now on your shelf!"
+  "publishSuccessAnnouncement": "Your book is now on your shelf!",
+  "editingBook": "Editing {{title}}",
+  "publishedEditBadge": "On your shelf — changes are live"
 }

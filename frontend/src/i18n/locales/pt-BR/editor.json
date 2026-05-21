@@ -68,5 +68,7 @@
   "publishing": "Publicando…",
   "publishEmptyContent": "Escreva algo primeiro! Seu livro precisa de pelo menos um capítulo com conteúdo.",
   "publishError": "Algo deu errado. Tente novamente.",
-  "publishSuccessAnnouncement": "Seu livro agora está na sua estante!"
+  "publishSuccessAnnouncement": "Seu livro agora está na sua estante!",
+  "editingBook": "Editando {{title}}",
+  "publishedEditBadge": "Na sua estante — mudanças ao vivo"
 }

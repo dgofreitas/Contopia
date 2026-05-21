@@ -138,6 +138,7 @@ export default function ChapterSidebar({
                   position={index}
                   totalCount={sortedChapters.length}
                   onCreateReplacement={onAddChapter}
+                  isFirstChapter={index === 0}
                 />
               ))}
             </ul>

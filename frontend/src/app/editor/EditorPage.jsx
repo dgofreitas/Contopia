@@ -1,11 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from 'flowbite-react';
 import { HiUpload } from 'react-icons/hi';
-import apiClient from '../../lib/api-client';
-import useChaptersQuery from '../../hooks/useChaptersQuery';
+import useBookEditQuery from '../../hooks/useBookEditQuery';
 import useCreateChapter from '../../hooks/useCreateChapter';
 import useUpdateChapter from '../../hooks/useUpdateChapter';
 import useDeleteChapter from '../../hooks/useDeleteChapter';
@@ -16,6 +14,8 @@ import ChapterEditor from './ChapterEditor';
 import PublishConfirmDialog from '../../components/editor/PublishConfirmDialog';
 import PublishSuccessToast from '../../components/editor/PublishSuccessToast';
 import CelebrationOverlay from '../../components/editor/CelebrationOverlay';
+import PublishedEditBadge from '../../components/editor/PublishedEditBadge';
+import A11yAnnouncer from '../../components/common/A11yAnnouncer';
 import { useErrorStore } from '../../stores/error-store';
 
 export default function EditorPage() {
@@ -23,29 +23,34 @@ export default function EditorPage() {
   const { t } = useTranslation('editor');
   const navigate = useNavigate();
 
-  const { data: chaptersData, isLoading } = useChaptersQuery(bookId);
-  const { data: bookData } = useQuery({
-    queryKey: ['book', bookId],
-    queryFn: async () => {
-      const { data } = await apiClient.get(`/v1/books/${bookId}`);
-      return data.data;
-    },
-    enabled: !!bookId,
-  });
+  const { data: bookEditData, isLoading } = useBookEditQuery(bookId);
+
+  const bookData = bookEditData?.book;
+  const chapters = useMemo(() => {
+    if (!bookEditData?.chapters) return [];
+    return [...bookEditData.chapters].sort((a, b) => a.order - b.order);
+  }, [bookEditData]);
 
   const bookStatus = bookData?.status || 'draft';
   const bookTitle = bookData?.title || '';
+
+  useEffect(() => {
+    if (!isLoading && chapters.length > 0) {
+      const timer = setTimeout(() => {
+        const firstItem = document.querySelector('[data-chapter-list-item]');
+        if (firstItem) {
+          firstItem.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, chapters.length]);
 
   const createChapter = useCreateChapter(bookId);
   const updateChapter = useUpdateChapter(bookId);
   const deleteChapter = useDeleteChapter(bookId);
   const publishBook = usePublishBook();
   const addToast = useErrorStore((s) => s.addToast);
-
-  const chapters = useMemo(() => {
-    if (!chaptersData?.data) return [];
-    return [...chaptersData.data].sort((a, b) => a.order - b.order);
-  }, [chaptersData]);
 
   const [activeChapterId, setActiveChapterId] = useState(null);
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
@@ -141,6 +146,12 @@ export default function EditorPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-amber-50 to-teal-50">
+      <A11yAnnouncer message={isLoading ? '' : t('editingBook', { title: bookTitle })} />
+      {bookStatus === 'published' && (
+        <div className="flex items-center justify-between px-4 pt-3">
+          <PublishedEditBadge book={bookData} />
+        </div>
+      )}
       {bookStatus === 'draft' && (
         <div className="flex justify-end px-4 pt-3">
           <Button

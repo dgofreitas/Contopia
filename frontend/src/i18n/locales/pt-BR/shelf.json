@@ -32,5 +32,8 @@
   "placeBack": "Colocar de volta",
   "newBookButton": "Novo Livro",
   "highlightNew": "Novo na sua estante!",
-  "goToShelf": "Ir para minha estante"
+  "goToShelf": "Ir para minha estante",
+  "draftsTitle": "Meus Rascunhos",
+  "wordCount": "{{count}} palavras",
+  "emptyDraftsMessage": "Nenhum rascunho — comece a escrever!"
 }

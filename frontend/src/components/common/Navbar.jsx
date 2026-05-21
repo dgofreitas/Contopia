@@ -2,7 +2,7 @@
 // App navigation with child-friendly large targets + WCAG AA compliance
 import { useState } from 'react';
 import { Navbar as FlowbiteNavbar } from 'flowbite-react';
-import { HiBookOpen, HiPencilAlt, HiCog, HiLogout } from 'react-icons/hi';
+import { HiBookOpen, HiPencilAlt, HiCog, HiLogout, HiDocumentText } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../../stores/auth-store';
@@ -18,6 +18,7 @@ export default function Navbar() {
 
   const navItems = [
     { path: '/shelf', label: t('nav.shelf', { defaultValue: 'Estante' }), icon: HiBookOpen },
+    { path: '/drafts', label: t('nav.drafts', { defaultValue: 'My Drafts' }), icon: HiDocumentText },
     { path: '/editor/new', label: t('nav.editor', { defaultValue: 'Escrever' }), icon: HiPencilAlt },
     { path: '/settings', label: t('settings.title'), icon: HiCog },
   ];
