@@ -180,7 +180,17 @@ export async function publishBookManager(bookId, authorId) {
   }
 
   if (book.status === 'published') {
-    return book; // Idempotent
+    return book; // Idempotent early return
+  }
+
+  // Validate at least one chapter with non-empty content
+  const chapters = await findChaptersByBook(bookId);
+  const hasContent = chapters.some(ch => (ch.content || '').trim().length > 0);
+  if (!hasContent) {
+    const err = new Error('Write something first! Your book needs at least one chapter with content.');
+    err.code = 'EMPTY_CONTENT';
+    err.status = 422;
+    throw err;
   }
 
   const updated = await updateBookById(bookId, {

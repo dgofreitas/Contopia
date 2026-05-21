@@ -30,5 +30,7 @@
   "coverOverlay.ariaLabel": "Visualização da capa de {{title}}",
   "coverOverlay.authorBy": "por {{name}}",
   "placeBack": "Colocar de volta",
-  "newBookButton": "Novo Livro"
+  "newBookButton": "Novo Livro",
+  "highlightNew": "Novo na sua estante!",
+  "goToShelf": "Ir para minha estante"
 }

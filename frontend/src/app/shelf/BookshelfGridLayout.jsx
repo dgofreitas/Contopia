@@ -1,6 +1,6 @@
 // Contopia — BookshelfGridLayout
 // Orchestrator: fetches books via TanStack Query, renders appropriate state
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'flowbite-react';
 import { HiExclamationCircle } from 'react-icons/hi';
@@ -10,10 +10,11 @@ import BookshelfGrid from '../../components/shelf/BookshelfGrid';
 import ShelfSkeleton from '../../components/shelf/ShelfSkeleton';
 import EmptyShelfState from '../../components/shelf/EmptyShelfState';
 
-export default function BookshelfGridLayout() {
+export default function BookshelfGridLayout({ highlightBookId }) {
   const { t } = useTranslation('shelf');
   const { data, isLoading, isError, refetch } = useBooksQuery();
   const setBooks = useBookStore((s) => s.setBooks);
+  const highlightRef = useRef(null);
 
   const books = data?.data ?? [];
   const hasBooks = books.length > 0;
@@ -24,6 +25,19 @@ export default function BookshelfGridLayout() {
       setBooks(data.data);
     }
   }, [data, setBooks]);
+
+  useEffect(() => {
+    if (!highlightBookId || isLoading || !hasBooks) return;
+    const el = highlightRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('book-highlight-ring');
+    el.focus({ preventScroll: true });
+    const timer = setTimeout(() => {
+      el.classList.remove('book-highlight-ring');
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [highlightBookId, isLoading, hasBooks]);
 
   const handleBookClick = useCallback((bookId) => {
     // Future: navigate to editor or reader
@@ -63,9 +77,9 @@ export default function BookshelfGridLayout() {
     }
 
     return (
-      <BookshelfGrid books={books} onBookClick={handleBookClick} />
+      <BookshelfGrid books={books} onBookClick={handleBookClick} highlightBookId={highlightBookId} highlightRef={highlightRef} />
     );
-  }, [isLoading, isError, books, hasBooks, t, handleRetry, handleBookClick]);
+  }, [isLoading, isError, books, hasBooks, t, handleRetry, handleBookClick, highlightBookId]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4">

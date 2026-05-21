@@ -168,6 +168,47 @@ async function _cleanupWithDB(db, maxAgeDays, maxCount) {
   });
 }
 
+async function flushDraftsForBook(bookId) {
+  const apiClient = (await import('../lib/api-client.js')).default;
+  const db = await openDB();
+
+  const drafts = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const index = store.index('byBookId');
+    const request = index.getAll(bookId);
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+  });
+
+  const results = await Promise.allSettled(
+    drafts.map((draft) =>
+      apiClient.put(`/v1/chapters/${draft.chapterId}`, { content: draft.content })
+    )
+  );
+
+  const tx2 = db.transaction(STORE_NAME, 'readwrite');
+  const store2 = tx2.objectStore(STORE_NAME);
+  for (const draft of drafts) {
+    store2.delete(draft.key);
+  }
+  await new Promise((resolve, reject) => {
+    tx2.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx2.onerror = () => {
+      db.close();
+      reject(tx2.error);
+    };
+  });
+
+  return results;
+}
+
 const autosaveService = {
   openDB,
   saveDraft,
@@ -175,6 +216,7 @@ const autosaveService = {
   deleteDraft,
   getAllPendingDrafts,
   cleanupOldDrafts,
+  flushDraftsForBook,
 };
 
 export default autosaveService;

@@ -2,6 +2,7 @@
 //
 // Tests the REAL autosave-service with fake-indexeddb.
 // No vi.mock() — we import the actual module.
+import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import autosaveService from '../services/autosave-service';
 
@@ -248,6 +249,73 @@ describe('autosaveService', () => {
 
       lsSpy.mockRestore();
       indexedDB.open = origOpen;
+    });
+  });
+
+  describe('flushDraftsForBook (STORY-020)', () => {
+    const mockApiClientPut = vi.fn();
+
+    beforeEach(async () => {
+      // Seed 2 drafts for the book
+      await autosaveService.saveDraft(bookId, 'ch-1', { content: '<p>Ch1</p>', timestamp: Date.now() });
+      await autosaveService.saveDraft(bookId, 'ch-2', { content: '<p>Ch2</p>', timestamp: Date.now() });
+
+      // Mock the dynamic import inside flushDraftsForBook
+      // The function does: const apiClient = (await import('../lib/api-client.js')).default;
+      // We mock the module before it's loaded
+      vi.doMock('../lib/api-client.js', () => ({
+        default: { put: mockApiClientPut },
+      }));
+    });
+
+    it('flushes all drafts for a book via API PUT calls', async () => {
+      mockApiClientPut.mockResolvedValue({ data: { data: {} } });
+
+      const results = await autosaveService.flushDraftsForBook(bookId);
+
+      expect(mockApiClientPut).toHaveBeenCalledTimes(2);
+      expect(mockApiClientPut).toHaveBeenCalledWith('/v1/chapters/ch-1', { content: '<p>Ch1</p>' });
+      expect(mockApiClientPut).toHaveBeenCalledWith('/v1/chapters/ch-2', { content: '<p>Ch2</p>' });
+      expect(results).toHaveLength(2);
+    });
+
+    it('deletes drafts from IndexedDB after successful flush', async () => {
+      mockApiClientPut.mockResolvedValue({ data: { data: {} } });
+
+      await autosaveService.flushDraftsForBook(bookId);
+
+      // Verify drafts were deleted
+      const draft1 = await autosaveService.getDraft(bookId, 'ch-1');
+      const draft2 = await autosaveService.getDraft(bookId, 'ch-2');
+      expect(draft1).toBeNull();
+      expect(draft2).toBeNull();
+    });
+
+    it('returns results even if some API calls fail', async () => {
+      mockApiClientPut
+        .mockResolvedValueOnce({ data: { data: {} } })
+        .mockRejectedValueOnce(new Error('Network error'));
+
+      const results = await autosaveService.flushDraftsForBook(bookId);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].status).toBe('fulfilled');
+      expect(results[1].status).toBe('rejected');
+    });
+
+    it('does not flush drafts from other books', async () => {
+      const otherBookId = 'other-book';
+      await autosaveService.saveDraft(otherBookId, 'ch-other', { content: '<p>Other</p>', timestamp: Date.now() });
+      mockApiClientPut.mockResolvedValue({ data: { data: {} } });
+
+      await autosaveService.flushDraftsForBook(bookId);
+
+      // Only 2 calls for our book's chapters, not 3
+      expect(mockApiClientPut).toHaveBeenCalledTimes(2);
+
+      // Other book's draft still exists
+      const otherDraft = await autosaveService.getDraft(otherBookId, 'ch-other');
+      expect(otherDraft).not.toBeNull();
     });
   });
 });

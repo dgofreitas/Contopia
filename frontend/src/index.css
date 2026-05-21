@@ -45,3 +45,21 @@
     transition: none;
   }
 }
+
+.book-highlight-ring {
+  outline: 3px solid #d97706;
+  outline-offset: 2px;
+  animation: highlight-pulse 0.6s ease-in-out 3;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% { outline-color: #d97706; }
+  50% { outline-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-highlight-ring {
+    animation: none;
+    outline: 3px solid #d97706;
+  }
+}

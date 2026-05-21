@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,6 +16,31 @@ vi.mock('../stores/book-store', () => ({
 }));
 
 // setup.js already mocks react-i18next globally to pass through keys
+
+// Mock BookshelfGrid to expose the highlightRef
+vi.mock('../components/shelf/BookshelfGrid', () => ({
+  default: ({ books, onBookClick, highlightBookId, highlightRef }) => (
+    <div data-testid="bookshelf-grid">
+      {books.map((book) => (
+        <div key={book._id} ref={highlightBookId === book._id ? highlightRef : null} data-book-id={book._id}>
+          {book.title}
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
+// Mock ShelfSkeleton
+vi.mock('../components/shelf/ShelfSkeleton', () => ({
+  default: () => <div aria-busy="true" data-testid="skeleton" />,
+}));
+
+// Mock EmptyShelfState
+vi.mock('../components/shelf/EmptyShelfState', () => ({
+  default: () => <div role="status" data-testid="empty-state">No books</div>,
+}));
+
+vi.useFakeTimers();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -88,6 +113,47 @@ describe('BookshelfGridLayout', () => {
     renderWithProviders(<BookshelfGridLayout />);
     expect(screen.getByText('Story One')).toBeInTheDocument();
     expect(screen.getByText('Story Two')).toBeInTheDocument();
+  });
+
+  it('passes highlightBookId to BookshelfGrid', () => {
+    useBooksQueryModule.default.mockReturnValue({
+      data: { data: [{ _id: '1', title: 'Highlighted Book' }] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderWithProviders(<BookshelfGridLayout highlightBookId="1" />);
+    expect(screen.getByText('Highlighted Book')).toBeInTheDocument();
+  });
+
+  it('does not attempt scroll/focus when highlightBookId is not provided', () => {
+    // Mock scrollIntoView to prove it's not called
+    Element.prototype.scrollIntoView = vi.fn();
+    useBooksQueryModule.default.mockReturnValue({
+      data: { data: [{ _id: '1', title: 'Book 1' }, { _id: '2', title: 'Book 2' }] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderWithProviders(<BookshelfGridLayout />);
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('calls scrollIntoView when highlightBookId is provided', () => {
+    useBooksQueryModule.default.mockReturnValue({
+      data: { data: [{ _id: '1', title: 'Highlight Me' }] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    // scrollIntoView is polyfilled in setup.js
+    renderWithProviders(<BookshelfGridLayout highlightBookId="1" />);
+
+    // scrollIntoView is called via useEffect
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   });
 
   it('has no sort UI controls (AC-3: no sort UI in MVP)', () => {

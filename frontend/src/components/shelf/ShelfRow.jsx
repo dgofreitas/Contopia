@@ -1,6 +1,6 @@
 import BookSpine from './BookSpine';
 
-export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId }) {
+export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, highlightBookId, highlightRef }) {
   const hasPlacingBack = placingBackBookId && books.some(b => b._id === placingBackBookId);
 
   return (
@@ -13,6 +13,8 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
               onClick={() => onBookClick(book._id)}
               isPulledOut={book._id === pulledOutBookId}
               onPullOut={() => onBookClick(book._id)}
+              isHighlighted={book._id === highlightBookId}
+              highlightRef={book._id === highlightBookId ? highlightRef : undefined}
             />
           </div>
         ))}
