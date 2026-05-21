@@ -55,6 +55,21 @@ describe('useUpdateChapter', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['chapters', bookId] });
   });
 
+  it('invalidates books query on success (STORY-021)', async () => {
+    mockPut.mockResolvedValue({ data: { data: { _id: 'c1' } } });
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useUpdateChapter(bookId), { wrapper });
+
+    await waitFor(async () => {
+      await result.current.mutateAsync({ chapterId: 'c1', title: 'Updated' });
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['chapters', bookId] });
+    // STORY-021: also invalidates ['books'] to refresh draft word counts
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['books'] });
+  });
+
   it('propagates error from apiClient', async () => {
     const apiError = new Error('Not found');
     mockPut.mockRejectedValue(apiError);

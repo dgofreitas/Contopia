@@ -51,6 +51,19 @@ describe('useDraftsQuery', () => {
     useDraftsQuery();
     expect(capturedFn).toBeDefined();
 
+    // axios response shape: { data: <responseBody> }
+    // hook does: const { data } = await apiClient.get(...) → data = responseBody
+    const responseBody = { data: [{ _id: 'd1' }], meta: { pagination: { total: 1 } } };
+    mockGet.mockResolvedValue({ data: responseBody });
+
+    const result = await capturedFn();
+    expect(result).toEqual(responseBody);
+    expect(mockGet).toHaveBeenCalledWith('/v1/books', { params: { status: 'draft' } });
+  });
+
+    useDraftsQuery();
+    expect(capturedFn).toBeDefined();
+
     mockGet.mockResolvedValue({ data: { data: [{ _id: 'd1' }], meta: { pagination: { total: 1 } } } });
 
     const result = await capturedFn();

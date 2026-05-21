@@ -67,7 +67,11 @@ Master MUST scan the user's **first prompt of the session** for these triggers:
 - If auto-mode detected → G1 proceeds WITHOUT asking (auto-approve stories) → G2 auto-approves plan → G3 auto-approves MR + auto-merges + auto-deletes branch
 - **GATE #4 ALWAYS asks** "Prosseguir para próxima story? [Y/n]" — even in auto-mode
 - **GATE #SA** follows G1 behavior (auto in auto-mode, asks in default)
-- Master MUST confirm at session start: "Modo automático ativado — prosseguindo direto. Apenas troca de story pede confirmação." (or "Modo interativo — todos os gates pedem confirmação.")
+- Master MUST confirm ONLY: "Modo automático — implementando STORY-XXX."
+- **Auto-mode = delegate fast, delegate once.**
+  - Max 3 read/glob calls per state detection. Then DELEGATE. No more analysis.
+  - Do NOT re-verify what was already found. Do NOT explain the pipeline.
+  - One message confirming mode. Then task() call. That's it.
 
 ### Gates
 
@@ -89,12 +93,24 @@ Master MUST scan the user's **first prompt of the session** for these triggers:
 
 ## State Detection (run on every request, including "continue")
 
+**If the user mentioned a SPECIFIC story id** (e.g., "STORY-021", "STORY-theme-003"), skip detection entirely. Go directly to that story:
+
 ```
-1. glob("docs/stories/STORY-*.md")                     → any stories?
-2. for each story → glob("*-technical-analysis.md")   → has plan?
-3. git log or ls feat/* branches                       → impl started?
-4. Route based on what's MISSING (see table below)
+1. bash: ls docs/stories/STORY-XXX.md 2>/dev/null        → story file exists? (fast, no context)
+2. bash: ls docs/stories/STORY-XXX-technical-analysis.md 2>/dev/null → has plan?
+3. Route based on what's MISSING (see table below)
 ```
+
+> **Use `ls` (bash), NOT `glob` or `read`** for detection. `ls` is one line of output, no context cost.
+
+**Only when NO specific story is mentioned** (vague "continue" or "build X"):
+
+```
+1. bash: ls docs/stories/STORY-*.md                       → list story filenames only
+2. Route based on what's MISSING (see table below)
+```
+
+> **NEVER read story content during detection.** Content reading is the job of the delegated agent, not Master.
 
 | What exists | What's missing | → Delegate to |
 |-------------|----------------|---------------|
