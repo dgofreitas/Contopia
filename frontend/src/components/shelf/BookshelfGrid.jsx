@@ -28,7 +28,7 @@ function computeItemsPerRow(viewportWidth) {
   return Math.max(1, Math.floor((available + gap) / (minCol + gap)));
 }
 
-export default function BookshelfGrid({ books, onBookClick }) {
+export default function BookshelfGrid({ books, onBookClick, highlightBookId, highlightRef }) {
   const { t } = useTranslation('shelf');
   const prefersReducedMotion = useReducedMotion();
   const navigate = useNavigate();
@@ -99,11 +99,13 @@ export default function BookshelfGrid({ books, onBookClick }) {
         {rows.map((row, index) => (
           <motion.div key={index} variants={spineVariants}>
             <ShelfRow
-              books={row}
-              onBookClick={handleBookClick}
-              pulledOutBookId={pulledOutBookId}
-              placingBackBookId={isPlacingBack ? pulledOutBookId : null}
-            />
+               books={row}
+               onBookClick={handleBookClick}
+               pulledOutBookId={pulledOutBookId}
+               placingBackBookId={isPlacingBack ? pulledOutBookId : null}
+               highlightBookId={highlightBookId}
+               highlightRef={highlightRef}
+             />
           </motion.div>
         ))}
       </motion.div>

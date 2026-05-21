@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from 'flowbite-react';
 import { HiPlus } from 'react-icons/hi';
 import BookshelfGridLayout from './BookshelfGridLayout';
@@ -10,6 +10,8 @@ export default function ShelfPage() {
   const { t } = useTranslation('shelf');
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
+  const [searchParams] = useSearchParams();
+  const highlightBookId = searchParams.get('highlight');
   const { data } = useBooksQuery();
   const hasBooks = (data?.data ?? []).length > 0;
 
@@ -42,7 +44,7 @@ export default function ShelfPage() {
           )}
         </div>
 
-        <BookshelfGridLayout />
+        <BookshelfGridLayout highlightBookId={highlightBookId} />
       </motion.div>
     </main>
   );

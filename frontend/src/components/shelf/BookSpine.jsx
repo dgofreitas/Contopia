@@ -7,7 +7,7 @@ import { sanitizeText } from '../../lib/sanitize';
 import { getTextColor, spineColorFromId } from '../../lib/spine-colors';
 
 const BookSpine = React.forwardRef(function BookSpine(
-  { book, onClick, isPulledOut, onPullOut },
+  { book, onClick, isPulledOut, onPullOut, isHighlighted, highlightRef },
   ref,
 ) {
   const { t } = useTranslation('shelf');
@@ -34,14 +34,15 @@ const BookSpine = React.forwardRef(function BookSpine(
 
   return (
     <motion.button
-      ref={ref}
+      ref={isHighlighted ? highlightRef : ref}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       aria-label={t('ariaSpineLabel', { title })}
       aria-expanded={isPulledOut}
-      className="flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[48px] min-h-[48px] select-none"
+      tabIndex={isHighlighted ? 0 : undefined}
+      className={`flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[48px] min-h-[48px] select-none${isHighlighted ? ' book-highlight-ring' : ''}`}
       style={{
         backgroundColor: spineColor,
         color: textColor,

@@ -59,5 +59,14 @@
   "conflictWarning": "Suas alterações offline podem diferir da versão do servidor. Suas alterações locais foram mantidas.",
   "syncingMessage": "Sincronizando…",
   "unableToSync": "Não foi possível sincronizar",
-  "localChangesKept": "Alterações locais mantidas"
+  "localChangesKept": "Alterações locais mantidas",
+  "publishButton": "Publicar na Minha Estante",
+  "publishConfirmTitle": "Publicar Seu Livro",
+  "publishConfirmMessage": "Seu livro \"{{title}}\" aparecerá na sua estante. Você ainda pode continuar editando!",
+  "publishConfirmButton": "Publicar na Minha Estante",
+  "publishCancelButton": "Cancelar",
+  "publishing": "Publicando…",
+  "publishEmptyContent": "Escreva algo primeiro! Seu livro precisa de pelo menos um capítulo com conteúdo.",
+  "publishError": "Algo deu errado. Tente novamente.",
+  "publishSuccessAnnouncement": "Seu livro agora está na sua estante!"
 }

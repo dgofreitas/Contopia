@@ -1,6 +1,5 @@
 // Contopia — Test Setup
 import '@testing-library/jest-dom';
-import 'fake-indexeddb/auto';
 
 if (!globalThis.requestIdleCallback) {
   globalThis.requestIdleCallback = (cb) => setTimeout(cb, 1);
@@ -33,6 +32,11 @@ Object.defineProperty(window, 'IntersectionObserver', {
   writable: true,
   value: MockIntersectionObserver,
 });
+
+// Polyfill scrollIntoView for JSDOM (used by BookshelfGridLayout highlight)
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = vi.fn();
+}
 
 // Mock IntersectionObserver for Framer Motion (used by BookshelfGrid)
 if (!globalThis.IntersectionObserver) {

@@ -6,13 +6,15 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EditorPage from '../app/editor/EditorPage';
 
-// Mock react-router-dom's useParams
+// Mock react-router-dom's useParams + useNavigate
 const mockBookId = 'book123';
+const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
     useParams: () => ({ bookId: mockBookId }),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -24,6 +26,61 @@ vi.mock('react-i18next', () => ({
 const mockCreateChapterMutate = vi.fn();
 const mockUpdateChapterMutate = vi.fn();
 const mockDeleteChapterMutate = vi.fn();
+const mockPublishMutateAsync = vi.fn();
+const mockFlushDrafts = vi.fn();
+
+// Mock autosave service
+vi.mock('../services/autosave-service', () => ({
+  default: {
+    flushDraftsForBook: (...args) => mockFlushDrafts(...args),
+  },
+}));
+
+// Mock usePublishBook
+vi.mock('../hooks/usePublishBook', () => ({
+  default: vi.fn(() => ({
+    mutateAsync: (...args) => mockPublishMutateAsync(...args),
+    isPending: false,
+  })),
+}));
+
+// Mock PublishConfirmDialog
+vi.mock('../components/editor/PublishConfirmDialog', () => ({
+  default: ({ isOpen, onConfirm, onCancel, isPublishing, bookTitle }) =>
+    isOpen ? (
+      <div data-testid="publish-confirm-dialog" data-booktitle={bookTitle}>
+        <button data-testid="confirm-publish" onClick={onConfirm} disabled={isPublishing}>Confirm</button>
+        <button data-testid="cancel-publish" onClick={onCancel}>Cancel</button>
+      </div>
+    ) : null,
+}));
+
+// Mock PublishSuccessToast
+vi.mock('../components/editor/PublishSuccessToast', () => ({
+  default: ({ isOpen, onDismiss, bookId }) =>
+    isOpen ? (
+      <div data-testid="publish-success-toast" data-bookid={bookId}>
+        <button data-testid="dismiss-toast" onClick={onDismiss}>Dismiss</button>
+      </div>
+    ) : null,
+}));
+
+// Mock CelebrationOverlay
+vi.mock('../components/editor/CelebrationOverlay', () => ({
+  default: () => <div data-testid="celebration-overlay" />,
+}));
+
+// Mock apiClient.get for book data query
+vi.mock('../lib/api-client', () => ({
+  default: {
+    get: vi.fn().mockImplementation((url) => {
+      if (url.startsWith('/v1/books/')) {
+        return Promise.resolve({ data: { data: { _id: mockBookId, title: 'My Book', status: 'draft' } } });
+      }
+      return Promise.resolve({ data: {} });
+    }),
+  },
+}));
 
 let mockChaptersData = {
   data: [
@@ -52,6 +109,7 @@ vi.mock('../hooks/useCreateChapter', () => ({
 vi.mock('../hooks/useUpdateChapter', () => ({
   default: vi.fn(() => ({
     mutate: mockUpdateChapterMutate,
+    mutateAsync: mockUpdateChapterMutate,
   })),
 }));
 
@@ -97,9 +155,12 @@ vi.mock('../app/editor/ChapterSidebar', () => ({
 }));
 
 vi.mock('../app/editor/ChapterEditor', () => ({
-  default: ({ chapter }) => (
+  default: ({ chapter, onContentChange }) => (
     <div data-testid="chapter-editor">
       {chapter ? chapter.title : 'empty'}
+      <button data-testid="trigger-content-change" onClick={() => onContentChange({ chapterId: 'c1', content: '<p>Updated</p>' })}>
+        Change Content
+      </button>
     </div>
   ),
 }));
@@ -337,5 +398,123 @@ describe('EditorPage', () => {
     renderWithProviders(<EditorPage />);
     // The sidebar is rendered — isCreatingChapter comes from createChapter.isPending (false)
     expect(screen.getByTestId('chapter-sidebar')).toBeInTheDocument();
+  });
+
+  // === STORY-020: Publish Flow Tests ===
+
+  it('renders publish button when book status is draft', () => {
+    renderWithProviders(<EditorPage />);
+    expect(screen.getByText('publishButton')).toBeInTheDocument();
+  });
+
+  it('calls flushDrafts and opens publish dialog on publish click', async () => {
+    mockFlushDrafts.mockResolvedValue([]);
+    const user = userEvent.setup();
+    renderWithProviders(<EditorPage />);
+
+    await user.click(screen.getByText('publishButton'));
+
+    expect(mockFlushDrafts).toHaveBeenCalledWith('book123');
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-confirm-dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('opens publish dialog even when flushDrafts fails', async () => {
+    mockFlushDrafts.mockRejectedValue(new Error('flush failed'));
+    const user = userEvent.setup();
+    renderWithProviders(<EditorPage />);
+
+    await user.click(screen.getByText('publishButton'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-confirm-dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('closes dialog on cancel', async () => {
+    mockFlushDrafts.mockResolvedValue([]);
+    const user = userEvent.setup();
+    renderWithProviders(<EditorPage />);
+
+    await user.click(screen.getByText('publishButton'));
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-confirm-dialog')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('cancel-publish'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('publish-confirm-dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows success toast and celebration on successful publish', async () => {
+    mockFlushDrafts.mockResolvedValue([]);
+    mockPublishMutateAsync.mockResolvedValue({ _id: 'book123', status: 'published' });
+    const user = userEvent.setup();
+    renderWithProviders(<EditorPage />);
+
+    await user.click(screen.getByText('publishButton'));
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-confirm-dialog')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('confirm-publish'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-success-toast')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('celebration-overlay')).toBeInTheDocument();
+  });
+
+  it('sets empty content error code when publish fails with EMPTY_CONTENT', async () => {
+    mockFlushDrafts.mockResolvedValue([]);
+    const emptyContentError = new Error('Empty content');
+    emptyContentError.response = { data: { error: { code: 'EMPTY_CONTENT' } } };
+    mockPublishMutateAsync.mockRejectedValue(emptyContentError);
+    const user = userEvent.setup();
+    renderWithProviders(<EditorPage />);
+
+    await user.click(screen.getByText('publishButton'));
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-confirm-dialog')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('confirm-publish'));
+
+    // Dialog stays open with EMPTY_CONTENT error
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-confirm-dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('closes dialog on non-empty-content publish error and shows error toast', async () => {
+    mockFlushDrafts.mockResolvedValue([]);
+    const serverError = new Error('Server error');
+    serverError.response = { data: { error: { code: 'SERVER_ERROR' } } };
+    mockPublishMutateAsync.mockRejectedValue(serverError);
+    const user = userEvent.setup();
+    renderWithProviders(<EditorPage />);
+
+    await user.click(screen.getByText('publishButton'));
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-confirm-dialog')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('confirm-publish'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('publish-confirm-dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('calls updateChapter.mutateAsync on content change (covers handleContentChange)', async () => {
+    mockUpdateChapterMutate.mockResolvedValue({ _id: 'c1', content: '<p>Updated</p>' });
+    const user = userEvent.setup();
+    renderWithProviders(<EditorPage />);
+
+    await user.click(screen.getByTestId('trigger-content-change'));
+
+    expect(mockUpdateChapterMutate).toHaveBeenCalledWith({ chapterId: 'c1', content: '<p>Updated</p>' });
   });
 });

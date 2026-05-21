@@ -59,5 +59,14 @@
   "conflictWarning": "Your offline changes may differ from the server version. Your local changes have been kept.",
   "syncingMessage": "Syncing…",
   "unableToSync": "Unable to sync",
-  "localChangesKept": "Local changes kept"
+  "localChangesKept": "Local changes kept",
+  "publishButton": "Publish to My Shelf",
+  "publishConfirmTitle": "Publish Your Book",
+  "publishConfirmMessage": "Your book \"{{title}}\" will appear on your shelf. You can still keep editing it!",
+  "publishConfirmButton": "Publish to My Shelf",
+  "publishCancelButton": "Cancel",
+  "publishing": "Publishing…",
+  "publishEmptyContent": "Write something first! Your book needs at least one chapter with content.",
+  "publishError": "Something went wrong. Please try again.",
+  "publishSuccessAnnouncement": "Your book is now on your shelf!"
 }
