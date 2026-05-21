@@ -17,6 +17,7 @@ vi.mock('../book-dao.js', async () => {
     findBooksByAuthor: vi.fn(),
     countBooksByAuthor: vi.fn(),
     findBookById: vi.fn(),
+    updateBookById: vi.fn(),
     createActivityLog: vi.fn().mockReturnValue({ catch: vi.fn() }),
   };
 });
@@ -153,6 +154,7 @@ describe('Book Manager — STORY-021', () => {
       expect(bookDao.findBooksByAuthorWithWordCount).not.toHaveBeenCalled();
       expect(bookDao.findBooksByAuthor).toHaveBeenCalled();
     });
+  });
 
   describe('updateBookManager', () => {
     const bookId = new mongoose.Types.ObjectId().toString();
