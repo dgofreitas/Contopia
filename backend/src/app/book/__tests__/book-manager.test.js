@@ -154,6 +154,102 @@ describe('Book Manager — STORY-021', () => {
       expect(bookDao.findBooksByAuthor).toHaveBeenCalled();
     });
 
+  describe('updateBookManager', () => {
+    const bookId = new mongoose.Types.ObjectId().toString();
+
+    const createMockBook = (overrides = {}) => ({
+      _id: bookId,
+      authorId: AUTHOR_ID,
+      title: 'Original Title',
+      description: '',
+      language: 'pt-BR',
+      templateId: null,
+      ...overrides,
+    });
+
+    it('should update templateId when provided', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, templateId: 'galaxy' });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { templateId: 'galaxy' });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { templateId: 'galaxy' });
+      expect(result.templateId).toBe('galaxy');
+    });
+
+    it('should set templateId to null when explicitly provided as null', async () => {
+      const mockBook = createMockBook({ templateId: 'galaxy' });
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, templateId: null });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { templateId: null });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { templateId: null });
+      expect(result.templateId).toBeNull();
+    });
+
+    it('should not include templateId in update when undefined', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue(mockBook);
+
+      await bookManager.updateBookManager(bookId, AUTHOR_ID, { title: 'New Title' });
+
+      const updateCall = bookDao.updateBookById.mock.calls[0][1];
+      expect(updateCall).not.toHaveProperty('templateId');
+      expect(updateCall.title).toBe('New Title');
+    });
+
+    it('should update templateId alongside other fields', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({
+        ...mockBook,
+        title: 'Updated',
+        templateId: 'ocean',
+      });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, {
+        title: 'Updated',
+        templateId: 'ocean',
+      });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, {
+        title: 'Updated',
+        templateId: 'ocean',
+      });
+      expect(result.title).toBe('Updated');
+      expect(result.templateId).toBe('ocean');
+    });
+
+    it('should throw 404 when book not found', async () => {
+      bookDao.findBookById.mockResolvedValue(null);
+
+      await expect(
+        bookManager.updateBookManager(bookId, AUTHOR_ID, { templateId: 'galaxy' })
+      ).rejects.toMatchObject({
+        message: "We couldn't find that book",
+        code: 'NOT_FOUND',
+        status: 404,
+      });
+    });
+
+    it('should throw 403 when user is not the owner', async () => {
+      const mockBook = createMockBook({ authorId: OTHER_AUTHOR_ID });
+      bookDao.findBookById.mockResolvedValue(mockBook);
+
+      await expect(
+        bookManager.updateBookManager(bookId, AUTHOR_ID, { templateId: 'galaxy' })
+      ).rejects.toMatchObject({
+        message: "That doesn't belong to you",
+        code: 'FORBIDDEN',
+        status: 403,
+      });
+    });
+  });
+
+  describe('getBooksByAuthorManager — draft status', () => {
     it('should support page/pageSize pagination', async () => {
       // Arrange
       bookDao.findBooksByAuthorWithWordCount.mockResolvedValue([]);

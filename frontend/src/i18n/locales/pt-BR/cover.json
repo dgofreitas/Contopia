@@ -1,0 +1,49 @@
+{
+  "title": "Capa do seu livro",
+  "templates": {
+    "galaxy": "Galáxia",
+    "galaxyDesc": "Azul escuro com estrelinhas",
+    "adventure": "Aventura",
+    "adventureDesc": "Laranja quente com bússola",
+    "nature": "Natureza",
+    "natureDesc": "Verde com folhinhas",
+    "stripes": "Listras",
+    "stripesDesc": "Listras vermelhas e brancas",
+    "ocean": "Oceano",
+    "oceanDesc": "Azul verdinho com ondinhas",
+    "polka": "Bolinhas",
+    "polkaDesc": "Rosa com bolinhas divertidas",
+    "sunset": "Pôr do Sol",
+    "sunsetDesc": "Laranja e rosa com raios de sol",
+    "castle": "Castelo",
+    "castleDesc": "Roxo com torre em silhouette",
+    "rainbow": "Arco-Íris",
+    "rainbowDesc": "Faixas coloridas do arco-íris",
+    "forest": "Floresta",
+    "forestDesc": "Verde escuro com arvorezinhas",
+    "space": "Espaço",
+    "spaceDesc": "Preto com planetas e órbitas",
+    "chevron": "Zigzag",
+    "chevronDesc": "Mostarda com padrão zigzag",
+    "sparkles": "Brilinhos",
+    "sparklesDesc": "Lilás com estrelinhas brilhantes",
+    "waves": "Ondinhas",
+    "wavesDesc": "Azul com ondinhas fluindo",
+    "geometric": "Forminhas",
+    "geometricDesc": "Coral e ciano com formas divertidas"
+  },
+  "actions": {
+    "skip": "Pular",
+    "customize": "Personalizar",
+    "next": "Avançar"
+  },
+  "aria": {
+    "selectTemplate": "Selecionar modelo",
+    "selected": "Selecionado"
+  },
+  "preview": {
+    "title": "Título do Livro",
+    "author": "Nome do Autor",
+    "chooseTemplate": "Escolha um modelo"
+  }
+}

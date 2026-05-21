@@ -6,11 +6,13 @@ import ptBRAuth from './locales/pt-BR/auth.json';
 import ptBRShelf from './locales/pt-BR/shelf.json';
 import ptBREditor from './locales/pt-BR/editor.json';
 import ptBRReader from './locales/pt-BR/reader.json';
+import ptBRCover from './locales/pt-BR/cover.json';
 import ptBRErrors from './locales/pt-BR/errors.json';
 import enAuth from './locales/en/auth.json';
 import enShelf from './locales/en/shelf.json';
 import enEditor from './locales/en/editor.json';
 import enReader from './locales/en/reader.json';
+import enCover from './locales/en/cover.json';
 import enErrors from './locales/en/errors.json';
 
 i18n
@@ -19,7 +21,7 @@ i18n
   .init({
     fallbackLng: 'pt-BR',
     debug: import.meta.env.DEV,
-    ns: ['auth', 'shelf', 'editor', 'reader', 'errors'],
+    ns: ['auth', 'shelf', 'editor', 'reader', 'errors', 'cover'],
     defaultNS: 'auth',
     interpolation: {
       escapeValue: false, // React already escapes output
@@ -30,6 +32,7 @@ i18n
         shelf: ptBRShelf,
         editor: ptBREditor,
         reader: ptBRReader,
+        cover: ptBRCover,
         errors: ptBRErrors,
       },
       en: {
@@ -37,6 +40,7 @@ i18n
         shelf: enShelf,
         editor: enEditor,
         reader: enReader,
+        cover: enCover,
         errors: enErrors,
       },
     },

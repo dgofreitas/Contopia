@@ -1,0 +1,260 @@
+/* Contopia — Cover Template Background Styles */
+
+.cover-template--galaxy {
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  position: relative;
+}
+
+.cover-template--galaxy::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 30% 60%, #ffd700 100%, transparent),
+    radial-gradient(1.5px 1.5px at 50% 10%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 70% 80%, #ffd700 100%, transparent),
+    radial-gradient(1.5px 1.5px at 90% 40%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 20% 90%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 60% 50%, #ffd700 100%, transparent),
+    radial-gradient(1.5px 1.5px at 80% 25%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 40% 75%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 15% 45%, #ffd700 100%, transparent);
+  pointer-events: none;
+}
+
+.cover-template--adventure {
+  background: linear-gradient(135deg, #f97316, #ea580c, #c2410c);
+  position: relative;
+}
+
+.cover-template--adventure::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(254, 243, 199, 0.15) 30%, rgba(254, 243, 199, 0.15) 32%, transparent 32%),
+    radial-gradient(circle at 50% 50%, transparent 18%, rgba(254, 243, 199, 0.1) 18%, rgba(254, 243, 199, 0.1) 20%, transparent 20%);
+  pointer-events: none;
+}
+
+.cover-template--nature {
+  background: linear-gradient(135deg, #16a34a, #15803d, #166534);
+  position: relative;
+}
+
+.cover-template--nature::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 20px 30px at 15% 80%, rgba(255, 255, 255, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 18px 26px at 85% 75%, rgba(255, 255, 255, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 22px 34px at 50% 85%, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cover-template--stripes {
+  background: repeating-linear-gradient(
+    0deg,
+    #ffffff 0px,
+    #ffffff 12px,
+    #ef4444 12px,
+    #ef4444 24px
+  );
+}
+
+.cover-template--ocean {
+  background: linear-gradient(135deg, #0d9488, #0e7490, #1e40af);
+  position: relative;
+}
+
+.cover-template--ocean::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: repeating-linear-gradient(
+    170deg,
+    transparent 0px,
+    transparent 8px,
+    rgba(255, 255, 255, 0.08) 8px,
+    rgba(255, 255, 255, 0.08) 16px
+  );
+  pointer-events: none;
+}
+
+.cover-template--polka {
+  background-color: #fdf2f8;
+  background-image: radial-gradient(circle, #f9a8d4 6px, transparent 6px);
+  background-size: 28px 28px;
+}
+
+.cover-template--sunset {
+  background: linear-gradient(135deg, #f97316, #e11d48, #be123c);
+  position: relative;
+}
+
+.cover-template--sunset::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, transparent 40%, rgba(253, 224, 71, 0.15) 40%, rgba(253, 224, 71, 0.15) 42%, transparent 42%),
+    linear-gradient(150deg, transparent 50%, rgba(253, 224, 71, 0.12) 50%, rgba(253, 224, 71, 0.12) 52%, transparent 52%),
+    linear-gradient(160deg, transparent 55%, rgba(253, 224, 71, 0.1) 55%, rgba(253, 224, 71, 0.1) 57%, transparent 57%);
+  pointer-events: none;
+}
+
+.cover-template--castle {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9, #4c1d95);
+  position: relative;
+}
+
+.cover-template--castle::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 45%;
+  background:
+    linear-gradient(to bottom, transparent 0%, rgba(196, 181, 253, 0.12) 0%),
+    conic-gradient(from 0deg at 50% 100%, transparent 15deg, rgba(196, 181, 253, 0.15) 15deg, rgba(196, 181, 253, 0.15) 30deg, transparent 30deg, transparent 60deg, rgba(196, 181, 253, 0.12) 60deg, rgba(196, 181, 253, 0.12) 75deg, transparent 75deg);
+  clip-path: polygon(35% 100%, 35% 30%, 40% 30%, 40% 100%, 45% 100%, 45% 20%, 55% 20%, 55% 100%, 60% 100%, 60% 30%, 65% 30%, 65% 100%, 100% 100%);
+  pointer-events: none;
+}
+
+.cover-template--rainbow {
+  background: linear-gradient(
+    180deg,
+    #ef4444 0%,
+    #f97316 16.6%,
+    #eab308 33.2%,
+    #22c55e 49.8%,
+    #3b82f6 66.4%,
+    #8b5cf6 83%,
+    #8b5cf6 100%
+  );
+}
+
+.cover-template--forest {
+  background: linear-gradient(135deg, #15803d, #14532d, #052e16);
+  position: relative;
+}
+
+.cover-template--forest::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background:
+    linear-gradient(to top, rgba(163, 230, 53, 0.1) 0%, transparent 100%),
+    radial-gradient(ellipse 30px 50px at 20% 100%, rgba(0, 0, 0, 0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 25px 45px at 50% 100%, rgba(0, 0, 0, 0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 35px 55px at 80% 100%, rgba(0, 0, 0, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cover-template--space {
+  background: linear-gradient(135deg, #000000, #0f172a, #1e1b4b);
+  position: relative;
+}
+
+.cover-template--space::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle 18px at 25% 35%, transparent 50%, rgba(209, 213, 219, 0.12) 50%, rgba(209, 213, 219, 0.12) 52%, transparent 52%),
+    radial-gradient(circle 8px at 70% 60%, #d1d5db 0%, #d1d5db 40%, transparent 40%),
+    radial-gradient(circle 12px at 55% 25%, #818cf8 0%, #818cf8 30%, transparent 30%);
+  pointer-events: none;
+}
+
+.cover-template--chevron {
+  background-color: #b45309;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(146, 64, 14, 0.6) 10px,
+    rgba(146, 64, 14, 0.6) 20px
+  );
+}
+
+.cover-template--sparkles {
+  background: linear-gradient(135deg, #c4b5fd, #a78bfa, #7c3aed);
+  position: relative;
+}
+
+.cover-template--sparkles::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 15% 25%, #fef3c7 100%, transparent),
+    radial-gradient(1.5px 1.5px at 75% 15%, #fef9c3 100%, transparent),
+    radial-gradient(2.5px 2.5px at 45% 70%, #fef3c7 100%, transparent),
+    radial-gradient(1px 1px at 85% 55%, #fef9c3 100%, transparent),
+    radial-gradient(2px 2px at 25% 80%, #fef3c7 100%, transparent),
+    radial-gradient(1.5px 1.5px at 60% 40%, #fef9c3 100%, transparent),
+    radial-gradient(2px 2px at 10% 55%, #fef3c7 100%, transparent),
+    radial-gradient(1px 1px at 90% 85%, #fef9c3 100%, transparent);
+  pointer-events: none;
+}
+
+.cover-template--waves {
+  background: linear-gradient(135deg, #2563eb, #0891b2, #06b6d4);
+  position: relative;
+}
+
+.cover-template--waves::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background:
+    radial-gradient(ellipse 80% 30px at 20% 60%, rgba(255, 255, 255, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 25px at 60% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 20px at 40% 95%, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cover-template--geometric {
+  background: linear-gradient(135deg, #f97316 50%, #06b6d4 50%);
+  position: relative;
+}
+
+.cover-template--geometric::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(60deg, rgba(249, 115, 22, 0.3) 25%, transparent 25%, transparent 75%, rgba(249, 115, 22, 0.3) 75%),
+    linear-gradient(120deg, rgba(6, 182, 212, 0.3) 25%, transparent 25%, transparent 75%, rgba(6, 182, 212, 0.3) 75%);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Cover preview and card shared styles */
+.cover-preview-text {
+  position: relative;
+  z-index: 1;
+}
+
+.cover-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8%;
+  background: rgba(0, 0, 0, 0.2);
+}

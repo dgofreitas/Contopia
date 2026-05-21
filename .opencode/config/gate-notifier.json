@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "logLevel": "info",
+  "desktopNotifier": "auto",
+  "terminalBell": true,
+  "tuiToast": true,
+  "toastDurationMs": 15000,
+  "stallTimeoutMs": 45000,
+  "notifyOnDangerousTools": true
+}
