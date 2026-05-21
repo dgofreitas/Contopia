@@ -19,6 +19,7 @@ export default function ChapterListItem({
   position,
   totalCount,
   onCreateReplacement,
+  isFirstChapter = false,
 }) {
   const { t } = useTranslation('editor');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -57,6 +58,7 @@ export default function ChapterListItem({
         style={style}
         role="listitem"
         aria-label={`Chapter ${position + 1}: ${chapter.title}`}
+        {...(isFirstChapter ? { 'data-chapter-list-item': 'true' } : {})}
         className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
           isActive
             ? 'bg-amber-100 border border-amber-300'

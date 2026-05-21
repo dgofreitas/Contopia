@@ -236,6 +236,142 @@ describe('Book DAO', () => {
     });
   });
 
+  describe('findBookWithChapters', () => {
+    it('should return book with chapters and total word count', async () => {
+      // Arrange
+      const book = await bookDao.createBook({ authorId, title: 'Edit Me' });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 1, title: 'Ch 1', content: 'Hello', wordCount: 5 });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 2, title: 'Ch 2', content: 'World', wordCount: 5 });
+
+      // Act
+      const result = await bookDao.findBookWithChapters(book._id.toString());
+
+      // Assert
+      expect(result).not.toBeNull();
+      expect(result.book._id.toString()).toBe(book._id.toString());
+      expect(result.chapters).toHaveLength(2);
+      expect(result.totalWordCount).toBe(10);
+    });
+
+    it('should sort chapters by order ascending', async () => {
+      // Arrange
+      const book = await bookDao.createBook({ authorId, title: 'Sorted' });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 3, title: 'Ch 3', content: 'C', wordCount: 1 });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 1, title: 'Ch 1', content: 'A', wordCount: 1 });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 2, title: 'Ch 2', content: 'B', wordCount: 1 });
+
+      // Act
+      const result = await bookDao.findBookWithChapters(book._id.toString());
+
+      // Assert
+      expect(result.chapters[0].title).toBe('Ch 1');
+      expect(result.chapters[1].title).toBe('Ch 2');
+      expect(result.chapters[2].title).toBe('Ch 3');
+    });
+
+    it('should exclude soft-deleted chapters', async () => {
+      // Arrange
+      const book = await bookDao.createBook({ authorId, title: 'With Deleted Ch' });
+      const ch1 = await mongoose.model('Chapter').create({ bookId: book._id, order: 1, title: 'Keep', content: 'A', wordCount: 1 });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 2, title: 'Deleted', content: 'B', wordCount: 1, deletedAt: new Date() });
+
+      // Act
+      const result = await bookDao.findBookWithChapters(book._id.toString());
+
+      // Assert
+      expect(result.chapters).toHaveLength(1);
+      expect(result.chapters[0].title).toBe('Keep');
+    });
+
+    it('should return null when book is soft-deleted', async () => {
+      // Arrange
+      const book = await bookDao.createBook({ authorId, title: 'Gone' });
+      await bookDao.softDeleteBook(book._id);
+
+      // Act
+      const result = await bookDao.findBookWithChapters(book._id.toString());
+
+      // Assert
+      expect(result).toBeNull();
+    });
+
+    it('should return null for non-existent book ID', async () => {
+      // Act
+      const result = await bookDao.findBookWithChapters(new mongoose.Types.ObjectId().toString());
+
+      // Assert
+      expect(result).toBeNull();
+    });
+
+    it('should return book with empty chapters and 0 word count when no chapters exist', async () => {
+      // Arrange
+      const book = await bookDao.createBook({ authorId, title: 'No Chapters' });
+
+      // Act
+      const result = await bookDao.findBookWithChapters(book._id.toString());
+
+      // Assert
+      expect(result).not.toBeNull();
+      expect(result.chapters).toEqual([]);
+      expect(result.totalWordCount).toBe(0);
+    });
+  });
+
+  describe('findBooksByAuthorWithWordCount', () => {
+    it('should return drafts with total word count per book', async () => {
+      // Arrange
+      const book = await bookDao.createBook({ authorId, title: 'Draft 1', status: 'draft' });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 1, title: 'Ch 1', content: 'Hello world', wordCount: 2 });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 2, title: 'Ch 2', content: 'Foo bar baz', wordCount: 3 });
+
+      // Act
+      const result = await bookDao.findBooksByAuthorWithWordCount(authorId, { status: 'draft' });
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0]._id.toString()).toBe(book._id.toString());
+      expect(result[0].totalWordCount).toBe(5);
+      expect(result[0].chapters).toBeUndefined(); // $project removes chapters
+    });
+
+    it('should exclude word count of soft-deleted chapters', async () => {
+      // Arrange
+      const book = await bookDao.createBook({ authorId, title: 'Partial', status: 'draft' });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 1, title: 'Active', content: 'A', wordCount: 1 });
+      await mongoose.model('Chapter').create({ bookId: book._id, order: 2, title: 'Deleted', content: 'B', wordCount: 100, deletedAt: new Date() });
+
+      // Act
+      const result = await bookDao.findBooksByAuthorWithWordCount(authorId, { status: 'draft' });
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].totalWordCount).toBe(1);
+    });
+
+    it('should return empty array when no matching books', async () => {
+      // Act
+      const result = await bookDao.findBooksByAuthorWithWordCount(authorId, { status: 'draft' });
+
+      // Assert
+      expect(result).toEqual([]);
+    });
+
+    it('should respect limit and skip pagination', async () => {
+      // Arrange
+      for (let i = 0; i < 3; i++) {
+        await bookDao.createBook({ authorId, title: `Draft ${i}`, status: 'draft' });
+      }
+
+      // Act
+      const firstTwo = await bookDao.findBooksByAuthorWithWordCount(authorId, { status: 'draft', limit: 2, skip: 0 });
+      const lastOne = await bookDao.findBooksByAuthorWithWordCount(authorId, { status: 'draft', limit: 1, skip: 2 });
+
+      // Assert
+      expect(firstTwo).toHaveLength(2);
+      expect(lastOne).toHaveLength(1);
+    });
+  });
+
   describe('countBooksByAuthor', () => {
     it('should count active books for an author', async () => {
       await bookDao.createBook({ authorId, title: 'A' });

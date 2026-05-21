@@ -372,7 +372,117 @@ describe('Book Router', () => {
     expect(res.body.meta.pagination).toBeDefined();
   });
 
-  // ── GET /?status=published — verify response order matches publish date ─
+  // ── STORY-021: GET /:bookId/edit — 200 returns book with chapters and word count ──
+  it('GET /api/v1/books/:bookId/edit — 200 returns book + chapters + totalWordCount + lastEditedAt', async () => {
+    // Arrange: create a book with 2 chapters
+    const book = await Book.create({ authorId: CHILD_ID, title: 'Edit Me' });
+    await Chapter.create({ bookId: book._id, order: 1, title: 'Ch 1', content: 'Hello', wordCount: 5 });
+    await Chapter.create({ bookId: book._id, order: 2, title: 'Ch 2', content: 'World', wordCount: 5 });
+
+    // Act
+    const res = await request(testApp)
+      .get(`/api/v1/books/${book._id}/edit`)
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeDefined();
+    expect(res.body.data.book._id).toBe(book._id.toString());
+    expect(res.body.data.book.title).toBe('Edit Me');
+    expect(res.body.data.chapters).toHaveLength(2);
+    expect(res.body.data.totalWordCount).toBe(10);
+    expect(res.body.data.lastEditedAt).toBeDefined();
+    expect(res.body.meta.requestId).toBe('req-test-123');
+  });
+
+  // ── STORY-021: GET /:bookId/edit — 403 not owner ────────────────────────
+  it('GET /api/v1/books/:bookId/edit — 403 when not the owner', async () => {
+    // Arrange: create a book owned by OTHER_CHILD_ID
+    const otherBook = await Book.create({ authorId: OTHER_CHILD_ID, title: 'Not Mine' });
+
+    // Act
+    const res = await request(testApp)
+      .get(`/api/v1/books/${otherBook._id}/edit`)
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  // ── STORY-021: GET /:bookId/edit — 404 book not found ──────────────────
+  it('GET /api/v1/books/:bookId/edit — 404 when book does not exist', async () => {
+    const nonExistentId = new mongoose.Types.ObjectId().toString();
+
+    const res = await request(testApp)
+      .get(`/api/v1/books/${nonExistentId}/edit`)
+      .set('Authorization', `Bearer ${validToken}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  // ── STORY-021: GET /:bookId/edit — 400 invalid ID format ───────────────
+  it('GET /api/v1/books/:bookId/edit — 400 VALIDATION_ERROR for invalid bookId', async () => {
+    const res = await request(testApp)
+      .get('/api/v1/books/invalid-id-format/edit')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  // ── STORY-021: GET /:bookId/edit — returns chapters sorted by order ────
+  it('GET /api/v1/books/:bookId/edit — returns chapters sorted ascending by order', async () => {
+    // Arrange: create chapters out of order
+    const book = await Book.create({ authorId: CHILD_ID, title: 'Ordered' });
+    await Chapter.create({ bookId: book._id, order: 3, title: 'Third', wordCount: 1 });
+    await Chapter.create({ bookId: book._id, order: 1, title: 'First', wordCount: 1 });
+    await Chapter.create({ bookId: book._id, order: 2, title: 'Second', wordCount: 1 });
+
+    // Act
+    const res = await request(testApp)
+      .get(`/api/v1/books/${book._id}/edit`)
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.chapters[0].title).toBe('First');
+    expect(res.body.data.chapters[1].title).toBe('Second');
+    expect(res.body.data.chapters[2].title).toBe('Third');
+  });
+
+  // ── STORY-021: GET /?status=draft — includes totalWordCount in response ──
+  it('GET /api/v1/books?status=draft — includes totalWordCount when aggregation returns it', async () => {
+    // Arrange: create a draft with chapters
+    const book = await Book.create({ authorId: CHILD_ID, title: 'Draft With Count', status: 'draft' });
+    await Chapter.create({ bookId: book._id, order: 1, title: 'Ch', content: 'A', wordCount: 7 });
+
+    // Act
+    const res = await request(testApp)
+      .get('/api/v1/books?status=draft')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert: draft aggregation returns totalWordCount per book
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].totalWordCount).toBeDefined();
+    expect(res.body.data[0].totalWordCount).toBe(7);
+    expect(res.body.meta.pagination.total).toBe(1);
+  });
+
+  // ── STORY-021: GET /?status=draft — returns empty array when no drafts ──
+  it('GET /api/v1/books?status=draft — returns empty data when no drafts exist', async () => {
+    const res = await request(testApp)
+      .get('/api/v1/books?status=draft')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.meta.pagination.total).toBe(0);
+  });
+
+  // ── STORY-021: GET /?status=published — verify response order matches publish date ─
   it('GET /api/v1/books?status=published — verify response order matches publish date', async () => {
     // Arrange: create two published books with different publishedAt
     const now = new Date();

@@ -11,6 +11,7 @@ export default function useUpdateChapter(bookId) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chapters', bookId] });
+      queryClient.invalidateQueries({ queryKey: ['bookEdit', bookId] });
     },
   });
 }

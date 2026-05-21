@@ -182,6 +182,84 @@ describe('PulledOutBookCard', () => {
     });
   });
 
+  describe('long-press handler (STORY-021)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('fires onEdit after 300ms touch hold (onTouchStart)', () => {
+      const onEdit = vi.fn();
+      renderPulledOutCard(undefined, { onEdit });
+
+      const group = document.querySelector('[role="group"]');
+      expect(group).toBeInTheDocument();
+
+      // Touch handlers are on the [role="group"] element itself
+      fireEvent.touchStart(group);
+
+      // Advance time by 300ms — timer fires
+      vi.advanceTimersByTime(300);
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire onEdit if touch is released before 300ms (onTouchEnd clears timer)', () => {
+      const onEdit = vi.fn();
+      renderPulledOutCard(undefined, { onEdit });
+
+      const group = document.querySelector('[role="group"]');
+
+      fireEvent.touchStart(group);
+      vi.advanceTimersByTime(200); // less than 300ms
+      fireEvent.touchEnd(group);
+      vi.advanceTimersByTime(200); // would fire if not cleared
+
+      expect(onEdit).not.toHaveBeenCalled();
+    });
+
+    it('does not fire onEdit if touch moves before 300ms (onTouchMove clears timer)', () => {
+      const onEdit = vi.fn();
+      renderPulledOutCard(undefined, { onEdit });
+
+      const group = document.querySelector('[role="group"]');
+
+      fireEvent.touchStart(group);
+      vi.advanceTimersByTime(100);
+      fireEvent.touchMove(group);
+      vi.advanceTimersByTime(300);
+
+      expect(onEdit).not.toHaveBeenCalled();
+    });
+
+    it('container has touchAction manipulation style', () => {
+      renderPulledOutCard();
+
+      const group = document.querySelector('[role="group"]');
+      expect(group.style.touchAction).toBe('manipulation');
+    });
+
+    it('handles multiple touch start events correctly (successive presses)', () => {
+      const onEdit = vi.fn();
+      renderPulledOutCard(undefined, { onEdit });
+
+      const group = document.querySelector('[role="group"]');
+
+      // First press — released before 300ms
+      fireEvent.touchStart(group);
+      fireEvent.touchEnd(group);
+
+      // Second press — held for 300ms
+      fireEvent.touchStart(group);
+      vi.advanceTimersByTime(300);
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('error handling', () => {
     it('handles missing title gracefully', () => {
       const noTitleBook = {

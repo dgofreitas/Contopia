@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 
@@ -7,12 +7,37 @@ function PulledOutBookCard({ book, onRead, onEdit, onDesignCover, onViewCover, o
   const title = sanitizeText(book.title);
   const summary = book.summary ? sanitizeText(book.summary) : '';
   const excerpt = summary.length > 120 ? summary.slice(0, 120) + '…' : summary;
+  const longPressTimer = useRef(null);
+
+  const handleTouchStart = useCallback(() => {
+    longPressTimer.current = setTimeout(() => {
+      onEdit();
+    }, 300);
+  }, [onEdit]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   return (
     <div
       role="group"
       aria-label={t('pullOut.ariaActions')}
       className="bg-white rounded-xl shadow-lg p-4 w-64 space-y-3"
+      style={{ touchAction: 'manipulation' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
     >
       <h3 className="text-sm font-bold text-gray-800 truncate">{title}</h3>
       <button

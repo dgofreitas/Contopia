@@ -84,8 +84,6 @@ export default function ChapterSidebar({
     [chapters, reorderMutation]
   );
 
-  const sortedChapters = [...(chapters || [])].sort((a, b) => a.order - b.order);
-
   const chapterList = (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
@@ -113,7 +111,7 @@ export default function ChapterSidebar({
         )}
       </div>
 
-      {sortedChapters.length > 0 && (
+      {(chapters || []).length > 0 && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -121,11 +119,11 @@ export default function ChapterSidebar({
           modifiers={[restrictToVerticalAxis]}
         >
           <SortableContext
-            items={sortedChapters.map((c) => c._id)}
+            items={chapters.map((c) => c._id)}
             strategy={verticalListSortingStrategy}
           >
             <ul role="list" className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
-              {sortedChapters.map((chapter, index) => (
+              {chapters.map((chapter, index) => (
                 <ChapterListItem
                   key={chapter._id}
                   chapter={chapter}
@@ -136,8 +134,9 @@ export default function ChapterSidebar({
                   onMoveUp={handleMoveUp}
                   onMoveDown={handleMoveDown}
                   position={index}
-                  totalCount={sortedChapters.length}
+                  totalCount={chapters.length}
                   onCreateReplacement={onAddChapter}
+                  isFirstChapter={index === 0}
                 />
               ))}
             </ul>
@@ -145,7 +144,7 @@ export default function ChapterSidebar({
         </DndContext>
       )}
 
-      {sortedChapters.length === 0 && (
+      {(chapters || []).length === 0 && (
         <div className="flex-1 flex items-center justify-center px-4">
           <p className="text-xs text-gray-400 text-center">{t('addChapter')}</p>
         </div>

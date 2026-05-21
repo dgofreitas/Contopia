@@ -32,5 +32,8 @@
   "placeBack": "Place Back",
   "newBookButton": "New Book",
   "highlightNew": "New on your shelf!",
-  "goToShelf": "Go to my shelf"
+  "goToShelf": "Go to my shelf",
+  "draftsTitle": "My Drafts",
+  "wordCount": "{{count}} words",
+  "emptyDraftsMessage": "No drafts — start writing!"
 }

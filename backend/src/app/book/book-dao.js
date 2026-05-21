@@ -1,4 +1,5 @@
 // Contopia — Book Data Access Object
+import mongoose from 'mongoose';
 import { Book, Chapter, Asset, ReadingProgress, ActivityLog } from './book-model.js';
 
 // ── Book DAO ──────────────────────────────────────────────────────────────────
@@ -19,6 +20,120 @@ export async function findBooksByAuthor(authorId, { status, limit = 50, skip = 0
     ? { publishedAt: -1, _id: -1 }
     : { createdAt: -1 };
   return Book.find(filter).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }).exec();
+}
+
+/**
+ * Fetch a single book with its non-deleted chapters and total word count.
+ * Uses MongoDB aggregation: $match → $lookup chapters → $addFields for totalWordCount.
+ * Returns { book, chapters, totalWordCount } or null if not found.
+ */
+export async function findBookWithChapters(bookId) {
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(bookId), deletedAt: null } },
+    {
+      $lookup: {
+        from: 'chapters',
+        localField: '_id',
+        foreignField: 'bookId',
+        as: 'chapters',
+      },
+    },
+    { $unwind: { path: '$chapters', preserveNullAndEmptyArrays: true } },
+    { $match: { $or: [{ 'chapters.deletedAt': null }, { 'chapters': { $exists: false } }] } },
+    {
+      $group: {
+        _id: '$_id',
+        root: { $first: '$$ROOT' },
+        chapters: { $push: '$chapters' },
+      },
+    },
+    {
+      $replaceRoot: {
+        newRoot: {
+          $mergeObjects: [
+            '$root',
+            {
+              chapters: { $filter: { input: '$chapters', as: 'ch', cond: { $ne: ['$$ch', null] } } },
+            },
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        totalWordCount: { $sum: '$chapters.wordCount' },
+      },
+    },
+  ];
+
+  const results = await Book.aggregate(pipeline).exec();
+  if (!results || results.length === 0) return null;
+
+  const doc = results[0];
+  // Sort chapters by order ascending
+  const chapters = (doc.chapters || [])
+    .filter((ch) => ch && ch.deletedAt === null)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const totalWordCount = doc.totalWordCount || 0;
+
+  return {
+    book: doc,
+    chapters,
+    totalWordCount,
+  };
+}
+
+/**
+ * Fetch books by author with totalWordCount per book (aggregation).
+ * Only used when status === 'draft' for edit-list word counts.
+ */
+export async function findBooksByAuthorWithWordCount(authorId, { status, limit = 50, skip = 0 } = {}) {
+  const matchFilter = { authorId: new mongoose.Types.ObjectId(authorId), deletedAt: null };
+  if (status) matchFilter.status = status;
+
+  const pipeline = [
+    { $match: matchFilter },
+    {
+      $lookup: {
+        from: 'chapters',
+        localField: '_id',
+        foreignField: 'bookId',
+        as: 'chapters',
+      },
+    },
+    {
+      $addFields: {
+        totalWordCount: {
+          $sum: {
+            $map: {
+              input: {
+                $filter: {
+                  input: '$chapters',
+                  as: 'ch',
+                  cond: { $eq: ['$$ch.deletedAt', null] },
+                },
+              },
+              as: 'filtered',
+              in: '$$filtered.wordCount',
+            },
+          },
+        },
+      },
+    },
+    { $project: { chapters: 0 } },
+  ];
+
+  // Apply sort
+  if (status === 'published') {
+    pipeline.push({ $sort: { publishedAt: -1, _id: -1 } });
+  } else {
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
+
+  // Apply pagination
+  pipeline.push({ $skip: skip }, { $limit: limit });
+
+  return Book.aggregate(pipeline).exec();
 }
 
 export async function updateBookById(id, update) {

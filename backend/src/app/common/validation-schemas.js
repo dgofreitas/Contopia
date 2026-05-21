@@ -172,6 +172,13 @@ export const chapterPutBodySchema = z.object({
 );
 
 /**
+ * Params for GET /api/v1/books/:bookId/edit.
+ */
+export const bookEditParamsSchema = z.object({
+  bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
+});
+
+/**
  * Body for POST /api/v1/books (V2 — accepts both summary and description).
  * Normalizes summary → description.
  */

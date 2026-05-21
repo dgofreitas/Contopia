@@ -34,6 +34,7 @@ export default function useReorderChapters(bookId) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['chapters', bookId] });
+      queryClient.invalidateQueries({ queryKey: ['bookEdit', bookId] });
     },
   });
 }

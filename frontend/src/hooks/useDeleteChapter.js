@@ -11,6 +11,7 @@ export default function useDeleteChapter(bookId) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chapters', bookId] });
+      queryClient.invalidateQueries({ queryKey: ['bookEdit', bookId] });
     },
   });
 }

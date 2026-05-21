@@ -36,6 +36,20 @@ vi.mock('../services/autosave-service', () => ({
   },
 }));
 
+let mockEditQueryData = {
+  book: { _id: mockBookId, title: 'My Book', status: 'draft', updatedAt: new Date() },
+  chapters: [
+    { _id: 'c1', title: 'Chapter 1', order: 0 },
+    { _id: 'c2', title: 'Chapter 2', order: 1 },
+    { _id: 'c3', title: 'Chapter 3', order: 2 },
+  ],
+  totalWordCount: 300,
+};
+
+// Mock useBookEditQuery (STORY-021: replaces useChaptersQuery)
+const mockUseBookEditQuery = vi.fn(() => ({ data: mockEditQueryData, isLoading: false }));
+vi.mock('../hooks/useBookEditQuery', () => ({ default: () => mockUseBookEditQuery() }));
+
 // Mock usePublishBook
 vi.mock('../hooks/usePublishBook', () => ({
   default: vi.fn(() => ({
@@ -82,21 +96,8 @@ vi.mock('../lib/api-client', () => ({
   },
 }));
 
-let mockChaptersData = {
-  data: [
-    { _id: 'c1', title: 'Chapter 1', order: 0 },
-    { _id: 'c2', title: 'Chapter 2', order: 1 },
-    { _id: 'c3', title: 'Chapter 3', order: 2 },
-  ],
-};
-
-const mockUseChaptersQuery = vi.fn(() => ({
-  data: mockChaptersData,
-  isLoading: false,
-}));
-
 vi.mock('../hooks/useChaptersQuery', () => ({
-  default: () => mockUseChaptersQuery(),
+  default: () => ({ data: { data: [] }, isLoading: false }),
 }));
 
 vi.mock('../hooks/useCreateChapter', () => ({
@@ -183,12 +184,14 @@ describe('EditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     queryClient.clear();
-    mockChaptersData = {
-      data: [
+    mockEditQueryData = {
+      book: { _id: mockBookId, title: 'My Book', status: 'draft', updatedAt: new Date() },
+      chapters: [
         { _id: 'c1', title: 'Chapter 1', order: 0 },
         { _id: 'c2', title: 'Chapter 2', order: 1 },
         { _id: 'c3', title: 'Chapter 3', order: 2 },
       ],
+      totalWordCount: 300,
     };
   });
 
@@ -211,10 +214,7 @@ describe('EditorPage', () => {
   });
 
   it('shows loading state when isLoading is true', () => {
-    mockUseChaptersQuery.mockReturnValueOnce({
-      data: null,
-      isLoading: true,
-    });
+    mockUseBookEditQuery.mockReturnValueOnce({ data: null, isLoading: true });
 
     renderWithProviders(<EditorPage />);
     expect(screen.getByText('chapterNav')).toBeInTheDocument();
@@ -309,10 +309,10 @@ describe('EditorPage', () => {
 
   it('sets active chapter to null when deleting the last remaining chapter', async () => {
     // Single chapter only
-    mockChaptersData = {
-      data: [
-        { _id: 'c1', title: 'Chapter 1', order: 0 },
-      ],
+    mockEditQueryData = {
+      book: { _id: mockBookId, title: 'My Book', status: 'draft', updatedAt: new Date() },
+      chapters: [{ _id: 'c1', title: 'Chapter 1', order: 0 }],
+      totalWordCount: 0,
     };
 
     let capturedOptions = null;
@@ -516,5 +516,60 @@ describe('EditorPage', () => {
     await user.click(screen.getByTestId('trigger-content-change'));
 
     expect(mockUpdateChapterMutate).toHaveBeenCalledWith({ chapterId: 'c1', content: '<p>Updated</p>' });
+  });
+
+  // === STORY-021: Edit Mode Awareness Tests ===
+
+  it('renders A11yAnnouncer with editing key when book is loaded', () => {
+    renderWithProviders(<EditorPage />);
+
+    // A11yAnnouncer renders with aria-live "polite" and sr-only class
+    const announcer = document.querySelector('[aria-live="polite"]');
+    expect(announcer).toBeInTheDocument();
+    // i18n mock returns key; EditorPage calls t('editingBook', { title: bookTitle })
+    expect(announcer.textContent).toContain('editingBook');
+  });
+
+  it('does not render A11yAnnouncer when loading (loading screen shown instead)', () => {
+    mockUseBookEditQuery.mockReturnValueOnce({ data: null, isLoading: true });
+
+    renderWithProviders(<EditorPage />);
+
+    // When loading, EditorPage returns early with a loading div, no A11yAnnouncer
+    expect(screen.getByText('chapterNav')).toBeInTheDocument();
+    const announcer = document.querySelector('[aria-live="polite"]');
+    expect(announcer).not.toBeInTheDocument();
+  });
+
+  it('renders PublishedEditBadge when book status is published', () => {
+    mockEditQueryData = {
+      book: { _id: mockBookId, title: 'Published Book', status: 'published', updatedAt: new Date() },
+      chapters: [{ _id: 'c1', title: 'Ch 1', order: 0 }],
+      totalWordCount: 100,
+    };
+
+    renderWithProviders(<EditorPage />);
+
+    // PublishedEditBadge renders text from editor translation
+    expect(screen.getByText('publishedEditBadge')).toBeInTheDocument();
+  });
+
+  it('does not render PublishedEditBadge when book status is draft', () => {
+    // Default mock has status 'draft'
+    renderWithProviders(<EditorPage />);
+
+    expect(screen.queryByText('publishedEditBadge')).not.toBeInTheDocument();
+  });
+
+  it('does not render publish button when book status is published', () => {
+    mockEditQueryData = {
+      book: { _id: mockBookId, title: 'Published Book', status: 'published', updatedAt: new Date() },
+      chapters: [{ _id: 'c1', title: 'Ch 1', order: 0 }],
+      totalWordCount: 100,
+    };
+
+    renderWithProviders(<EditorPage />);
+
+    expect(screen.queryByText('publishButton')).not.toBeInTheDocument();
   });
 });

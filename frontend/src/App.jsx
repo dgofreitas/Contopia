@@ -6,6 +6,7 @@ import VerifyPage from './app/auth/VerifyPage';
 import WelcomePage from './app/auth/WelcomePage';
 import LoginPage from './app/auth/LoginPage';
 import ShelfPage from './app/shelf/ShelfPage';
+import DraftsListPage from './app/drafts/DraftsListPage';
 import EditorPage from './app/editor/EditorPage';
 import NewBookPage from './app/editor/NewBookPage';
 import ReaderPage from './app/reader/ReaderPage';
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/shelf" element={<ShelfPage />} />
+          <Route path="/drafts" element={<DraftsListPage />} />
           <Route path="/editor/new" element={<NewBookPage />} />
           <Route path="/editor/:bookId" element={<EditorPage />} />
           <Route path="/reader/:bookId" element={<ReaderPage />} />
