@@ -32,6 +32,45 @@
     "geometric": "Geometric",
     "geometricDesc": "Coral and cyan with shapes"
   },
+  "colors": {
+    "skyBlue": "Sky blue",
+    "oceanBlue": "Ocean blue",
+    "teal": "Teal",
+    "forestGreen": "Forest green",
+    "lime": "Lime",
+    "sunnyYellow": "Sunny yellow",
+    "tangerine": "Tangerine",
+    "coral": "Coral",
+    "bubblegum": "Bubblegum",
+    "lavender": "Lavender",
+    "plum": "Plum",
+    "midnight": "Midnight",
+    "cottonCandy": "Cotton candy",
+    "peach": "Peach",
+    "mint": "Mint",
+    "snow": "Snow"
+  },
+  "patterns": {
+    "none": "None",
+    "stripes": "Stripes",
+    "dots": "Dots",
+    "stars": "Stars",
+    "chevron": "Chevron",
+    "waves": "Waves"
+  },
+  "customize": {
+    "colorPickerHeading": "Pick a color",
+    "patternPickerHeading": "Pick a pattern",
+    "back": "Back",
+    "save": "Save & Finish"
+  },
+  "spine": {
+    "sectionHeading": "Spine",
+    "toggleLabel": "Customize Spine",
+    "colorPickerHeading": "Spine color",
+    "autoState": "Auto",
+    "customState": "Custom"
+  },
   "actions": {
     "skip": "Skip",
     "customize": "Customize",
@@ -39,7 +78,19 @@
   },
   "aria": {
     "selectTemplate": "Select template",
-    "selected": "Selected"
+    "selected": "Selected",
+    "colorSwatch": "{{name}}, {{status}}",
+    "colorSwatchSelected": "selected",
+    "colorSwatchNotSelected": "not selected",
+    "patternSwatch": "{{name}} pattern, {{status}}",
+    "patternSwatchSelected": "selected",
+    "patternSwatchNotSelected": "not selected",
+    "noPatternIndicator": "No pattern",
+    "colorPickerGroup": "Color picker",
+    "patternPickerGroup": "Pattern picker",
+    "spineToggle": "Customize spine color",
+    "spineColorPickerGroup": "Spine color picker",
+    "spinePreview": "Spine preview: {{state}} color"
   },
   "preview": {
     "title": "Book Title",

@@ -9,7 +9,7 @@ Sempre use a forma longa `npm run <script>`, NUNCA a forma curta:
 - ❌ `npm build`  → ✅ `npm run build`
 
 ### Evite pipes desnecessários
-O RTK já filtra saídas — nunca use `2>&1 | tail -N`, `| head -N` em comandos suportados.
+O RTK já filtra saídas — NUNCA use `| grep`, `2>&1 | tail -N`, ou `| head -N` em comandos suportados (isso quebra a formatação e gera erros como `(no output)`).
 
 ### Comandos suportados (o plugin reescreve automaticamente)
 - git: status, diff, log, add, commit, push, pull
@@ -35,6 +35,19 @@ O RTK já filtra saídas — nunca use `2>&1 | tail -N`, `| head -N` em comandos
 - aws * → rtk aws
 - curl → rtk curl
 - pnpm list/outdated → rtk pnpm
+
+---
+
+## 🧪 Regras Rígidas para Testes e Cobertura
+
+Agentes frequentemente erram ao rodar testes. Siga **OBRIGATORIAMENTE** a estratégia definida em `.opencode/skills/test-execution/SKILL.md`:
+
+1. **NO PIPES:** Nunca use `| grep`, `| tail` ou `| head` ao rodar vitest/jest/mocha/npm test.
+2. **VERIFY CWD:** Sempre dê `cd backend` ou `cd frontend` antes de rodar o teste. Não rode da raiz se o `package.json` de teste estiver em uma sub-pasta.
+3. **TEXT COVERAGE:** Nunca tente ler arquivos JSON de cobertura (`coverage-summary.json` etc). Use repórteres de texto direto no console:
+   - Vitest: `npx vitest run --coverage.enabled=true --coverage.reporter=text-summary`
+   - Jest: `npx jest --coverage --coverageReporters="text-summary"`
+4. **ISOLATE FAILURES:** Se uma suíte inteira falhar com log gigante, **NÃO** tente ler o log bruto do RTK. Isole e rode apenas o arquivo que falhou (`npm run test -- arquivo_especifico.test.ts`).
 
 ---
 

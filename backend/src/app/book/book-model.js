@@ -45,6 +45,35 @@ const bookSchema = new Schema(
       maxlength: 50,
       default: null,
     },
+    coverColor: {
+      type: String,
+      trim: true,
+      maxlength: 7,
+      default: null,
+    },
+    coverPattern: {
+      type: String,
+      trim: true,
+      maxlength: 30,
+      default: null,
+    },
+    spineColor: {
+      type: String,
+      trim: true,
+      maxlength: 7,
+      default: null,
+      get: function (v) {
+        if (v != null) return v;
+        // Deterministic pastel fallback from book ID — child-safe palette
+        const palette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+        const idx = this._id.toString().split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % palette.length;
+        return palette[idx];
+      },
+    },
+    spineCustomized: {
+      type: Boolean,
+      default: false,
+    },
     publishedAt: {
       type: Date,
       default: null,
@@ -84,16 +113,9 @@ bookSchema.index(
 );
 bookSchema.index({ title: 'text' }, { language_override: 'searchLanguage', collation: { locale: 'simple' } });
 
-// ── Spine Color Virtual ──────────────────────────────────────────────────────
-// Deterministic pastel from book ID — child-safe palette
-bookSchema.virtual('spineColor').get(function () {
-  const palette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
-  const idx = this._id.toString().split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % palette.length;
-  return palette[idx];
-});
-
-bookSchema.set('toObject', { virtuals: true });
-bookSchema.set('toJSON', { virtuals: true });
+// ── Schema Options: include getters (spineColor fallback) + virtuals ────────
+bookSchema.set('toObject', { virtuals: true, getters: true });
+bookSchema.set('toJSON', { virtuals: true, getters: true });
 
 // ── Chapter Schema ────────────────────────────────────────────────────────────
 const chapterSchema = new Schema(

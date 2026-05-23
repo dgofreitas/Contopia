@@ -1,0 +1,18 @@
+export const COVER_COLOR_PALETTE = [
+  { id: 'sky-blue', hex: '#87CEEB', nameKey: 'cover.colors.skyBlue' },
+  { id: 'ocean-blue', hex: '#1E90FF', nameKey: 'cover.colors.oceanBlue' },
+  { id: 'teal', hex: '#2DD4BF', nameKey: 'cover.colors.teal' },
+  { id: 'forest-green', hex: '#22C55E', nameKey: 'cover.colors.forestGreen' },
+  { id: 'lime', hex: '#84CC16', nameKey: 'cover.colors.lime' },
+  { id: 'sunny-yellow', hex: '#FACC15', nameKey: 'cover.colors.sunnyYellow' },
+  { id: 'tangerine', hex: '#FB923C', nameKey: 'cover.colors.tangerine' },
+  { id: 'coral', hex: '#F87171', nameKey: 'cover.colors.coral' },
+  { id: 'bubblegum', hex: '#F472B6', nameKey: 'cover.colors.bubblegum' },
+  { id: 'lavender', hex: '#A78BFA', nameKey: 'cover.colors.lavender' },
+  { id: 'plum', hex: '#A855F7', nameKey: 'cover.colors.plum' },
+  { id: 'midnight', hex: '#1E1B4B', nameKey: 'cover.colors.midnight' },
+  { id: 'cotton-candy', hex: '#FBCFE8', nameKey: 'cover.colors.cottonCandy' },
+  { id: 'peach', hex: '#FED7AA', nameKey: 'cover.colors.peach' },
+  { id: 'mint', hex: '#A7F3D0', nameKey: 'cover.colors.mint' },
+  { id: 'snow', hex: '#F1F5F9', nameKey: 'cover.colors.snow' },
+];

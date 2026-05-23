@@ -32,6 +32,45 @@
     "geometric": "Forminhas",
     "geometricDesc": "Coral e ciano com formas divertidas"
   },
+  "colors": {
+    "skyBlue": "Azul céu",
+    "oceanBlue": "Azul oceano",
+    "teal": "Verde água",
+    "forestGreen": "Verde floresta",
+    "lime": "Limão",
+    "sunnyYellow": "Amarelo sol",
+    "tangerine": "Tangerina",
+    "coral": "Coral",
+    "bubblegum": "Chiclete",
+    "lavender": "Lavanda",
+    "plum": "Ameixa",
+    "midnight": "Azul noite",
+    "cottonCandy": "Algodão doce",
+    "peach": "Pêssego",
+    "mint": "Hortelã",
+    "snow": "Neve"
+  },
+  "patterns": {
+    "none": "Nenhum",
+    "stripes": "Listras",
+    "dots": "Bolinhas",
+    "stars": "Estrelinhas",
+    "chevron": "Zigue-zague",
+    "waves": "Ondinhas"
+  },
+  "customize": {
+    "colorPickerHeading": "Escolha uma cor",
+    "patternPickerHeading": "Escolha um padrão",
+    "back": "Voltar",
+    "save": "Salvar e finalizar"
+  },
+  "spine": {
+    "sectionHeading": "Lombada",
+    "toggleLabel": "Personalizar Lombada",
+    "colorPickerHeading": "Cor da lombada",
+    "autoState": "Automático",
+    "customState": "Personalizado"
+  },
   "actions": {
     "skip": "Pular",
     "customize": "Personalizar",
@@ -39,7 +78,19 @@
   },
   "aria": {
     "selectTemplate": "Selecionar modelo",
-    "selected": "Selecionado"
+    "selected": "Selecionado",
+    "colorSwatch": "{{name}}, {{status}}",
+    "colorSwatchSelected": "selecionado",
+    "colorSwatchNotSelected": "não selecionado",
+    "patternSwatch": "Padrão {{name}}, {{status}}",
+    "patternSwatchSelected": "selecionado",
+    "patternSwatchNotSelected": "não selecionado",
+    "noPatternIndicator": "Sem padrão",
+    "colorPickerGroup": "Seletor de cores",
+    "patternPickerGroup": "Seletor de padrões",
+    "spineToggle": "Personalizar cor da lombada",
+    "spineColorPickerGroup": "Seletor de cor da lombada",
+    "spinePreview": "Prévia da lombada: cor {{state}}"
   },
   "preview": {
     "title": "Título do Livro",
