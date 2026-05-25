@@ -30,11 +30,11 @@
 - [X] `frontend/src/i18n/locales/pt-BR/cover.json` (MODIFY) — Upload section i18n keys in Portuguese
 
 ## TESTS
-- [PENDING] Backend unit tests: image-processor, color-extractor
-- [PENDING] Frontend unit tests: image-upload-utils, cover-store
-- [PENDING] Component tests: UploadButton, UploadProgress, ImagePreview, ImageUploadSection, CoverPreview
-- [PENDING] Integration tests: CoverCustomizePage upload flow, backend POST /assets?type=cover
-- [PENDING] Security tests: SVG rejection, EXIF stripping, file type validation
+- [X] Backend unit tests: image-processor, color-extractor
+- [X] Frontend unit tests: image-upload-utils, cover-store
+- [X] Component tests: UploadButton, UploadProgress, ImagePreview, ImageUploadSection, CoverPreview
+- [X] Integration tests: CoverCustomizePage upload flow, backend POST /assets?type=cover
+- [X] Security tests: SVG rejection, EXIF stripping, file type validation
 
 ## GATE
 All domains [DONE] → proceed to TestEngineer
