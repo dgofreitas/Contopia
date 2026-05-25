@@ -1,6 +1,6 @@
 // Contopia — Validation Schemas Tests
 import { describe, it, expect } from 'vitest';
-import { registerSchema, resendSchema, childLoginSchema, bookUpdateSchema } from '../app/common/validation-schemas.js';
+import { registerSchema, resendSchema, childLoginSchema, bookUpdateSchema, stickerSchema } from '../app/common/validation-schemas.js';
 
 describe('Validation Schemas', () => {
   describe('registerSchema', () => {
@@ -173,6 +173,240 @@ describe('Validation Schemas', () => {
       expect(result.data.description).toBe('Updated description');
       expect(result.data.language).toBe('en-US');
       expect(result.data.templateId).toBe('adventure');
+    });
+  });
+
+  describe('stickerSchema', () => {
+    it('should accept a valid sticker', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: 50 });
+      expect(result.success).toBe(true);
+      expect(result.data.svgId).toBe('star');
+      expect(result.data.x).toBe(50);
+      expect(result.data.y).toBe(50);
+      expect(result.data.scale).toBe(1); // default
+    });
+
+    it('should accept a sticker with explicit scale', () => {
+      const result = stickerSchema.safeParse({ svgId: 'heart', x: 25, y: 75, scale: 1.5 });
+      expect(result.success).toBe(true);
+      expect(result.data.scale).toBe(1.5);
+    });
+
+    it('should default scale to 1 when omitted', () => {
+      const result = stickerSchema.safeParse({ svgId: 'moon', x: 10, y: 90 });
+      expect(result.success).toBe(true);
+      expect(result.data.scale).toBe(1);
+    });
+
+    it('should trim svgId', () => {
+      const result = stickerSchema.safeParse({ svgId: '  star  ', x: 50, y: 50 });
+      expect(result.success).toBe(true);
+      expect(result.data.svgId).toBe('star');
+    });
+
+    it('should reject svgId exceeding 30 characters', () => {
+      const result = stickerSchema.safeParse({ svgId: 'x'.repeat(31), x: 50, y: 50 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject svgId of exactly 30 characters', () => {
+      const result = stickerSchema.safeParse({ svgId: 'x'.repeat(30), x: 50, y: 50 });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject x below 0', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: -1, y: 50 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject x above 100', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 101, y: 50 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject y below 0', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: -1 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject y above 100', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: 101 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject scale below 0.5', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: 50, scale: 0.4 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject scale above 2', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: 50, scale: 2.1 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept scale of exactly 0.5', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: 50, scale: 0.5 });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept scale of exactly 2', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: 50, scale: 2 });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept coordinates at boundary values (0 and 100)', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 0, y: 100 });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject non-number x', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: '50', y: 50 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject non-number y', () => {
+      const result = stickerSchema.safeParse({ svgId: 'star', x: 50, y: '50' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject missing svgId', () => {
+      const result = stickerSchema.safeParse({ x: 50, y: 50 });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('bookUpdateSchema — coverTitle', () => {
+    const validBase = { title: 'Updated Book' };
+
+    it('should accept book update without coverTitle', () => {
+      const result = bookUpdateSchema.safeParse(validBase);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept coverTitle as a string', () => {
+      const result = bookUpdateSchema.safeParse({ ...validBase, coverTitle: 'My Cover Title' });
+      expect(result.success).toBe(true);
+      expect(result.data.coverTitle).toBe('My Cover Title');
+    });
+
+    it('should accept coverTitle as null (resetting to default)', () => {
+      const result = bookUpdateSchema.safeParse({ ...validBase, coverTitle: null });
+      expect(result.success).toBe(true);
+      expect(result.data.coverTitle).toBeNull();
+    });
+
+    it('should trim coverTitle', () => {
+      const result = bookUpdateSchema.safeParse({ ...validBase, coverTitle: '  Spaced Title  ' });
+      expect(result.success).toBe(true);
+      expect(result.data.coverTitle).toBe('Spaced Title');
+    });
+
+    it('should reject coverTitle exceeding 120 characters', () => {
+      const result = bookUpdateSchema.safeParse({ ...validBase, coverTitle: 'A'.repeat(121) });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept coverTitle of exactly 120 characters', () => {
+      const result = bookUpdateSchema.safeParse({ ...validBase, coverTitle: 'A'.repeat(120) });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('bookUpdateSchema — stickers', () => {
+    const validBase = { title: 'Updated Book' };
+
+    it('should accept book update without stickers (defaults to empty array)', () => {
+      const result = bookUpdateSchema.safeParse(validBase);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept stickers as an array of valid sticker objects', () => {
+      const result = bookUpdateSchema.safeParse({
+        ...validBase,
+        stickers: [
+          { svgId: 'star', x: 50, y: 50 },
+          { svgId: 'heart', x: 25, y: 75, scale: 1.5 },
+        ],
+      });
+      expect(result.success).toBe(true);
+      expect(result.data.stickers).toHaveLength(2);
+      expect(result.data.stickers[0].svgId).toBe('star');
+      expect(result.data.stickers[0].scale).toBe(1); // default
+      expect(result.data.stickers[1].scale).toBe(1.5);
+    });
+
+    it('should default stickers to empty array when not provided', () => {
+      const result = bookUpdateSchema.safeParse(validBase);
+      expect(result.success).toBe(true);
+      expect(result.data.stickers).toEqual([]);
+    });
+
+    it('should reject stickers array exceeding 10 items', () => {
+      const stickers = Array.from({ length: 11 }, (_, i) => ({
+        svgId: `s${i}`, x: i * 9, y: i * 9,
+      }));
+      const result = bookUpdateSchema.safeParse({ ...validBase, stickers });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept stickers array with exactly 10 items', () => {
+      const stickers = Array.from({ length: 10 }, (_, i) => ({
+        svgId: `s${i}`, x: i * 9, y: i * 9,
+      }));
+      const result = bookUpdateSchema.safeParse({ ...validBase, stickers });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject sticker with invalid svgId (too long)', () => {
+      const result = bookUpdateSchema.safeParse({
+        ...validBase,
+        stickers: [{ svgId: 'x'.repeat(31), x: 50, y: 50 }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject sticker with x outside 0–100', () => {
+      const result = bookUpdateSchema.safeParse({
+        ...validBase,
+        stickers: [{ svgId: 'star', x: 101, y: 50 }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject sticker with y outside 0–100', () => {
+      const result = bookUpdateSchema.safeParse({
+        ...validBase,
+        stickers: [{ svgId: 'star', x: 50, y: -1 }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject sticker with scale below 0.5', () => {
+      const result = bookUpdateSchema.safeParse({
+        ...validBase,
+        stickers: [{ svgId: 'star', x: 50, y: 50, scale: 0.3 }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject sticker with scale above 2', () => {
+      const result = bookUpdateSchema.safeParse({
+        ...validBase,
+        stickers: [{ svgId: 'star', x: 50, y: 50, scale: 3 }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept coverTitle and stickers together', () => {
+      const result = bookUpdateSchema.safeParse({
+        title: 'Updated',
+        coverTitle: 'Custom Cover',
+        stickers: [{ svgId: 'star', x: 50, y: 50 }],
+      });
+      expect(result.success).toBe(true);
+      expect(result.data.coverTitle).toBe('Custom Cover');
+      expect(result.data.stickers).toHaveLength(1);
+      expect(result.data.stickers[0].svgId).toBe('star');
     });
   });
 });

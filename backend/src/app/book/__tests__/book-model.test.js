@@ -266,4 +266,201 @@ describe('Book Model', () => {
       expect(Book.collection.collectionName).toBe('books');
     });
   });
+
+  // ── STORY-024: coverTitle & stickers ────────────────────────────────────────
+  describe('coverTitle field', () => {
+    it('should default coverTitle to null', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'No Cover Title' });
+      expect(book.coverTitle).toBeNull();
+    });
+
+    it('should accept a valid coverTitle string', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'My Book',
+        coverTitle: 'My Custom Title',
+      });
+      expect(book.coverTitle).toBe('My Custom Title');
+    });
+
+    it('should trim coverTitle', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Spaced',
+        coverTitle: '  Spaced Title  ',
+      });
+      expect(book.coverTitle).toBe('Spaced Title');
+    });
+
+    it('should reject coverTitle exceeding 120 characters', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Long', coverTitle: 'A'.repeat(121) })
+      ).rejects.toThrow();
+    });
+
+    it('should accept coverTitle of exactly 120 characters', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const exact = 'A'.repeat(120);
+      const book = await Book.create({ authorId, title: 'Exact', coverTitle: exact });
+      expect(book.coverTitle).toBe(exact);
+    });
+
+    it('should allow setting coverTitle to null explicitly', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Null Cover Title',
+        coverTitle: null,
+      });
+      expect(book.coverTitle).toBeNull();
+    });
+
+    it('should persist coverTitle update via save', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Update Title' });
+      expect(book.coverTitle).toBeNull();
+
+      book.coverTitle = 'New Cover Title';
+      await book.save();
+
+      const found = await Book.findById(book._id);
+      expect(found.coverTitle).toBe('New Cover Title');
+    });
+  });
+
+  describe('stickers field', () => {
+    it('should default stickers to an empty array', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'No Stickers' });
+      expect(book.stickers).toEqual([]);
+    });
+
+    it('should accept stickers with svgId, x, y, and scale', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'With Stickers',
+        stickers: [
+          { svgId: 'star', x: 50, y: 50, scale: 1 },
+          { svgId: 'heart', x: 25, y: 75, scale: 1.5 },
+        ],
+      });
+      expect(book.stickers).toHaveLength(2);
+      expect(book.stickers[0].svgId).toBe('star');
+      expect(book.stickers[0].x).toBe(50);
+      expect(book.stickers[0].y).toBe(50);
+      expect(book.stickers[0].scale).toBe(1);
+      expect(book.stickers[1].svgId).toBe('heart');
+      expect(book.stickers[1].scale).toBe(1.5);
+    });
+
+    it('should default sticker scale to 1 when omitted', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Default Scale',
+        stickers: [{ svgId: 'star', x: 50, y: 50 }],
+      });
+      expect(book.stickers[0].scale).toBe(1);
+    });
+
+    it('should trim sticker svgId', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Trimmed',
+        stickers: [{ svgId: '  star  ', x: 50, y: 50 }],
+      });
+      expect(book.stickers[0].svgId).toBe('star');
+    });
+
+    it('should reject sticker svgId exceeding 30 characters', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Long SvgId', stickers: [{ svgId: 'x'.repeat(31), x: 50, y: 50 }] })
+      ).rejects.toThrow();
+    });
+
+    it('should reject sticker x below 0', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Bad X', stickers: [{ svgId: 'star', x: -1, y: 50 }] })
+      ).rejects.toThrow();
+    });
+
+    it('should reject sticker x above 100', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Bad X', stickers: [{ svgId: 'star', x: 101, y: 50 }] })
+      ).rejects.toThrow();
+    });
+
+    it('should reject sticker y below 0', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Bad Y', stickers: [{ svgId: 'star', x: 50, y: -1 }] })
+      ).rejects.toThrow();
+    });
+
+    it('should reject sticker y above 100', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Bad Y', stickers: [{ svgId: 'star', x: 50, y: 101 }] })
+      ).rejects.toThrow();
+    });
+
+    it('should reject sticker scale below 0.5', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Low Scale', stickers: [{ svgId: 'star', x: 50, y: 50, scale: 0.4 }] })
+      ).rejects.toThrow();
+    });
+
+    it('should reject sticker scale above 2', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'High Scale', stickers: [{ svgId: 'star', x: 50, y: 50, scale: 2.1 }] })
+      ).rejects.toThrow();
+    });
+
+    it('should accept sticker with scale of exactly 0.5', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Min Scale',
+        stickers: [{ svgId: 'star', x: 50, y: 50, scale: 0.5 }],
+      });
+      expect(book.stickers[0].scale).toBe(0.5);
+    });
+
+    it('should accept sticker with scale of exactly 2', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Max Scale',
+        stickers: [{ svgId: 'star', x: 50, y: 50, scale: 2 }],
+      });
+      expect(book.stickers[0].scale).toBe(2);
+    });
+
+    it('should persist stickers update via save', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Update Stickers' });
+      expect(book.stickers).toEqual([]);
+
+      book.stickers = [{ svgId: 'moon', x: 30, y: 70, scale: 1.2 }];
+      await book.save();
+
+      const found = await Book.findById(book._id);
+      expect(found.stickers).toHaveLength(1);
+      expect(found.stickers[0].svgId).toBe('moon');
+      expect(found.stickers[0].x).toBe(30);
+      expect(found.stickers[0].y).toBe(70);
+      expect(found.stickers[0].scale).toBe(1.2);
+    });
+  });
 });

@@ -74,6 +74,35 @@ const bookSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    coverTitle: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+      default: null,
+    },
+    stickers: [{
+      svgId: {
+        type: String,
+        trim: true,
+        maxlength: 30,
+      },
+      x: {
+        type: Number,
+        min: 0,
+        max: 100,
+      },
+      y: {
+        type: Number,
+        min: 0,
+        max: 100,
+      },
+      scale: {
+        type: Number,
+        min: 0.5,
+        max: 2,
+        default: 1,
+      },
+    }],
     publishedAt: {
       type: Date,
       default: null,

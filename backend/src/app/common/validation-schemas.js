@@ -67,6 +67,17 @@ export const refreshSchema = z.object({
 
 const objectIdRegex = /^[a-f\d]{24}$/i;
 
+/**
+ * Sticker schema — positioned sticker on a book cover.
+ * Normalized coordinates (0–100%) relative to cover dimensions.
+ */
+export const stickerSchema = z.object({
+  svgId: z.string().trim().max(30),
+  x: z.number().min(0).max(100),
+  y: z.number().min(0).max(100),
+  scale: z.number().min(0.5).max(2).default(1),
+});
+
 export const bookIdSchema = z.object({
   bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
 });
@@ -86,6 +97,8 @@ export const bookUpdateSchema = z.object({
   coverPattern: z.enum(["none", "stripes", "dots", "stars", "chevron", "waves"]).optional().nullable(),
   spineColor: z.string().trim().max(7).regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   spineCustomized: z.boolean().optional(),
+  coverTitle: z.string().trim().max(120).optional().nullable(),
+  stickers: z.array(stickerSchema).max(10).optional().default([]),
 });
 
 export const chapterCreateSchema = z.object({

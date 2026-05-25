@@ -174,4 +174,270 @@ describe('useCoverStore', () => {
       expect(state.getEffectiveSpineColor()).toBeNull();
     });
   });
+
+  // STORY-024: Sticker & Cover Title Tests
+  describe('STORY-024: Sticker & Cover Title', () => {
+    it('initializes with empty stickers, null coverTitle, null selectedStickerId', () => {
+      const state = useCoverStore.getState();
+      expect(state.stickers).toEqual([]);
+      expect(state.coverTitle).toBeNull();
+      expect(state.selectedStickerId).toBeNull();
+    });
+
+    describe('addSticker', () => {
+      it('adds a sticker at center (50,50) with scale 1', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const state = useCoverStore.getState();
+        expect(state.stickers).toHaveLength(1);
+        const sticker = state.stickers[0];
+        expect(sticker.svgId).toBe('star');
+        expect(sticker.x).toBe(50);
+        expect(sticker.y).toBe(50);
+        expect(sticker.scale).toBe(1);
+        expect(sticker.id).toBeDefined();
+        expect(typeof sticker.id).toBe('string');
+      });
+
+      it('selects the newly added sticker', () => {
+        const state = useCoverStore.getState();
+        const { addSticker } = state;
+        addSticker('star');
+        const nextState = useCoverStore.getState();
+        expect(nextState.selectedStickerId).toBe(nextState.stickers[0].id);
+      });
+
+      it('does not add a sticker if already at max (10)', () => {
+        const store = useCoverStore.getState();
+        for (let i = 0; i < 10; i++) {
+          store.addSticker('star');
+        }
+        expect(useCoverStore.getState().stickers).toHaveLength(10);
+        useCoverStore.getState().addSticker('heart');
+        expect(useCoverStore.getState().stickers).toHaveLength(10);
+      });
+
+      it('allows adding up to exactly 10 stickers', () => {
+        const { addSticker } = useCoverStore.getState();
+        for (let i = 0; i < 10; i++) {
+          addSticker('star');
+        }
+        const state = useCoverStore.getState();
+        expect(state.stickers).toHaveLength(10);
+      });
+    });
+
+    describe('removeSticker', () => {
+      it('removes a sticker by id', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const sticker = useCoverStore.getState().stickers[0];
+        useCoverStore.getState().removeSticker(sticker.id);
+        expect(useCoverStore.getState().stickers).toHaveLength(0);
+      });
+
+      it('deselects when removed sticker was selected', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const sticker = useCoverStore.getState().stickers[0];
+        expect(useCoverStore.getState().selectedStickerId).toBe(sticker.id);
+        useCoverStore.getState().removeSticker(sticker.id);
+        expect(useCoverStore.getState().selectedStickerId).toBeNull();
+      });
+
+      it('does not deselect another sticker when removing a different one', () => {
+        const { addSticker, selectSticker, removeSticker } = useCoverStore.getState();
+        addSticker('star');
+        addSticker('heart');
+        const starSticker = useCoverStore.getState().stickers.find(s => s.svgId === 'star');
+        const heartSticker = useCoverStore.getState().stickers.find(s => s.svgId === 'heart');
+        selectSticker(heartSticker.id);
+        removeSticker(starSticker.id);
+        expect(useCoverStore.getState().selectedStickerId).toBe(heartSticker.id);
+      });
+
+      it('is idempotent — removing non-existent id does nothing', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        useCoverStore.getState().removeSticker('nonexistent-id');
+        expect(useCoverStore.getState().stickers).toHaveLength(1);
+      });
+    });
+
+    describe('moveSticker', () => {
+      it('updates sticker position within bounds', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const sticker = useCoverStore.getState().stickers[0];
+        useCoverStore.getState().moveSticker(sticker.id, 30, 60);
+        const updated = useCoverStore.getState().stickers[0];
+        expect(updated.x).toBe(30);
+        expect(updated.y).toBe(60);
+      });
+
+      it('clamps x to 0–100', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const sticker = useCoverStore.getState().stickers[0];
+        useCoverStore.getState().moveSticker(sticker.id, -10, 50);
+        expect(useCoverStore.getState().stickers[0].x).toBe(0);
+        useCoverStore.getState().moveSticker(sticker.id, 150, 50);
+        expect(useCoverStore.getState().stickers[0].x).toBe(100);
+      });
+
+      it('clamps y to 0–100', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const sticker = useCoverStore.getState().stickers[0];
+        useCoverStore.getState().moveSticker(sticker.id, 50, -20);
+        expect(useCoverStore.getState().stickers[0].y).toBe(0);
+        useCoverStore.getState().moveSticker(sticker.id, 50, 120);
+        expect(useCoverStore.getState().stickers[0].y).toBe(100);
+      });
+
+      it('only updates the targeted sticker', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        addSticker('heart');
+        const starSticker = useCoverStore.getState().stickers.find(s => s.svgId === 'star');
+        const heartSticker = useCoverStore.getState().stickers.find(s => s.svgId === 'heart');
+        useCoverStore.getState().moveSticker(starSticker.id, 10, 20);
+        const state = useCoverStore.getState();
+        expect(state.stickers.find(s => s.id === starSticker.id).x).toBe(10);
+        expect(state.stickers.find(s => s.id === heartSticker.id).x).toBe(50);
+      });
+    });
+
+    describe('setScale', () => {
+      it('updates sticker scale', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const sticker = useCoverStore.getState().stickers[0];
+        useCoverStore.getState().setScale(sticker.id, 1.5);
+        expect(useCoverStore.getState().stickers[0].scale).toBe(1.5);
+      });
+
+      it('clamps scale to 0.5–2.0', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        const sticker = useCoverStore.getState().stickers[0];
+        useCoverStore.getState().setScale(sticker.id, 0.1);
+        expect(useCoverStore.getState().stickers[0].scale).toBe(0.5);
+        useCoverStore.getState().setScale(sticker.id, 5);
+        expect(useCoverStore.getState().stickers[0].scale).toBe(2);
+      });
+
+      it('only updates the targeted sticker scale', () => {
+        const { addSticker } = useCoverStore.getState();
+        addSticker('star');
+        addSticker('heart');
+        const starSticker = useCoverStore.getState().stickers.find(s => s.svgId === 'star');
+        const heartSticker = useCoverStore.getState().stickers.find(s => s.svgId === 'heart');
+        useCoverStore.getState().setScale(starSticker.id, 0.5);
+        const state = useCoverStore.getState();
+        expect(state.stickers.find(s => s.id === starSticker.id).scale).toBe(0.5);
+        expect(state.stickers.find(s => s.id === heartSticker.id).scale).toBe(1);
+      });
+    });
+
+    describe('setCoverTitle', () => {
+      it('sets coverTitle to a string', () => {
+        const { setCoverTitle } = useCoverStore.getState();
+        setCoverTitle('My Custom Title');
+        expect(useCoverStore.getState().coverTitle).toBe('My Custom Title');
+      });
+
+      it('sets coverTitle to null', () => {
+        const { setCoverTitle } = useCoverStore.getState();
+        setCoverTitle('Something');
+        setCoverTitle(null);
+        expect(useCoverStore.getState().coverTitle).toBeNull();
+      });
+
+      it('overwrites previous value', () => {
+        const { setCoverTitle } = useCoverStore.getState();
+        setCoverTitle('First');
+        setCoverTitle('Second');
+        expect(useCoverStore.getState().coverTitle).toBe('Second');
+      });
+    });
+
+    describe('selectSticker / deselectSticker', () => {
+      it('selectSticker sets selectedStickerId', () => {
+        const { selectSticker } = useCoverStore.getState();
+        selectSticker('some-id');
+        expect(useCoverStore.getState().selectedStickerId).toBe('some-id');
+      });
+
+      it('deselectSticker clears selectedStickerId', () => {
+        const { selectSticker, deselectSticker } = useCoverStore.getState();
+        selectSticker('some-id');
+        deselectSticker();
+        expect(useCoverStore.getState().selectedStickerId).toBeNull();
+      });
+    });
+
+    describe('clearStickers', () => {
+      it('removes all stickers and clears selection', () => {
+        const { addSticker, clearStickers } = useCoverStore.getState();
+        addSticker('star');
+        addSticker('heart');
+        addSticker('moon');
+        clearStickers();
+        const state = useCoverStore.getState();
+        expect(state.stickers).toEqual([]);
+        expect(state.selectedStickerId).toBeNull();
+      });
+
+      it('is idempotent when already empty', () => {
+        const { clearStickers } = useCoverStore.getState();
+        clearStickers();
+        expect(useCoverStore.getState().stickers).toEqual([]);
+      });
+    });
+
+    describe('setStoreStickers', () => {
+      it('sets stickers from an external source (e.g. API response)', () => {
+        const { setStoreStickers } = useCoverStore.getState();
+        const external = [
+          { id: 'a1', svgId: 'star', x: 20, y: 30, scale: 1 },
+          { id: 'a2', svgId: 'heart', x: 70, y: 60, scale: 1.5 },
+        ];
+        setStoreStickers(external);
+        expect(useCoverStore.getState().stickers).toEqual(external);
+      });
+    });
+
+    describe('resetCustomization with stickers', () => {
+      it('clears stickers, coverTitle, and selectedStickerId but keeps template', () => {
+        const { setSelectedTemplate, addSticker, setCoverTitle, resetCustomization } = useCoverStore.getState();
+        setSelectedTemplate('galaxy');
+        addSticker('star');
+        setCoverTitle('Mine');
+        resetCustomization();
+        const state = useCoverStore.getState();
+        expect(state.selectedTemplateId).toBe('galaxy');
+        expect(state.stickers).toEqual([]);
+        expect(state.coverTitle).toBeNull();
+        expect(state.selectedStickerId).toBeNull();
+      });
+    });
+
+    describe('resetStore with stickers', () => {
+      it('clears all state including stickers and coverTitle', () => {
+        const { setSelectedTemplate, addSticker, setCoverTitle, resetStore } = useCoverStore.getState();
+        setSelectedTemplate('galaxy');
+        addSticker('star');
+        setCoverTitle('Mine');
+        resetStore();
+        const state = useCoverStore.getState();
+        expect(state.selectedTemplateId).toBeNull();
+        expect(state.stickers).toEqual([]);
+        expect(state.coverTitle).toBeNull();
+        expect(state.selectedStickerId).toBeNull();
+      });
+    });
+  });
 });
+
+

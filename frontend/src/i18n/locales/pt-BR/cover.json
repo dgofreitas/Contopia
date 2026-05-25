@@ -61,6 +61,12 @@
   "customize": {
     "colorPickerHeading": "Escolha uma cor",
     "patternPickerHeading": "Escolha um padrão",
+    "stickerPickerHeading": "Adicionar adesivos",
+    "stickerCategoryLabel": "Adesivos de {{name}}",
+    "removeSticker": "Remover adesivo",
+    "clearAllStickers": "Remover todos os adesivos",
+    "clearAllConfirm": "Remover todos os adesivos?",
+    "cancel": "Cancelar",
     "back": "Voltar",
     "save": "Salvar e finalizar"
   },
@@ -70,6 +76,45 @@
     "colorPickerHeading": "Cor da lombada",
     "autoState": "Automático",
     "customState": "Personalizado"
+  },
+  "stickers": {
+    "flower": "Flor",
+    "leaf": "Folha",
+    "sun": "Sol",
+    "rainbowArc": "Arco-íris",
+    "cloud": "Nuvem",
+    "cat": "Gato",
+    "butterfly": "Borboleta",
+    "fish": "Peixe",
+    "bird": "Pássaro",
+    "ladybug": "Joaninha",
+    "star": "Estrela",
+    "heart": "Coração",
+    "moon": "Lua",
+    "diamond": "Diamante",
+    "circle": "Círculo",
+    "rose": "Rosa",
+    "doubleHeart": "Coração duplo",
+    "tulip": "Tulipa",
+    "rocket": "Foguete",
+    "crown": "Coroa",
+    "sparkle": "Brilho",
+    "comet": "Cometa",
+    "planet": "Planeta",
+    "partyHat": "Chapéu de festa",
+    "balloon": "Balão",
+    "categories": {
+      "nature": "Natureza",
+      "animals": "Animais",
+      "shapes": "Formas",
+      "hearts": "Corações e Flores",
+      "space": "Espaço e Fantasia",
+      "celebration": "Celebração"
+    },
+    "stickerCount": "{{count}}/10 adesivos",
+    "titleEditPlaceholder": "Digite seu título",
+    "titleEditAriaLabel": "Título do livro, editável, máximo de 120 caracteres",
+    "authorNameAriaLabel": "Nome do autor: {{name}}"
   },
   "actions": {
     "skip": "Pular",
@@ -90,7 +135,8 @@
     "patternPickerGroup": "Seletor de padrões",
     "spineToggle": "Personalizar cor da lombada",
     "spineColorPickerGroup": "Seletor de cor da lombada",
-    "spinePreview": "Prévia da lombada: cor {{state}}"
+    "spinePreview": "Prévia da lombada: cor {{state}}",
+    "stickerAriaLabel": "Adesivo de {{name}}, {{x}}% da esquerda, {{y}}% do topo"
   },
   "preview": {
     "title": "Título do Livro",

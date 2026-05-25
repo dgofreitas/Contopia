@@ -118,6 +118,8 @@ export async function updateBookManager(bookId, authorId, updates) {
   if (updates.coverPattern !== undefined) allowedFields.coverPattern = updates.coverPattern;
   if (updates.spineColor !== undefined) allowedFields.spineColor = updates.spineColor;
   if (updates.spineCustomized !== undefined) allowedFields.spineCustomized = updates.spineCustomized;
+  if (updates.coverTitle !== undefined) allowedFields.coverTitle = updates.coverTitle;
+  if (updates.stickers !== undefined) allowedFields.stickers = updates.stickers;
 
   const updated = await updateBookById(bookId, allowedFields);
   logger.info({ bookId, authorId }, 'Book updated');

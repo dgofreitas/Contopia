@@ -249,6 +249,93 @@ describe('Book Manager — STORY-021', () => {
         status: 403,
       });
     });
+
+    // ── STORY-024: coverTitle & stickers ──────────────────────────────────────
+    it('should update coverTitle when provided', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, coverTitle: 'My Custom Title' });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { coverTitle: 'My Custom Title' });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { coverTitle: 'My Custom Title' });
+      expect(result.coverTitle).toBe('My Custom Title');
+    });
+
+    it('should set coverTitle to null when explicitly provided as null', async () => {
+      const mockBook = createMockBook({ coverTitle: 'Old Title' });
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, coverTitle: null });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { coverTitle: null });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { coverTitle: null });
+      expect(result.coverTitle).toBeNull();
+    });
+
+    it('should update stickers when provided', async () => {
+      const stickers = [
+        { svgId: 'star', x: 50, y: 50, scale: 1 },
+        { svgId: 'heart', x: 25, y: 75, scale: 1.5 },
+      ];
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, stickers });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { stickers });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { stickers });
+      expect(result.stickers).toHaveLength(2);
+      expect(result.stickers[0].svgId).toBe('star');
+    });
+
+    it('should not include coverTitle in update when undefined', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue(mockBook);
+
+      await bookManager.updateBookManager(bookId, AUTHOR_ID, { title: 'New Title' });
+
+      const updateCall = bookDao.updateBookById.mock.calls[0][1];
+      expect(updateCall).not.toHaveProperty('coverTitle');
+    });
+
+    it('should not include stickers in update when undefined', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue(mockBook);
+
+      await bookManager.updateBookManager(bookId, AUTHOR_ID, { title: 'New Title' });
+
+      const updateCall = bookDao.updateBookById.mock.calls[0][1];
+      expect(updateCall).not.toHaveProperty('stickers');
+    });
+
+    it('should update coverTitle and stickers alongside other fields', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({
+        ...mockBook,
+        title: 'Updated',
+        coverTitle: 'Custom',
+        stickers: [{ svgId: 'star', x: 50, y: 50, scale: 1 }],
+      });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, {
+        title: 'Updated',
+        coverTitle: 'Custom',
+        stickers: [{ svgId: 'star', x: 50, y: 50, scale: 1 }],
+      });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, {
+        title: 'Updated',
+        coverTitle: 'Custom',
+        stickers: [{ svgId: 'star', x: 50, y: 50, scale: 1 }],
+      });
+      expect(result.title).toBe('Updated');
+      expect(result.coverTitle).toBe('Custom');
+      expect(result.stickers).toHaveLength(1);
+    });
   });
 
   describe('getBooksByAuthorManager — draft status', () => {

@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useCoverStore } from '../../stores/cover-store';
 import SpinePreview from './SpinePreview';
+import CoverStickerLayer from './CoverStickerLayer';
+import CoverTitleEdit from './CoverTitleEdit';
+import CoverAuthorName from './CoverAuthorName';
 import '../../styles/cover.css';
 
 export default function CoverPreview({ book, template }) {
@@ -43,6 +46,9 @@ export default function CoverPreview({ book, template }) {
                 aria-hidden="true"
               />
             )}
+            <div data-sticker-layer className="absolute inset-0 z-10" style={{ touchAction: 'none' }}>
+              <CoverStickerLayer textColor={textColor} />
+            </div>
             <div aria-hidden="true">
               <SpinePreview
                 spineColor={effectiveSpineColor}
@@ -50,24 +56,14 @@ export default function CoverPreview({ book, template }) {
                 proportional={false}
               />
             </div>
-            <div className="cover-preview-text absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+            <div className="cover-preview-text absolute inset-0 flex flex-col items-center justify-center p-6 text-center" style={{ zIndex: 20 }}>
               <div
                 className="w-12 h-0.5 rounded-full mb-4"
                 style={{ backgroundColor: accentColor }}
                 aria-hidden="true"
               />
-              <h2
-                className="text-xl sm:text-2xl font-bold leading-tight mb-2"
-                style={{ color: textColor }}
-              >
-                {title}
-              </h2>
-              <p
-                className="text-sm opacity-80"
-                style={{ color: textColor }}
-              >
-                {author}
-              </p>
+              <CoverTitleEdit bookTitle={title} textColor={textColor} />
+              <CoverAuthorName authorName={author} textColor={textColor} />
               <div
                 className="w-12 h-0.5 rounded-full mt-4"
                 style={{ backgroundColor: accentColor }}
