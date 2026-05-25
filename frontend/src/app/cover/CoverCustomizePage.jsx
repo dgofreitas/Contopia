@@ -9,6 +9,8 @@ import CoverPreview from './CoverPreview';
 import ColorPickerPanel from './ColorPickerPanel';
 import PatternPickerPanel from './PatternPickerPanel';
 import SpineCustomizeSection from './SpineCustomizeSection';
+import StickerPickerPanel from './StickerPickerPanel';
+import StickerActions from './StickerActions';
 import CustomizeActions from './CustomizeActions';
 import '../../styles/cover.css';
 
@@ -22,11 +24,15 @@ export default function CoverCustomizePage() {
     patternId,
     spineColor,
     spineCustomized,
+    stickers,
+    coverTitle,
     setSelectedTemplate,
     setBaseColor,
     setPattern,
     setSpineColor,
     setSpineCustomized,
+    setCoverTitle,
+    setStoreStickers,
     resetStore,
   } = useCoverStore();
   const saveCustomization = useSaveCoverCustomization();
@@ -49,8 +55,21 @@ export default function CoverCustomizePage() {
       if (book.spineCustomized && !spineCustomized) {
         setSpineCustomized(book.spineCustomized);
       }
+      if (book.coverTitle !== undefined && coverTitle === null) {
+        setCoverTitle(book.coverTitle);
+      }
+      if (book.stickers && book.stickers.length > 0 && stickers.length === 0) {
+        const restored = book.stickers.map((s) => ({
+          id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+          svgId: s.svgId,
+          x: s.x,
+          y: s.y,
+          scale: s.scale ?? 1,
+        }));
+        setStoreStickers(restored);
+      }
     }
-  }, [book?.templateId, book?.coverColor, book?.coverPattern, book?.spineColor, book?.spineCustomized]);
+  }, [book?.templateId, book?.coverColor, book?.coverPattern, book?.spineColor, book?.spineCustomized, book?.coverTitle, book?.stickers?.length]);
 
   const selectedTemplate = COVER_TEMPLATES.find((tpl) => tpl.id === selectedTemplateId) || null;
 
@@ -75,6 +94,8 @@ export default function CoverCustomizePage() {
         coverPattern: patternId,
         spineColor,
         spineCustomized,
+        coverTitle,
+        stickers: stickers.map(({ svgId, x, y, scale }) => ({ svgId, x, y, scale })),
       });
       resetStore();
       navigate('/shelf');
@@ -121,6 +142,8 @@ export default function CoverCustomizePage() {
             baseColor={baseColor}
           />
           <SpineCustomizeSection title={book?.title} />
+          <StickerPickerPanel />
+          <StickerActions />
         </div>
       </div>
 

@@ -61,8 +61,14 @@
   "customize": {
     "colorPickerHeading": "Pick a color",
     "patternPickerHeading": "Pick a pattern",
+    "stickerPickerHeading": "Add stickers",
+    "stickerCategoryLabel": "{{name}} stickers",
+    "removeSticker": "Remove sticker",
+    "clearAllStickers": "Clear all stickers",
+    "clearAllConfirm": "Clear all stickers?",
+    "cancel": "Cancel",
     "back": "Back",
-    "save": "Save & Finish"
+    "save": "Save & finish"
   },
   "spine": {
     "sectionHeading": "Spine",
@@ -70,6 +76,45 @@
     "colorPickerHeading": "Spine color",
     "autoState": "Auto",
     "customState": "Custom"
+  },
+  "stickers": {
+    "flower": "Flower",
+    "leaf": "Leaf",
+    "sun": "Sun",
+    "rainbowArc": "Rainbow",
+    "cloud": "Cloud",
+    "cat": "Cat",
+    "butterfly": "Butterfly",
+    "fish": "Fish",
+    "bird": "Bird",
+    "ladybug": "Ladybug",
+    "star": "Star",
+    "heart": "Heart",
+    "moon": "Moon",
+    "diamond": "Diamond",
+    "circle": "Circle",
+    "rose": "Rose",
+    "doubleHeart": "Double heart",
+    "tulip": "Tulip",
+    "rocket": "Rocket",
+    "crown": "Crown",
+    "sparkle": "Sparkle",
+    "comet": "Comet",
+    "planet": "Planet",
+    "partyHat": "Party hat",
+    "balloon": "Balloon",
+    "categories": {
+      "nature": "Nature",
+      "animals": "Animals",
+      "shapes": "Shapes",
+      "hearts": "Hearts & Flowers",
+      "space": "Space & Fantasy",
+      "celebration": "Celebration"
+    },
+    "stickerCount": "{{count}}/10 stickers",
+    "titleEditPlaceholder": "Enter your title",
+    "titleEditAriaLabel": "Book title, editable, 120 characters max",
+    "authorNameAriaLabel": "Author name: {{name}}"
   },
   "actions": {
     "skip": "Skip",
@@ -90,7 +135,8 @@
     "patternPickerGroup": "Pattern picker",
     "spineToggle": "Customize spine color",
     "spineColorPickerGroup": "Spine color picker",
-    "spinePreview": "Spine preview: {{state}} color"
+    "spinePreview": "Spine preview: {{state}} color",
+    "stickerAriaLabel": "{{name}} sticker, {{x}}% from left, {{y}}% from top"
   },
   "preview": {
     "title": "Book Title",
