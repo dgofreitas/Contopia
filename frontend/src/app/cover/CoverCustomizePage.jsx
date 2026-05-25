@@ -9,6 +9,7 @@ import CoverPreview from './CoverPreview';
 import ColorPickerPanel from './ColorPickerPanel';
 import PatternPickerPanel from './PatternPickerPanel';
 import SpineCustomizeSection from './SpineCustomizeSection';
+import EdgeCustomizeSection from './EdgeCustomizeSection';
 import StickerPickerPanel from './StickerPickerPanel';
 import StickerActions from './StickerActions';
 import CustomizeActions from './CustomizeActions';
@@ -24,6 +25,9 @@ export default function CoverCustomizePage() {
     patternId,
     spineColor,
     spineCustomized,
+    edgeColor,
+    edgePattern,
+    edgeCustomized,
     stickers,
     coverTitle,
     setSelectedTemplate,
@@ -31,6 +35,9 @@ export default function CoverCustomizePage() {
     setPattern,
     setSpineColor,
     setSpineCustomized,
+    setEdgeColor,
+    setEdgePattern,
+    setEdgeCustomized,
     setCoverTitle,
     setStoreStickers,
     resetStore,
@@ -55,6 +62,15 @@ export default function CoverCustomizePage() {
       if (book.spineCustomized && !spineCustomized) {
         setSpineCustomized(book.spineCustomized);
       }
+      if (book.edgeColor && !edgeColor) {
+        setEdgeColor(book.edgeColor);
+      }
+      if (book.edgePattern && edgePattern === 'solid') {
+        setEdgePattern(book.edgePattern);
+      }
+      if (book.edgeCustomized && !edgeCustomized) {
+        setEdgeCustomized(book.edgeCustomized);
+      }
       if (book.coverTitle !== undefined && coverTitle === null) {
         setCoverTitle(book.coverTitle);
       }
@@ -69,7 +85,7 @@ export default function CoverCustomizePage() {
         setStoreStickers(restored);
       }
     }
-  }, [book?.templateId, book?.coverColor, book?.coverPattern, book?.spineColor, book?.spineCustomized, book?.coverTitle, book?.stickers?.length]);
+  }, [book?.templateId, book?.coverColor, book?.coverPattern, book?.spineColor, book?.spineCustomized, book?.edgeColor, book?.edgePattern, book?.edgeCustomized, book?.coverTitle, book?.stickers?.length]);
 
   const selectedTemplate = COVER_TEMPLATES.find((tpl) => tpl.id === selectedTemplateId) || null;
 
@@ -94,6 +110,9 @@ export default function CoverCustomizePage() {
         coverPattern: patternId,
         spineColor,
         spineCustomized,
+        edgeColor,
+        edgePattern,
+        edgeCustomized,
         coverTitle,
         stickers: stickers.map(({ svgId, x, y, scale }) => ({ svgId, x, y, scale })),
       });
@@ -142,6 +161,7 @@ export default function CoverCustomizePage() {
             baseColor={baseColor}
           />
           <SpineCustomizeSection title={book?.title} />
+          <EdgeCustomizeSection title={book?.title} />
           <StickerPickerPanel />
           <StickerActions />
         </div>

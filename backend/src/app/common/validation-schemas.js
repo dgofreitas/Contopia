@@ -97,6 +97,8 @@ export const bookUpdateSchema = z.object({
   coverPattern: z.enum(["none", "stripes", "dots", "stars", "chevron", "waves"]).optional().nullable(),
   spineColor: z.string().trim().max(7).regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   spineCustomized: z.boolean().optional(),
+  edgeColor: z.string().trim().max(7).regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
+  edgePattern: z.enum(['solid', 'gradient', 'marbling', 'dots', 'chevron']).optional(),
   coverTitle: z.string().trim().max(120).optional().nullable(),
   stickers: z.array(stickerSchema).max(10).optional().default([]),
 });

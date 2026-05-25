@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { deriveSpineColor } from '../lib/spine-color-utils';
+import { deriveEdgeColor } from '../lib/edge-utils';
 import { generateId } from '../lib/sticker-library.jsx';
 
 export const useCoverStore = create((set, get) => ({
@@ -8,6 +9,9 @@ export const useCoverStore = create((set, get) => ({
   patternId: null,
   spineColor: null,
   spineCustomized: false,
+  edgeColor: null,
+  edgePattern: 'solid',
+  edgeCustomized: false,
   stickers: [],
   coverTitle: null,
   selectedStickerId: null,
@@ -17,6 +21,9 @@ export const useCoverStore = create((set, get) => ({
   setPattern: (id) => set({ patternId: id }),
   setSpineColor: (hex) => set({ spineColor: hex }),
   setSpineCustomized: (bool) => set({ spineCustomized: bool }),
+  setEdgeColor: (hex) => set({ edgeColor: hex }),
+  setEdgePattern: (id) => set({ edgePattern: id }),
+  setEdgeCustomized: (bool) => set({ edgeCustomized: bool }),
 
   addSticker: (svgId) => {
     const { stickers } = get();
@@ -76,12 +83,27 @@ export const useCoverStore = create((set, get) => ({
     return null;
   },
 
+  getEffectiveEdgeColor: () => {
+    const { edgeCustomized, edgeColor, spineColor, baseColor, selectedTemplateId } = get();
+    const effectiveSpineColor = get().getEffectiveSpineColor();
+    return deriveEdgeColor({
+      edgeColor: edgeCustomized ? edgeColor : null,
+      spineColor: effectiveSpineColor,
+      coverColor: baseColor,
+      template: selectedTemplateId,
+      bookId: null,
+    });
+  },
+
   resetCustomization: () =>
     set({
       baseColor: null,
       patternId: null,
       spineColor: null,
       spineCustomized: false,
+      edgeColor: null,
+      edgePattern: 'solid',
+      edgeCustomized: false,
       stickers: [],
       coverTitle: null,
       selectedStickerId: null,
@@ -95,6 +117,9 @@ export const useCoverStore = create((set, get) => ({
       patternId: null,
       spineColor: null,
       spineCustomized: false,
+      edgeColor: null,
+      edgePattern: 'solid',
+      edgeCustomized: false,
       stickers: [],
       coverTitle: null,
       selectedStickerId: null,

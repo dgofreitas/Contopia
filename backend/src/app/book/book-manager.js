@@ -118,6 +118,8 @@ export async function updateBookManager(bookId, authorId, updates) {
   if (updates.coverPattern !== undefined) allowedFields.coverPattern = updates.coverPattern;
   if (updates.spineColor !== undefined) allowedFields.spineColor = updates.spineColor;
   if (updates.spineCustomized !== undefined) allowedFields.spineCustomized = updates.spineCustomized;
+  if (updates.edgeColor !== undefined) allowedFields.edgeColor = updates.edgeColor;
+  if (updates.edgePattern !== undefined) allowedFields.edgePattern = updates.edgePattern;
   if (updates.coverTitle !== undefined) allowedFields.coverTitle = updates.coverTitle;
   if (updates.stickers !== undefined) allowedFields.stickers = updates.stickers;
 

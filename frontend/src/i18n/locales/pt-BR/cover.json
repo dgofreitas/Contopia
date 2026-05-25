@@ -77,6 +77,21 @@
     "autoState": "Automático",
     "customState": "Personalizado"
   },
+  "edge": {
+    "sectionHeading": "Corte",
+    "toggleLabel": "Personalizar Corte",
+    "colorPickerHeading": "Cor do corte",
+    "patternHeading": "Padrão do corte",
+    "autoState": "Automático",
+    "customState": "Personalizado",
+    "patterns": {
+      "solid": "Sólido",
+      "gradient": "Gradiente",
+      "marbling": "Marmorizado",
+      "dots": "Bolinhas",
+      "chevron": "Zigue-zague"
+    }
+  },
   "stickers": {
     "flower": "Flor",
     "leaf": "Folha",
@@ -136,6 +151,10 @@
     "spineToggle": "Personalizar cor da lombada",
     "spineColorPickerGroup": "Seletor de cor da lombada",
     "spinePreview": "Prévia da lombada: cor {{state}}",
+    "edgeToggle": "Personalizar cor e padrão do corte",
+    "edgeColorPickerGroup": "Seletor de cor do corte",
+    "edgePatternPickerGroup": "Seletor de padrão do corte",
+    "edgePreview": "Prévia do corte: cor {{state}}, padrão {{pattern}}",
     "stickerAriaLabel": "Adesivo de {{name}}, {{x}}% da esquerda, {{y}}% do topo"
   },
   "preview": {
