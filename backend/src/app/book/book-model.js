@@ -62,6 +62,7 @@ const bookSchema = new Schema(
       trim: true,
       maxlength: 7,
       default: null,
+      match: /^#[0-9a-fA-F]{6}$/,
       get: function (v) {
         if (v != null) return v;
         // Deterministic pastel fallback from book ID — child-safe palette

@@ -611,4 +611,189 @@ describe('Book Router', () => {
     expect(res.body.data.lastPosition).toBe(200);
     expect(res.body.data.percentage).toBe(75);
   });
+
+  // ── STORY-025: PATCH spineColor + spineCustomized ──────────────────────────
+  describe('PATCH /:bookId — spineColor & spineCustomized', () => {
+    it('PATCH — should update spineColor and spineCustomized', async () => {
+      // Arrange: create a book
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Spine Book' });
+
+      // Act
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: '#4ECDC4', spineCustomized: true });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.spineColor).toBe('#4ECDC4');
+      expect(res.body.data.spineCustomized).toBe(true);
+    });
+
+    it('PATCH — should update spineCustomized independently', async () => {
+      // Arrange
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Toggle Spine' });
+
+      // Act: just toggle spineCustomized
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineCustomized: true });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.spineCustomized).toBe(true);
+    });
+
+    it('PATCH — should set spineColor to null and spineCustomized to false', async () => {
+      // Arrange: create book with spine color
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Reset Spine', spineColor: '#FF6B6B', spineCustomized: true });
+
+      // Act: reset spine customization
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: null, spineCustomized: false });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.spineColor).toBeNull();
+      expect(res.body.data.spineCustomized).toBe(false);
+    });
+
+    it('PATCH — should reject invalid spineColor format (no hash)', async () => {
+      // Arrange
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Bad Format' });
+
+      // Act: spineColor without hash prefix
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: 'FF6B6B' });
+
+      // Assert
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('PATCH — should reject invalid spineColor format (5 chars)', async () => {
+      // Arrange
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Short Hex' });
+
+      // Act: 5-char hex
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: '#FF6B6' });
+
+      // Assert
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('PATCH — should reject invalid spineColor format (8 chars)', async () => {
+      // Arrange
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Long Hex' });
+
+      // Act: 8-char hex (with alpha)
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: '#FF6B6BFF' });
+
+      // Assert
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('PATCH — should reject non-hex chars in spineColor', async () => {
+      // Arrange
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Non Hex' });
+
+      // Act
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: '#GGHHII' });
+
+      // Assert
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('PATCH — should update spineColor alongside other fields', async () => {
+      // Arrange
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Multi Update' });
+
+      // Act
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({
+          title: 'Updated Title',
+          spineColor: '#45B7D1',
+          spineCustomized: true,
+          coverColor: '#96CEB4',
+        });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.title).toBe('Updated Title');
+      expect(res.body.data.spineColor).toBe('#45B7D1');
+      expect(res.body.data.spineCustomized).toBe(true);
+      expect(res.body.data.coverColor).toBe('#96CEB4');
+    });
+
+    it('PATCH — should return 403 when updating spineColor on another user\'s book', async () => {
+      // Arrange: book owned by OTHER_CHILD_ID
+      const otherBook = await Book.create({ authorId: OTHER_CHILD_ID, title: 'Not Mine' });
+
+      // Act
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${otherBook._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: '#FF6B6B' });
+
+      // Assert
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('PATCH — should accept lowercase hex spineColor', async () => {
+      // Arrange
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Lower Spine' });
+
+      // Act
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: '#4ecdc4' });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.spineColor).toBe('#4ecdc4');
+    });
+
+    it('PATCH — should accept null spineColor and null coverColor to reset customization', async () => {
+      // Arrange: create with colors set
+      const book = await Book.create({
+        authorId: CHILD_ID,
+        title: 'Reset Colors',
+        spineColor: '#FF6B6B',
+        coverColor: '#4ECDC4',
+        spineCustomized: true,
+      });
+
+      // Act: reset all
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ spineColor: null, coverColor: null, spineCustomized: false });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.spineCustomized).toBe(false);
+      // Note: JSON response includes virtual getter for spineColor
+    });
+  });
 });
