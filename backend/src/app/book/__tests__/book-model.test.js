@@ -267,6 +267,219 @@ describe('Book Model', () => {
     });
   });
 
+  // ── STORY-025: spineColor & spineCustomized ──────────────────────────────────
+  describe('spineColor field', () => {
+    it('should default spineColor to null (raw), getter returns fallback', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'No Spine Color' });
+      // Raw stored value is null; getter transforms it to a palette fallback
+      expect(book._doc.spineColor).toBeNull();
+      expect(book.spineColor).toBeDefined();
+      expect(book.spineColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+    });
+
+    it('should accept a valid hex spineColor', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Red Spine',
+        spineColor: '#FF6B6B',
+      });
+      expect(book.spineColor).toBe('#FF6B6B');
+    });
+
+    it('should accept lowercase hex spineColor', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Lowercase Spine',
+        spineColor: '#4ecdc4',
+      });
+      expect(book.spineColor).toBe('#4ecdc4');
+    });
+
+    it('should accept mixed-case hex spineColor', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Mixed Spine',
+        spineColor: '#45B7d1',
+      });
+      expect(book.spineColor).toBe('#45B7d1');
+    });
+
+    it('should reject invalid hex spineColor without hash', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Bad Spine', spineColor: 'FF6B6B' })
+      ).rejects.toThrow();
+    });
+
+    it('should reject invalid hex spineColor with 5 chars', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Short Spine', spineColor: '#FF6B6' })
+      ).rejects.toThrow();
+    });
+
+    it('should reject invalid hex spineColor with 8 chars', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Long Spine', spineColor: '#FF6B6BFF' })
+      ).rejects.toThrow();
+    });
+
+    it('should reject spineColor with non-hex chars', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Invalid Spine', spineColor: '#GGHHII' })
+      ).rejects.toThrow();
+    });
+
+    it('should reject spineColor that is just hash', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Hash Spine', spineColor: '#' })
+      ).rejects.toThrow();
+    });
+
+    it('should allow setting spineColor to null explicitly (raw value)', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Null Spine',
+        spineColor: null,
+      });
+      // Getter provides fallback; raw value is null
+      expect(book._doc.spineColor).toBeNull();
+      expect(book.spineColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+    });
+
+    it('should trim whitespace from spineColor', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Trimmed Spine',
+        spineColor: '  #FF6B6B  ',
+      });
+      expect(book.spineColor).toBe('#FF6B6B');
+    });
+
+    it('should persist spineColor update via save', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Update Spine' });
+      expect(book._doc.spineColor).toBeNull();
+
+      book.spineColor = '#96CEB4';
+      await book.save();
+
+      const found = await Book.findById(book._id);
+      expect(found.spineColor).toBe('#96CEB4');
+    });
+
+    it('should return deterministic fallback color via getter when spineColor is null', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Fallback Spine',
+        spineColor: null,
+      });
+
+      // Book was created with null spineColor — but when serialized with getters,
+      // the getter should return a color from the palette
+      const palette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+      const idx = book._id.toString().split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % palette.length;
+      const expectedFallback = palette[idx];
+
+      // Use toObject({ getters: true }) to trigger the getter
+      const obj = book.toObject({ getters: true });
+      expect(obj.spineColor).toBe(expectedFallback);
+    });
+
+    it('should return stored spineColor instead of fallback when set', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Stored Spine',
+        spineColor: '#FFEAA7',
+      });
+
+      // When spineColor is explicitly set, getter should return it, not the fallback
+      const obj = book.toObject({ getters: true });
+      expect(obj.spineColor).toBe('#FFEAA7');
+    });
+
+    it('should produce consistent fallback for same book ID', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Consistent Spine',
+        spineColor: null,
+      });
+
+      const obj1 = book.toObject({ getters: true });
+      const obj2 = book.toObject({ getters: true });
+      expect(obj1.spineColor).toBe(obj2.spineColor);
+    });
+
+    it('should accept exact 7-char hex spineColor', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Exact Spine',
+        spineColor: '#123456',
+      });
+      expect(book.spineColor).toBe('#123456');
+    });
+  });
+
+  describe('spineCustomized field', () => {
+    it('should default spineCustomized to false', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'No Custom Spine' });
+      expect(book.spineCustomized).toBe(false);
+    });
+
+    it('should accept spineCustomized set to true', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Custom Spine',
+        spineCustomized: true,
+      });
+      expect(book.spineCustomized).toBe(true);
+    });
+
+    it('should accept spineCustomized set to false explicitly', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Explicit False',
+        spineCustomized: false,
+      });
+      expect(book.spineCustomized).toBe(false);
+    });
+
+    it('should persist spineCustomized update via save', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Toggle Spine' });
+      expect(book.spineCustomized).toBe(false);
+
+      book.spineCustomized = true;
+      await book.save();
+
+      const found = await Book.findById(book._id);
+      expect(found.spineCustomized).toBe(true);
+    });
+
+    it('should reject non-boolean spineCustomized (object)', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Bad Custom', spineCustomized: { value: true } })
+      ).rejects.toThrow();
+    });
+  });
+
   // ── STORY-024: coverTitle & stickers ────────────────────────────────────────
   describe('coverTitle field', () => {
     it('should default coverTitle to null', async () => {

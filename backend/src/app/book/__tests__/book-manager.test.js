@@ -336,6 +336,93 @@ describe('Book Manager — STORY-021', () => {
       expect(result.coverTitle).toBe('Custom');
       expect(result.stickers).toHaveLength(1);
     });
+
+    // ── STORY-025: spineColor & spineCustomized ──────────────────────────────
+    it('should update spineColor when provided', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, spineColor: '#4ECDC4' });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { spineColor: '#4ECDC4' });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { spineColor: '#4ECDC4' });
+      expect(result.spineColor).toBe('#4ECDC4');
+    });
+
+    it('should update spineCustomized when provided', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, spineCustomized: true });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { spineCustomized: true });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { spineCustomized: true });
+      expect(result.spineCustomized).toBe(true);
+    });
+
+    it('should set spineColor to null when explicitly provided as null', async () => {
+      const mockBook = createMockBook({ spineColor: '#FF6B6B' });
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, spineColor: null });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { spineColor: null });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { spineColor: null });
+      expect(result.spineColor).toBeNull();
+    });
+
+    it('should set spineCustomized to false when explicitly provided', async () => {
+      const mockBook = createMockBook({ spineCustomized: true });
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, spineCustomized: false });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { spineCustomized: false });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { spineCustomized: false });
+      expect(result.spineCustomized).toBe(false);
+    });
+
+    it('should not include spineColor in update when undefined', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue(mockBook);
+
+      await bookManager.updateBookManager(bookId, AUTHOR_ID, { title: 'New Title' });
+
+      const updateCall = bookDao.updateBookById.mock.calls[0][1];
+      expect(updateCall).not.toHaveProperty('spineColor');
+      expect(updateCall).not.toHaveProperty('spineCustomized');
+    });
+
+    it('should update spineColor and spineCustomized alongside other fields', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({
+        ...mockBook,
+        title: 'Updated',
+        spineColor: '#45B7D1',
+        spineCustomized: true,
+        coverColor: '#96CEB4',
+      });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, {
+        title: 'Updated',
+        spineColor: '#45B7D1',
+        spineCustomized: true,
+        coverColor: '#96CEB4',
+      });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, {
+        title: 'Updated',
+        spineColor: '#45B7D1',
+        spineCustomized: true,
+        coverColor: '#96CEB4',
+      });
+      expect(result.title).toBe('Updated');
+      expect(result.spineColor).toBe('#45B7D1');
+      expect(result.spineCustomized).toBe(true);
+      expect(result.coverColor).toBe('#96CEB4');
+    });
   });
 
   describe('getBooksByAuthorManager — draft status', () => {
