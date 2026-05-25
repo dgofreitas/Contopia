@@ -77,6 +77,21 @@
     "autoState": "Auto",
     "customState": "Custom"
   },
+  "edge": {
+    "sectionHeading": "Edge",
+    "toggleLabel": "Customize Edge",
+    "colorPickerHeading": "Edge color",
+    "patternHeading": "Edge pattern",
+    "autoState": "Auto",
+    "customState": "Custom",
+    "patterns": {
+      "solid": "Solid",
+      "gradient": "Gradient",
+      "marbling": "Marbling",
+      "dots": "Dots",
+      "chevron": "Chevron"
+    }
+  },
   "stickers": {
     "flower": "Flower",
     "leaf": "Leaf",
@@ -136,6 +151,10 @@
     "spineToggle": "Customize spine color",
     "spineColorPickerGroup": "Spine color picker",
     "spinePreview": "Spine preview: {{state}} color",
+    "edgeToggle": "Customize edge color and pattern",
+    "edgeColorPickerGroup": "Edge color picker",
+    "edgePatternPickerGroup": "Edge pattern picker",
+    "edgePreview": "Edge preview: {{state}} color, {{pattern}} pattern",
     "stickerAriaLabel": "{{name}} sticker, {{x}}% from left, {{y}}% from top"
   },
   "preview": {

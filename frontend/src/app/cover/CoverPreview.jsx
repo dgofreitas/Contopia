@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useCoverStore } from '../../stores/cover-store';
 import SpinePreview from './SpinePreview';
+import EdgePreview from './EdgePreview';
 import CoverStickerLayer from './CoverStickerLayer';
 import CoverTitleEdit from './CoverTitleEdit';
 import CoverAuthorName from './CoverAuthorName';
@@ -10,13 +11,16 @@ export default function CoverPreview({ book, template }) {
   const { t } = useTranslation('cover');
   const baseColor = useCoverStore((s) => s.baseColor);
   const patternId = useCoverStore((s) => s.patternId);
+  const edgePattern = useCoverStore((s) => s.edgePattern);
   const getEffectiveSpineColor = useCoverStore((s) => s.getEffectiveSpineColor);
+  const getEffectiveEdgeColor = useCoverStore((s) => s.getEffectiveEdgeColor);
 
   const title = book?.title || t('preview.title');
   const author = book?.author?.name || t('preview.author');
   const textColor = template?.textColor || '#6b7280';
   const accentColor = template?.accentColor || '#9ca3af';
   const effectiveSpineColor = getEffectiveSpineColor();
+  const effectiveEdgeColor = getEffectiveEdgeColor();
 
   const coverStyle = baseColor ? { '--cover-bg': baseColor } : undefined;
   const activePattern = patternId && patternId !== 'none' ? patternId : null;
@@ -54,6 +58,13 @@ export default function CoverPreview({ book, template }) {
                 spineColor={effectiveSpineColor}
                 title={title}
                 proportional={false}
+              />
+            </div>
+            <div aria-hidden="true">
+              <EdgePreview
+                edgeColor={effectiveEdgeColor}
+                edgePattern={edgePattern}
+                standalone={false}
               />
             </div>
             <div className="cover-preview-text absolute inset-0 flex flex-col items-center justify-center p-6 text-center" style={{ zIndex: 20 }}>

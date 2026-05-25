@@ -75,6 +75,19 @@ const bookSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    edgeColor: {
+      type: String,
+      trim: true,
+      maxlength: 7,
+      match: /^#[0-9a-fA-F]{6}$/,
+      default: null,
+    },
+    edgePattern: {
+      type: String,
+      trim: true,
+      maxlength: 30,
+      default: 'solid',
+    },
     coverTitle: {
       type: String,
       trim: true,
