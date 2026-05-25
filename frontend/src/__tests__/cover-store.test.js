@@ -438,6 +438,175 @@ describe('useCoverStore', () => {
       });
     });
   });
+
+  // STORY-027 Tests: Cover Image Upload
+  describe('STORY-027: Cover Image Upload', () => {
+    beforeEach(() => {
+      useCoverStore.getState().resetStore();
+    });
+
+    describe('setCoverImage / clearCoverImage', () => {
+      it('initializes with coverImage as null', () => {
+        expect(useCoverStore.getState().coverImage).toBeNull();
+      });
+
+      it('setCoverImage stores image data', () => {
+        const coverData = {
+          assetId: 'asset-123',
+          thumbnailUrl: 'https://s3.example.com/thumb.jpg',
+          fullUrl: 'https://s3.example.com/full.jpg',
+          dominantColor: '#4a9b6e',
+        };
+        useCoverStore.getState().setCoverImage(coverData);
+        expect(useCoverStore.getState().coverImage).toEqual(coverData);
+      });
+
+      it('setCoverImage overwrites previous image data', () => {
+        useCoverStore.getState().setCoverImage({
+          assetId: 'old',
+          thumbnailUrl: 'old.jpg',
+          fullUrl: 'old.jpg',
+        });
+        useCoverStore.getState().setCoverImage({
+          assetId: 'new',
+          thumbnailUrl: 'new.jpg',
+          fullUrl: 'new.jpg',
+          dominantColor: '#000000',
+        });
+        expect(useCoverStore.getState().coverImage.assetId).toBe('new');
+      });
+
+      it('clearCoverImage resets coverImage to null', () => {
+        useCoverStore.getState().setCoverImage({
+          assetId: 'asset-123',
+          thumbnailUrl: 'thumb.jpg',
+          fullUrl: 'full.jpg',
+        });
+        useCoverStore.getState().clearCoverImage();
+        expect(useCoverStore.getState().coverImage).toBeNull();
+      });
+
+      it('clearCoverImage is idempotent when already null', () => {
+        useCoverStore.getState().clearCoverImage();
+        expect(useCoverStore.getState().coverImage).toBeNull();
+      });
+    });
+
+    describe('upload state management', () => {
+      it('initializes with isUploading as false', () => {
+        expect(useCoverStore.getState().isUploading).toBe(false);
+      });
+
+      it('initializes with uploadProgress as 0', () => {
+        expect(useCoverStore.getState().uploadProgress).toBe(0);
+      });
+
+      it('initializes with uploadError as null', () => {
+        expect(useCoverStore.getState().uploadError).toBeNull();
+      });
+
+      it('setUploadProgress updates progress', () => {
+        useCoverStore.getState().setUploadProgress(50);
+        expect(useCoverStore.getState().uploadProgress).toBe(50);
+      });
+
+      it('setUploadProgress handles 0 and 100', () => {
+        useCoverStore.getState().setUploadProgress(0);
+        expect(useCoverStore.getState().uploadProgress).toBe(0);
+        useCoverStore.getState().setUploadProgress(100);
+        expect(useCoverStore.getState().uploadProgress).toBe(100);
+      });
+
+      it('setUploadError stores error code', () => {
+        useCoverStore.getState().setUploadError('FILE_TOO_LARGE');
+        expect(useCoverStore.getState().uploadError).toBe('FILE_TOO_LARGE');
+      });
+
+      it('setUploadError with null clears error', () => {
+        useCoverStore.getState().setUploadError('UPLOAD_FAILED');
+        useCoverStore.getState().setUploadError(null);
+        expect(useCoverStore.getState().uploadError).toBeNull();
+      });
+    });
+
+    describe('getEffectiveSpineColor with coverImage dominantColor fallback', () => {
+      it('returns coverImage dominantColor when no baseColor or spineColor set', () => {
+        useCoverStore.getState().setCoverImage({
+          assetId: 'asset-123',
+          dominantColor: '#4a9b6e',
+        });
+        expect(useCoverStore.getState().getEffectiveSpineColor()).toBe('#4a9b6e');
+      });
+
+      it('returns spineColor when spineCustomized (takes priority over coverImage)', () => {
+        useCoverStore.getState().setSpineColor('#ff0000');
+        useCoverStore.getState().setSpineCustomized(true);
+        useCoverStore.getState().setCoverImage({
+          assetId: 'asset-123',
+          dominantColor: '#4a9b6e',
+        });
+        expect(useCoverStore.getState().getEffectiveSpineColor()).toBe('#ff0000');
+      });
+
+      it('returns baseColor when set (takes priority over coverImage)', () => {
+        useCoverStore.getState().setBaseColor('#00ff00');
+        useCoverStore.getState().setCoverImage({
+          assetId: 'asset-123',
+          dominantColor: '#4a9b6e',
+        });
+        expect(useCoverStore.getState().getEffectiveSpineColor()).toBe('#00ff00');
+      });
+
+      it('returns null when coverImage has no dominantColor and no other color set', () => {
+        useCoverStore.getState().setCoverImage({
+          assetId: 'asset-123',
+          // no dominantColor
+        });
+        expect(useCoverStore.getState().getEffectiveSpineColor()).toBeNull();
+      });
+    });
+
+    describe('resetCustomization clears coverImage', () => {
+      it('clears coverImage, isUploading, uploadProgress, uploadError but keeps template', () => {
+        useCoverStore.getState().setSelectedTemplate('galaxy');
+        useCoverStore.getState().setCoverImage({
+          assetId: 'asset-123',
+          thumbnailUrl: 'thumb.jpg',
+          fullUrl: 'full.jpg',
+        });
+        useCoverStore.getState().setUploadProgress(75);
+        useCoverStore.getState().setUploadError(null);
+
+        useCoverStore.getState().resetCustomization();
+
+        const state = useCoverStore.getState();
+        expect(state.selectedTemplateId).toBe('galaxy');
+        expect(state.coverImage).toBeNull();
+        expect(state.uploadProgress).toBe(0);
+        expect(state.uploadError).toBeNull();
+      });
+    });
+
+    describe('resetStore clears coverImage', () => {
+      it('clears coverImage related state', () => {
+        useCoverStore.getState().setCoverImage({
+          assetId: 'asset-123',
+          thumbnailUrl: 'thumb.jpg',
+          fullUrl: 'full.jpg',
+        });
+        useCoverStore.getState().setUploadProgress(100);
+        useCoverStore.getState().setUploadError(null);
+
+        useCoverStore.getState().resetStore();
+
+        const state = useCoverStore.getState();
+        expect(state.coverImage).toBeNull();
+        expect(state.isUploading).toBe(false);
+        expect(state.uploadProgress).toBe(0);
+        expect(state.uploadError).toBeNull();
+      });
+    });
+  });
 });
 
 

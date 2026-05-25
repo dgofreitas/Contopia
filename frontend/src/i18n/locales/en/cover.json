@@ -161,5 +161,21 @@
     "title": "Book Title",
     "author": "Author Name",
     "chooseTemplate": "Choose a template"
+  },
+  "upload": {
+    "sectionHeading": "Upload My Picture",
+    "buttonLabel": "Upload My Picture",
+    "previewAlt": "Uploaded cover image preview",
+    "removeButton": "Remove",
+    "progressAnnouncement": "Uploading... {{percent}} percent",
+    "completeAnnouncement": "Upload complete",
+    "cancel": "Cancel",
+    "errors": {
+      "FILE_TOO_LARGE": "This file is too big! Try a smaller picture (max 5MB).",
+      "INVALID_TYPE": "Only photos (JPG, PNG) can be uploaded.",
+      "SVG_NOT_ALLOWED": "SVG images are not allowed for safety.",
+      "UPLOAD_FAILED": "Upload failed. Please try again.",
+      "PROCESSING_ERROR": "Something went wrong processing your image. Please try again."
+    }
   }
 }

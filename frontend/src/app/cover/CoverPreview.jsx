@@ -12,6 +12,7 @@ export default function CoverPreview({ book, template }) {
   const baseColor = useCoverStore((s) => s.baseColor);
   const patternId = useCoverStore((s) => s.patternId);
   const edgePattern = useCoverStore((s) => s.edgePattern);
+  const coverImage = useCoverStore((s) => s.coverImage);
   const getEffectiveSpineColor = useCoverStore((s) => s.getEffectiveSpineColor);
   const getEffectiveEdgeColor = useCoverStore((s) => s.getEffectiveEdgeColor);
 
@@ -48,6 +49,16 @@ export default function CoverPreview({ book, template }) {
               <div
                 className={`cover-pattern-overlay cover-pattern--${activePattern}`}
                 aria-hidden="true"
+              />
+            )}
+            {coverImage && (coverImage.fullUrl || coverImage.thumbnailUrl) && (
+              <img
+                src={coverImage.fullUrl || coverImage.thumbnailUrl}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ zIndex: 5 }}
+                loading="lazy"
               />
             )}
             <div data-sticker-layer className="absolute inset-0 z-10" style={{ touchAction: 'none' }}>

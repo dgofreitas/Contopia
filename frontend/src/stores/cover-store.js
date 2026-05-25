@@ -15,6 +15,10 @@ export const useCoverStore = create((set, get) => ({
   stickers: [],
   coverTitle: null,
   selectedStickerId: null,
+  coverImage: null,
+  isUploading: false,
+  uploadProgress: 0,
+  uploadError: null,
 
   setSelectedTemplate: (id) => set({ selectedTemplateId: id }),
   setBaseColor: (hex) => set({ baseColor: hex }),
@@ -69,13 +73,22 @@ export const useCoverStore = create((set, get) => ({
 
   setStoreStickers: (newStickers) => set({ stickers: newStickers }),
 
+  setCoverImage: (data) => set({ coverImage: data }),
+  setUploadProgress: (percent) => set({ uploadProgress: percent }),
+  setUploadError: (error) => set({ uploadError: error }),
+  setIsUploading: (bool) => set({ isUploading: bool }),
+  clearCoverImage: () => set({ coverImage: null }),
+
   getEffectiveSpineColor: () => {
-    const { spineCustomized, spineColor, baseColor, selectedTemplateId } = get();
+    const { spineCustomized, spineColor, baseColor, selectedTemplateId, coverImage } = get();
     if (spineCustomized && spineColor) {
       return spineColor;
     }
     if (baseColor) {
       return baseColor;
+    }
+    if (coverImage?.dominantColor) {
+      return coverImage.dominantColor;
     }
     if (selectedTemplateId) {
       return deriveSpineColor({ coverColor: null, template: selectedTemplateId });
@@ -84,7 +97,7 @@ export const useCoverStore = create((set, get) => ({
   },
 
   getEffectiveEdgeColor: () => {
-    const { edgeCustomized, edgeColor, spineColor, baseColor, selectedTemplateId } = get();
+    const { edgeCustomized, edgeColor, baseColor, selectedTemplateId } = get();
     const effectiveSpineColor = get().getEffectiveSpineColor();
     return deriveEdgeColor({
       edgeColor: edgeCustomized ? edgeColor : null,
@@ -107,6 +120,10 @@ export const useCoverStore = create((set, get) => ({
       stickers: [],
       coverTitle: null,
       selectedStickerId: null,
+      coverImage: null,
+      isUploading: false,
+      uploadProgress: 0,
+      uploadError: null,
     }),
 
   clearSelection: () => set({ selectedTemplateId: null }),
@@ -123,5 +140,9 @@ export const useCoverStore = create((set, get) => ({
       stickers: [],
       coverTitle: null,
       selectedStickerId: null,
+      coverImage: null,
+      isUploading: false,
+      uploadProgress: 0,
+      uploadError: null,
     }),
 }));

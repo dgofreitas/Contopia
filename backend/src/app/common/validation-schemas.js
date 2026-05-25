@@ -101,6 +101,7 @@ export const bookUpdateSchema = z.object({
   edgePattern: z.enum(['solid', 'gradient', 'marbling', 'dots', 'chevron']).optional(),
   coverTitle: z.string().trim().max(120).optional().nullable(),
   stickers: z.array(stickerSchema).max(10).optional().default([]),
+  coverAssetId: z.string().regex(objectIdRegex, 'Invalid asset ID format').optional().nullable(),
 });
 
 export const chapterCreateSchema = z.object({

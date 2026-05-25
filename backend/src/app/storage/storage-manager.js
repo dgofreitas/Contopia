@@ -3,9 +3,11 @@ import pino from 'pino';
 import mongoose from 'mongoose';
 import { validateFile } from './file-validator.js';
 import { stripExif } from './exif-stripper.js';
+import { generateThumbnail, generateCoverSize } from './image-processor.js';
+import { extractDominantColor } from './color-extractor.js';
 import * as storageService from './storage-service.js';
 import * as storageDao from './storage-dao.js';
-import { sumAssetBytesByAuthor, findBookById } from '../book/book-dao.js';
+import { sumAssetBytesByAuthor, findBookById, updateBookById } from '../book/book-dao.js';
 import { Asset } from '../book/book-model.js';
 
 const logger = pino({ name: 'storage-manager', level: process.env.LOG_LEVEL || 'info' });
@@ -20,10 +22,11 @@ const MIME_TO_EXT = {
 
 /**
  * Upload an asset: validate → strip EXIF → store to S3 → save metadata → return presigned URL.
- * @param {{ childId: string, bookId: string, file: { mimetype: string, size: number, buffer: Buffer } }} params
- * @returns {{ assetId: string, url: string, expiresAt: string }}
+ * When type='cover', also generates thumbnail + cover-size variants and extracts dominant color.
+ * @param {{ childId: string, bookId: string, file: { mimetype: string, size: number, buffer: Buffer }, type?: string }} params
+ * @returns {{ assetId: string, url: string, expiresAt: string, thumbnailUrl?: string, dominantColor?: string }}
  */
-export async function uploadAssetManager({ childId, bookId, file }) {
+export async function uploadAssetManager({ childId, bookId, file, type = 'upload' }) {
   // 1. Validate file
   validateFile(file);
 
@@ -63,15 +66,18 @@ export async function uploadAssetManager({ childId, bookId, file }) {
     throw err;
   }
 
-  // 6. Determine storage path using a temp asset ID (do NOT create DB record yet)
+  // ── Cover image processing pipeline ──────────────────────────────────────
+  if (type === 'cover') {
+    return uploadCoverAsset({ childId, bookId, cleanBuffer, file, book });
+  }
+
+  // ── Default upload flow (unchanged from STORY-006) ───────────────────────
   const ext = MIME_TO_EXT[file.mimetype] || 'bin';
   const tempAssetId = new mongoose.Types.ObjectId();
   const storagePath = `users/${childId}/books/${bookId}/assets/${tempAssetId}.${ext}`;
 
-  // 7. Upload to S3/MinIO FIRST
   await storageService.putObject(storagePath, cleanBuffer, file.mimetype);
 
-  // 8. Only after successful S3 upload, create the asset record with the storage path
   const assetRecord = await storageDao.createAssetRecord({
     bookId,
     authorId: childId,
@@ -81,7 +87,6 @@ export async function uploadAssetManager({ childId, bookId, file }) {
     sizeBytes: cleanBuffer.length,
   });
 
-  // 9. Generate presigned URL
   const url = await storageService.getSignedUrl(storagePath);
   const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
 
@@ -90,6 +95,83 @@ export async function uploadAssetManager({ childId, bookId, file }) {
   return {
     assetId: assetRecord._id.toString(),
     url,
+    expiresAt,
+  };
+}
+
+/**
+ * Cover upload pipeline: generate thumbnail + cover-size, extract dominant color,
+ * upload both to S3, create two Asset records, link Book.coverAssetId.
+ * @param {{ childId: string, bookId: string, cleanBuffer: Buffer, file: object, book: object }} params
+ * @returns {{ assetId: string, thumbnailUrl: string, fullUrl: string, dominantColor: string, expiresAt: string }}
+ */
+async function uploadCoverAsset({ childId, bookId, cleanBuffer, file, book: _book }) {
+  const ext = MIME_TO_EXT[file.mimetype] || 'jpg';
+
+  // 6a. Generate thumbnail (300x450) and cover-size (600x900) in parallel
+  const [thumbnailResult, coverResult, dominantColor] = await Promise.all([
+    generateThumbnail(cleanBuffer),
+    generateCoverSize(cleanBuffer),
+    extractDominantColor(cleanBuffer),
+  ]);
+
+  // 6b. Generate S3 paths
+  const tempAssetId = new mongoose.Types.ObjectId();
+  const tempThumbnailId = new mongoose.Types.ObjectId();
+  const coverStoragePath = `users/${childId}/books/${bookId}/covers/${tempAssetId}.${ext}`;
+  const thumbnailStoragePath = `users/${childId}/books/${bookId}/covers/${tempThumbnailId}_thumb.${ext}`;
+
+  // 6c. Upload both to S3 in parallel
+  const coverMime = 'image/jpeg'; // sharp outputs JPEG after processing
+  await Promise.all([
+    storageService.putObject(coverStoragePath, coverResult.buffer, coverMime),
+    storageService.putObject(thumbnailStoragePath, thumbnailResult.buffer, coverMime),
+  ]);
+
+  // 6d. Create Asset records in parallel
+  const [coverAsset, thumbnailAsset] = await Promise.all([
+    storageDao.createAssetRecord({
+      bookId,
+      authorId: childId,
+      url: coverStoragePath,
+      type: 'cover',
+      mimeType: coverMime,
+      sizeBytes: coverResult.buffer.length,
+      dominantColor,
+      width: coverResult.width,
+      height: coverResult.height,
+    }),
+    storageDao.createAssetRecord({
+      bookId,
+      authorId: childId,
+      url: thumbnailStoragePath,
+      type: 'cover_thumbnail',
+      mimeType: coverMime,
+      sizeBytes: thumbnailResult.buffer.length,
+      dominantColor,
+      width: thumbnailResult.width,
+      height: thumbnailResult.height,
+    }),
+  ]);
+
+  // 6e. Update Book.coverAssetId with the full-size asset ID
+  await updateBookById(bookId, { coverAssetId: coverAsset._id });
+
+  // 6f. Generate presigned URLs
+  const [fullUrl, thumbnailUrl] = await Promise.all([
+    storageService.getSignedUrl(coverStoragePath),
+    storageService.getSignedUrl(thumbnailStoragePath),
+  ]);
+  const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+
+  logger.info({ assetId: coverAsset._id, thumbnailId: thumbnailAsset._id, childId, bookId, dominantColor }, 'Cover asset uploaded');
+
+  return {
+    assetId: coverAsset._id.toString(),
+    thumbnailAssetId: thumbnailAsset._id.toString(),
+    thumbnailUrl,
+    fullUrl,
+    dominantColor,
     expiresAt,
   };
 }
