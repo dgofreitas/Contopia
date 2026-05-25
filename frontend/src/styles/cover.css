@@ -258,3 +258,93 @@
   width: 8%;
   background: rgba(0, 0, 0, 0.2);
 }
+
+.cover-pattern-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cover-pattern--stripes {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 4px,
+    transparent 4px,
+    transparent 12px
+  );
+}
+
+.cover-pattern--dots {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.18) 4px, transparent 4px);
+  background-size: 20px 20px;
+}
+
+.cover-pattern--stars {
+  background-image:
+    radial-gradient(2px 2px at 10% 20%, rgba(255, 255, 255, 0.5) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 30% 60%, rgba(255, 255, 255, 0.4) 100%, transparent),
+    radial-gradient(2.5px 2.5px at 50% 10%, rgba(255, 255, 255, 0.5) 100%, transparent),
+    radial-gradient(1px 1px at 70% 80%, rgba(255, 255, 255, 0.4) 100%, transparent),
+    radial-gradient(2px 2px at 90% 40%, rgba(255, 255, 255, 0.5) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 15% 85%, rgba(255, 255, 255, 0.4) 100%, transparent),
+    radial-gradient(2px 2px at 55% 45%, rgba(255, 255, 255, 0.5) 100%, transparent),
+    radial-gradient(1px 1px at 80% 25%, rgba(255, 255, 255, 0.4) 100%, transparent);
+}
+
+.cover-pattern--chevron {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.06) 0px,
+    rgba(255, 255, 255, 0.06) 6px,
+    transparent 6px,
+    transparent 12px
+  ),
+  repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.06) 0px,
+    rgba(255, 255, 255, 0.06) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+.cover-pattern--waves {
+  background:
+    radial-gradient(ellipse 80% 18px at 15% 30%, rgba(255, 255, 255, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 14px at 50% 55%, rgba(255, 255, 255, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 16px at 80% 75%, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+}
+
+.cover-spine-preview {
+  aspect-ratio: 2 / 7;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 2px;
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.cover-spine-preview--auto {
+  opacity: 1;
+}
+
+.cover-spine-preview--custom {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-spine-preview {
+    transition: none;
+  }
+}

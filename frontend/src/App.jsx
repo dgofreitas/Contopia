@@ -10,6 +10,7 @@ import DraftsListPage from './app/drafts/DraftsListPage';
 import EditorPage from './app/editor/EditorPage';
 import NewBookPage from './app/editor/NewBookPage';
 const CoverDesignerPage = lazy(() => import('./app/cover/CoverDesignerPage'));
+const CoverCustomizePage = lazy(() => import('./app/cover/CoverCustomizePage'));
 import ReaderPage from './app/reader/ReaderPage';
 import SettingsPage from './app/settings/SettingsPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -74,7 +75,7 @@ export default function App() {
           <Route path="/editor/:bookId" element={<EditorPage />} />
           <Route path="/reader/:bookId" element={<ReaderPage />} />
           <Route path="/cover/:bookId" element={<Suspense fallback={<CoverFallback />}><CoverDesignerPage /></Suspense>} />
-          <Route path="/cover/:bookId/customize" element={<Suspense fallback={<CoverFallback />}><CoverDesignerPage /></Suspense>} />
+          <Route path="/cover/:bookId/customize" element={<Suspense fallback={<CoverFallback />}><CoverCustomizePage /></Suspense>} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/welcome" element={<WelcomePage />} />
         </Route>

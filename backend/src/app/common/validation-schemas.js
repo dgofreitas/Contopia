@@ -82,6 +82,10 @@ export const bookUpdateSchema = z.object({
   description: z.string().max(500).trim().optional(),
   language: z.string().max(5).optional(),
   templateId: z.string().max(50).trim().optional().nullable(),
+  coverColor: z.string().trim().max(7).regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
+  coverPattern: z.enum(["none", "stripes", "dots", "stars", "chevron", "waves"]).optional().nullable(),
+  spineColor: z.string().trim().max(7).regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
+  spineCustomized: z.boolean().optional(),
 });
 
 export const chapterCreateSchema = z.object({

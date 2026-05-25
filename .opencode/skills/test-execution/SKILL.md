@@ -11,12 +11,14 @@ tags:
   - vitest
   - jest
   - mocha
+  - eslint
+  - tsc
   - execution
 ---
 
 # Test Execution & Coverage Strategy
 
-> **Purpose**: Prevent agents from making common mistakes (wrong commands, reading huge files, piping errors) when running tests and checking coverage across ANY Node.js testing framework.
+> **Purpose**: Prevent agents from making common mistakes (wrong commands, reading huge files, piping errors) when running tests, checking coverage, and executing static analysis (ESLint/TypeScript) across ANY Node.js project.
 
 ---
 
@@ -98,12 +100,32 @@ If a test suite fails with a massive output that gets truncated:
    - **Vitest/Jest:** `npm test -- path/to/failing.test.ts --bail 1`
    - **Mocha:** `npx mocha path/to/failing.test.ts --bail`
 
+### 4. Linting and Static Analysis (ESLint & TSC)
+Running `eslint` or `tsc` on a dirty codebase can produce massive outputs that crash the terminal proxy or consume all tokens.
+
+*   **TypeScript (tsc):**
+    Never pipe `tsc` to `grep`. If `tsc --noEmit` fails with too many errors, you must fix the most critical errors first or focus on the files you modified.
+*   **ESLint:**
+    If `eslint .` produces too much output:
+    1. **Target Specific Files:** Run ESLint only on the files you are currently working on.
+       ```bash
+       npx eslint path/to/your-file.ts
+       ```
+    2. **Quiet Mode:** Only show errors, ignore warnings to reduce output size.
+       ```bash
+       npx eslint . --quiet
+       ```
+    3. **Auto-fix:** Attempt to automatically fix issues before reading the output.
+       ```bash
+       npx eslint . --fix
+       ```
+
 ---
 
 ## Summary of Golden Rules
 
-1. **NO PIPES** on test commands.
+1. **NO PIPES** on test or lint commands.
 2. **VERIFY CWD**: Always `cd` into the correct project folder (frontend/backend) first.
 3. **TEXT REPORTERS** for coverage (e.g., `--coverageReporters="text-summary"`).
-4. **ISOLATE** failing tests by running only their specific files.
+4. **ISOLATE** failing tests or lint errors by running only their specific files.
 5. **NEVER READ** raw `rtk` log files.

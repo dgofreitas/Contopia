@@ -121,8 +121,6 @@ function terminalBell() {
   } catch { }
 }
 
-const DANGEROUS_TOOLS = ["bash", "shell", "write", "edit", "patch", "task", "rm"];
-
 export const GateNotifierPlugin: Plugin = async ({ client, directory, worktree }: any) => {
   const config = loadConfig(directory, worktree);
 
@@ -134,8 +132,6 @@ export const GateNotifierPlugin: Plugin = async ({ client, directory, worktree }
   const TUI_TOAST = config.tuiToast !== false;
   const BELL = config.terminalBell !== false;
   const DURATION = config.toastDurationMs ?? 15000;
-  const STALL_MS = config.stallTimeoutMs ?? 45000;
-  const NOTIFY_DANGEROUS = config.notifyOnDangerousTools !== false;
 
   let notifier = config.desktopNotifier ?? "auto";
   if (notifier === "auto") {
@@ -151,49 +147,16 @@ export const GateNotifierPlugin: Plugin = async ({ client, directory, worktree }
     desktopNotifier: notifier,
     tuiToast: TUI_TOAST,
     terminalBell: BELL,
-    stallTimeoutMs: STALL_MS,
-    notifyOnDangerousTools: NOTIFY_DANGEROUS,
+    mode: "stdout_interception"
   });
 
-  // Rastreamento de sessões e stalls
-  const pendingSessions = new Map<string, { lastActivity: number; notified: boolean; toolsPending: Set<string> }>();
-  const stallTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  function getSessionState(sessionID: string) {
-    if (!pendingSessions.has(sessionID)) {
-      pendingSessions.set(sessionID, { lastActivity: Date.now(), notified: false, toolsPending: new Set() });
-    }
-    return pendingSessions.get(sessionID)!;
-  }
-
-  function clearStallTimer(sessionID: string) {
-    const t = stallTimers.get(sessionID);
-    if (t) {
-      clearTimeout(t);
-      stallTimers.delete(sessionID);
-    }
-  }
-
-  function setStallTimer(sessionID: string) {
-    clearStallTimer(sessionID);
-    const timer = setTimeout(() => {
-      const state = pendingSessions.get(sessionID);
-      if (!state) return;
-      if (state.toolsPending.size > 0 && !state.notified) {
-        state.notified = true;
-        const msg = `⏳ Sessão ${sessionID} parada com ${state.toolsPending.size} ferramenta(s) pendente(s). Aprovação pode ser necessária.`;
-        log("warn", "STALL_DETECTED", { sessionID, pending: [...state.toolsPending] });
-        if (TUI_TOAST) {
-          client.tui.showToast({ body: { message: msg, variant: "warning", title: "Gate / Interação Requerida", duration: DURATION } }).catch(() => {});
-        }
-        if (BELL) terminalBell();
-        sendDesktopNotification(notifier as any, "OpenCode - Gate Requerido", msg);
-      }
-    }, STALL_MS);
-    stallTimers.set(sessionID, timer);
-  }
+  let lastNotificationTime = 0;
 
   function notifyGate(sessionID: string | null, title: string, message: string, variant: "info" | "warning" | "error" = "warning") {
+    // Evita spam de notificações: só notifica 1x a cada 10 segundos
+    if (Date.now() - lastNotificationTime < 10000) return;
+    lastNotificationTime = Date.now();
+
     log("warn", "GATE_NOTIFY", { sessionID, title, message });
     if (TUI_TOAST) {
       client.tui.showToast({
@@ -209,73 +172,39 @@ export const GateNotifierPlugin: Plugin = async ({ client, directory, worktree }
     sendDesktopNotification(notifier as any, title || "OpenCode Gate", message);
   }
 
+  // Intercepta o stdout para capturar exatamente o momento em que o OpenCode
+  // exibe um prompt (y/n) ou aguarda permissão, acabando com falsos positivos de timeout.
+  const originalWrite = process.stdout.write;
+  // @ts-ignore
+  process.stdout.write = function (chunk: any, encoding?: any, cb?: any) {
+    if (chunk) {
+      const str = chunk.toString().toLowerCase();
+      // Heurística precisa para identificar os prompts de permissão do OpenCode
+      if (
+        (str.includes("allow") && str.includes("?")) ||
+        str.includes("(y/n)") || 
+        str.includes("(y/n/a)") ||
+        str.includes("permissão requerida") ||
+        (str.includes("execute") && str.includes("permission"))
+      ) {
+        notifyGate(null, "Permissão Requerida", "O OpenCode travou aguardando sua autorização no terminal.", "warning");
+      }
+    }
+    // @ts-ignore
+    return originalWrite.apply(process.stdout, arguments);
+  };
+
   return {
-    "tool.execute.before": async (ctx: any, toolName: string, params: any) => {
-      const actualToolName = typeof toolName === "string" ? toolName : (toolName?.tool || toolName?.name || "");
-      const sid = ctx?.sessionID ?? "global";
-      const state = getSessionState(sid);
-      state.lastActivity = Date.now();
-      state.notified = false;
-
-      if (ctx?.callID) {
-        state.toolsPending.add(ctx.callID);
-      }
-
-      // Se for tool perigosa e estamos em modo que pode pedir permissão, notifica
-      if (NOTIFY_DANGEROUS && DANGEROUS_TOOLS.some((t) => actualToolName.toLowerCase().includes(t))) {
-        const fileHint = params?.filePath || params?.path || params?.file || "";
-        const msg = `🔒 ${actualToolName}${fileHint ? ` em ${fileHint}` : ""} requer atenção. Verifique permissões pendentes.`;
-        notifyGate(sid, "Gate Detectado", msg, "warning");
-      }
-
-      setStallTimer(sid);
-      return params;
-    },
-
-    "tool.execute.after": async (ctx: any, toolName: string, result: any) => {
-      const sid = ctx?.sessionID ?? "global";
-      const state = pendingSessions.get(sid);
-      if (state && ctx?.callID) {
-        state.toolsPending.delete(ctx.callID);
-        state.lastActivity = Date.now();
-        if (state.toolsPending.size === 0) {
-          state.notified = false;
-          clearStallTimer(sid);
-        } else {
-          setStallTimer(sid);
-        }
-      }
-    },
-
     event: async ({ event }: any) => {
       const e = event as { type: string; properties: Record<string, any> };
       const props = e.properties || {};
       const sessionID = props.sessionID || props.info?.sessionID || null;
 
-      if (sessionID) {
-        const state = getSessionState(sessionID);
-        state.lastActivity = Date.now();
-      }
-
-      // Detecta eventos de permissão (heurística ampla)
-      const typeLower = e.type.toLowerCase();
-      const isPermissionEvent =
-        typeLower.includes("permission") ||
-        typeLower.includes("gate") ||
-        typeLower.includes("ask") ||
-        typeLower.includes("prompt");
-
-      if (isPermissionEvent) {
-        const msg = `🚧 Evento de permissão: ${e.type}. Aprovação pode ser necessária.`;
-        notifyGate(sessionID, "Permissão Requerida", msg, "warning");
-      }
-
-      // Detecta sessão idle com possível stall
-      if (e.type === "session.idle" && sessionID) {
-        const state = pendingSessions.get(sessionID);
-        if (state && state.toolsPending.size > 0 && !state.notified) {
-          setStallTimer(sessionID);
-        }
+      // Mantemos a notificação quando a sessão fica idle (aguardando input no chat)
+      // pois pode ser que o usuário precise responder a uma pergunta do agente.
+      if (e.type === "session.idle") {
+         // O agente terminou de falar e precisa que você continue o fluxo
+         notifyGate(sessionID, "Agente Aguardando", "A sessão ficou ociosa. O agente aguarda seu input.", "info");
       }
 
       // Detecta erro / retry que pode indicar que o usuário precisa intervir
@@ -287,16 +216,14 @@ export const GateNotifierPlugin: Plugin = async ({ client, directory, worktree }
         }
       }
 
-      // Log debug de todos os eventos (ajuda calibrar heurística)
       if (LOG_LEVEL <= LEVELS.debug) {
         log("debug", "EVENT", { type: e.type, sessionID, keys: Object.keys(props) });
       }
     },
 
     cleanup: () => {
-      for (const [, timer] of stallTimers) clearTimeout(timer);
-      stallTimers.clear();
-      pendingSessions.clear();
+      // Restaura o stdout original no cleanup
+      process.stdout.write = originalWrite;
     },
   };
 };
