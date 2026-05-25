@@ -1,11 +1,12 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { useCoverStore } from '../stores/cover-store';
 import useAuthStore from '../stores/auth-store';
 
 export function useUploadCoverImage() {
   const xhrRef = useRef(null);
-  const [isUploading, setIsUploading] = useState(false);
 
+  const isUploading = useCoverStore((s) => s.isUploading);
+  const setIsUploading = useCoverStore((s) => s.setIsUploading);
   const setCoverImage = useCoverStore((s) => s.setCoverImage);
   const setUploadProgress = useCoverStore((s) => s.setUploadProgress);
   const storeSetUploadError = useCoverStore((s) => s.setUploadError);

@@ -200,12 +200,11 @@ export const GateNotifierPlugin: Plugin = async ({ client, directory, worktree }
       const props = e.properties || {};
       const sessionID = props.sessionID || props.info?.sessionID || null;
 
-      // Mantemos a notificação quando a sessão fica idle (aguardando input no chat)
-      // pois pode ser que o usuário precise responder a uma pergunta do agente.
-      if (e.type === "session.idle") {
-         // O agente terminou de falar e precisa que você continue o fluxo
-         notifyGate(sessionID, "Agente Aguardando", "A sessão ficou ociosa. O agente aguarda seu input.", "info");
-      }
+      // Removemos a notificação automática de session.idle pois ela gera muitos
+      // falsos positivos em workflows multi-agentes ou quando a tarefa simplesmente conclui.
+      // if (e.type === "session.idle") {
+      //    notifyGate(sessionID, "Agente Aguardando", "A sessão ficou ociosa. O agente aguarda seu input.", "info");
+      // }
 
       // Detecta erro / retry que pode indicar que o usuário precisa intervir
       if (e.type === "session.error" || e.type === "session.status") {

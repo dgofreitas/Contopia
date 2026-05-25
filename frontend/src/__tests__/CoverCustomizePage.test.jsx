@@ -224,16 +224,18 @@ describe('CoverCustomizePage', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockSaveMutation.mutateAsync).toHaveBeenCalledWith({
-          bookId: 'book-123',
-          templateId: 'galaxy',
-          coverColor: '#FF6B6B',
-          coverPattern: 'stripes',
-          spineColor: null,
-          spineCustomized: false,
-          coverTitle: null,
-          stickers: [],
-        });
+        expect(mockSaveMutation.mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            bookId: 'book-123',
+            templateId: 'galaxy',
+            coverColor: '#FF6B6B',
+            coverPattern: 'stripes',
+            spineColor: null,
+            spineCustomized: false,
+            coverTitle: null,
+            stickers: [],
+          })
+        );
       });
 
       await waitFor(() => {

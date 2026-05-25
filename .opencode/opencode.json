@@ -1,179 +1,202 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "Master",
+  "instructions": ["./instructions.md"],
   "provider": {
+    "ollama-cloud": {
+      "options": {
+        "timeout": 600000,
+        "setCacheKey": true
+      }
+    },
     "openrouter": {
       "options": {
-        "timeout": 36000000,
+        "timeout": 600000,
         "setCacheKey": true
       }
     },
     "opencode": {
       "options": {
-        "timeout": 36000000,
+        "timeout": 600000,
         "setCacheKey": true
       }
     },
     "zai-coding-plan": {
       "options": {
-        "timeout": 36000000,
+        "timeout": 600000,
         "setCacheKey": true
       }
     }
   },
   "agent": {
     "general": {
-      "model": "zai-coding-plan/glm-4.5-air",
-      "options": {
-        "timeout": 600000
-      }
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
+
     "Master": {
-      "model": "zai-coding-plan/glm-4.5-air",
+      "model": "ollama-cloud/kimi-k2.6",
       "options": {
-        "timeout": 1800000
+        "timeout": 3600000
       }
     },
+
     "Architect": {
-      "model": "zai-coding-plan/glm-5.1",
+      "model": "ollama-cloud/glm-5.1",
       "options": {
         "timeout": 600000
       }
     },
-    "BackendDeveloper": {
-      "model": "zai-coding-plan/glm-5.1",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "BuildAgent": {
-      "model": "zai-coding-plan/glm-4.5-air",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "BugFixerNodejs": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "CodeAnalyzer": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "CodeReviewer": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "ContextOrganizer": {
-      "model": "zai-coding-plan/glm-4.5-air",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "ContextScout": {
-      "model": "zai-coding-plan/glm-4.5-air",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "DevopsSpecialist": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "DocWriter": {
-      "model": "zai-coding-plan/glm-4.5-air",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "ExternalScout": {
-      "model": "zai-coding-plan/glm-4.5-air",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "FrontendDeveloper": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "FrontendDeveloperAngular": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "FrontendDeveloperReact": {
-      "model": "zai-coding-plan/glm-5.1",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "FrontendDeveloperVue": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "ImplReviewerNodejs": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "MergeRequestCreator": {
-      "model": "zai-coding-plan/glm-4.5-air",
+    "SystemArchitect": {
+      "model": "ollama-cloud/glm-5.1",
       "options": {
         "timeout": 600000
       }
     },
     "ProductManager": {
-      "model": "zai-coding-plan/glm-5.1",
+      "model": "ollama-cloud/kimi-k2.6",
+      "options": {
+        "timeout": 1800000
+      }
+    },
+    "ProductOwner": {
+      "model": "ollama-cloud/kimi-k2.6",
+      "options": {
+        "timeout": 1800000
+      }
+    },
+    "TechLead": {
+      "model": "ollama-cloud/kimi-k2.6",
+      "options": {
+        "timeout": 2400000
+      }
+    },
+    "QAAnalyst": {
+      "model": "ollama-cloud/deepseek-v4-flash",
       "options": {
         "timeout": 600000
       }
     },
-    "QAAnalyst": {
-      "model": "zai-coding-plan/glm-4.5-air",
+    "MergeRequestCreator": {
+      "model": "ollama-cloud/deepseek-v4-flash",
+      "options": {
+        "timeout": 600000
+      }
+    },
+
+    "BackendDeveloper": {
+      "model": "ollama-cloud/glm-5.1",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "BugFixerNodejs": {
+      "model": "ollama-cloud/minimax-m2.7",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "TestEngineer": {
+      "model": "ollama-cloud/deepseek-v4-flash",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "CodeReviewer": {
+      "model": "ollama-cloud/deepseek-v4-flash",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "BuildAgent": {
+      "model": "ollama-cloud/deepseek-v4-flash",
+      "options": {
+        "timeout": 600000
+      }
+    },
+
+    "FrontendDeveloper": {
+      "model": "ollama-cloud/glm-5.1",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "FrontendDeveloperAngular": {
+      "model": "ollama-cloud/glm-5.1",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "FrontendDeveloperReact": {
+      "model": "ollama-cloud/glm-5.1",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "FrontendDeveloperVue": {
+      "model": "ollama-cloud/glm-5.1",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "DevopsSpecialist": {
+      "model": "ollama-cloud/deepseek-v4-pro",
       "options": {
         "timeout": 600000
       }
     },
     "ShellDeveloper": {
-      "model": "zai-coding-plan/glm-4.7",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "TaskManager": {
-      "model": "zai-coding-plan/glm-4.5-air",
-      "options": {
-        "timeout": 600000
-      }
-    },
-    "TechLead": {
-      "model": "zai-coding-plan/glm-5.1",
-      "options": {
-        "timeout": 1800000
-      }
-    },
-    "TestEngineer": {
-      "model": "zai-coding-plan/glm-4.7",
+      "model": "ollama-cloud/deepseek-v4-flash",
       "options": {
         "timeout": 600000
       }
     },
     "UXDesigner": {
-      "model": "zai-coding-plan/glm-5.1",
+      "model": "ollama-cloud/qwen3.5:397b",
+      "options": {
+        "timeout": 600000
+      }
+    },
+
+    "CodeAnalyzer": {
+      "model": "ollama-cloud/deepseek-v4-pro",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "ImplReviewerNodejs": {
+      "model": "ollama-cloud/deepseek-v4-flash",
+      "options": {
+        "timeout": 600000
+      }
+    },
+
+    "ContextScout": {
+      "model": "ollama-cloud/qwen3-coder-next",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "TaskManager": {
+      "model": "ollama-cloud/deepseek-v4-flash",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "DocWriter": {
+      "model": "ollama-cloud/qwen3.5:397b",
+      "options": {
+        "timeout": 600000
+      }
+    },
+    "ExternalScout": {
+      "model": "ollama-cloud/qwen3-coder-next",
+      "options": {
+        "timeout": 600000
+      }
+    },
+
+    "ContextOrganizer": {
+      "model": "ollama-cloud/deepseek-v4-pro",
       "options": {
         "timeout": 600000
       }
@@ -199,5 +222,12 @@
     "edit": "allow",
     "write": "allow",
     "skill": "allow"
+  },
+  "mcp": {
+    "tavily": {
+      "type": "remote",
+      "url": "https://mcp.tavily.com/mcp/?tavilyApiKey=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",
+      "enabled": true
+    }
   }
 }

@@ -76,6 +76,7 @@ export const useCoverStore = create((set, get) => ({
   setCoverImage: (data) => set({ coverImage: data }),
   setUploadProgress: (percent) => set({ uploadProgress: percent }),
   setUploadError: (error) => set({ uploadError: error }),
+  setIsUploading: (bool) => set({ isUploading: bool }),
   clearCoverImage: () => set({ coverImage: null }),
 
   getEffectiveSpineColor: () => {

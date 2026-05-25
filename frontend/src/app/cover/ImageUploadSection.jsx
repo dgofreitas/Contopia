@@ -57,7 +57,7 @@ export default function ImageUploadSection({ bookId }) {
         )}
 
         {coverUploadError && !isUploading && (
-          <p className="text-red-600 text-xs" role="alert">
+          <p className="text-red-700 text-xs" role="alert">
             {t(`cover.upload.errors.${coverUploadError}`, t('cover.upload.errors.UPLOAD_FAILED'))}
           </p>
         )}
