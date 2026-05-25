@@ -4,7 +4,7 @@ import apiClient from '../lib/api-client';
 export function useSaveCoverCustomization() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ bookId, templateId, coverColor, coverPattern, spineColor, spineCustomized, edgeColor, edgePattern, edgeCustomized, coverTitle, stickers }) => {
+    mutationFn: async ({ bookId, templateId, coverColor, coverPattern, spineColor, spineCustomized, edgeColor, edgePattern, edgeCustomized, coverTitle, stickers, coverAssetId }) => {
       const { data } = await apiClient.patch(`/v1/books/${bookId}`, {
         templateId,
         coverColor,
@@ -16,6 +16,7 @@ export function useSaveCoverCustomization() {
         edgeCustomized,
         coverTitle,
         stickers,
+        coverAssetId,
       });
       return data;
     },

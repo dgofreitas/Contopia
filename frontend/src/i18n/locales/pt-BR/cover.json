@@ -161,5 +161,21 @@
     "title": "Título do Livro",
     "author": "Nome do Autor",
     "chooseTemplate": "Escolha um modelo"
+  },
+  "upload": {
+    "sectionHeading": "Enviar Minha Foto",
+    "buttonLabel": "Enviar Minha Foto",
+    "previewAlt": "Prévia da imagem de capa enviada",
+    "removeButton": "Remover",
+    "progressAnnouncement": "Enviando... {{percent}} por cento",
+    "completeAnnouncement": "Envio completo",
+    "cancel": "Cancelar",
+    "errors": {
+      "FILE_TOO_LARGE": "Arquivo muito grande! Tente uma imagem menor (máximo 5MB).",
+      "INVALID_TYPE": "Só aceitamos fotos (PNG, JPG).",
+      "SVG_NOT_ALLOWED": "Imagens SVG não são permitidas por segurança.",
+      "UPLOAD_FAILED": "Falha no envio. Por favor, tente novamente.",
+      "PROCESSING_ERROR": "Algo deu errado ao processar sua imagem. Por favor, tente novamente."
+    }
   }
 }

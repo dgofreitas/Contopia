@@ -231,7 +231,7 @@ const assetSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['cover', 'spine', 'edge', 'upload'],
+      enum: ['cover', 'cover_thumbnail', 'spine', 'edge', 'upload'],
       required: [true, 'Asset type is required'],
     },
     mimeType: {
@@ -242,6 +242,23 @@ const assetSchema = new Schema(
     sizeBytes: {
       type: Number,
       required: [true, 'Size in bytes is required'],
+      min: 0,
+    },
+    dominantColor: {
+      type: String,
+      trim: true,
+      maxlength: 7,
+      default: null,
+      match: /^#[0-9a-fA-F]{6}$/,
+    },
+    width: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    height: {
+      type: Number,
+      default: null,
       min: 0,
     },
     deletedAt: {

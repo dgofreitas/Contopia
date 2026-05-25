@@ -39,13 +39,17 @@ router.post(
         return res.status(400).json(fail('INVALID_FILE_TYPE', 'No file uploaded', { requestId }));
       }
 
-      const { assetId, url, expiresAt } = await storageManager.uploadAssetManager({
+      // type query param: 'cover' for cover image uploads, 'upload' (default) for generic assets
+      const type = req.query.type === 'cover' ? 'cover' : 'upload';
+
+      const result = await storageManager.uploadAssetManager({
         childId: req.childId,
         bookId: req._params.bookId,
         file: req.file,
+        type,
       });
 
-      return res.status(201).json(ok({ assetId, url, expiresAt }, { requestId }));
+      return res.status(201).json(ok(result, { requestId }));
     } catch (err) {
       return handleError(err, req, res);
     }

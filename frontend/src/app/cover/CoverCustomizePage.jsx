@@ -10,6 +10,7 @@ import ColorPickerPanel from './ColorPickerPanel';
 import PatternPickerPanel from './PatternPickerPanel';
 import SpineCustomizeSection from './SpineCustomizeSection';
 import EdgeCustomizeSection from './EdgeCustomizeSection';
+import ImageUploadSection from './ImageUploadSection';
 import StickerPickerPanel from './StickerPickerPanel';
 import StickerActions from './StickerActions';
 import CustomizeActions from './CustomizeActions';
@@ -30,6 +31,7 @@ export default function CoverCustomizePage() {
     edgeCustomized,
     stickers,
     coverTitle,
+    coverImage,
     setSelectedTemplate,
     setBaseColor,
     setPattern,
@@ -40,6 +42,7 @@ export default function CoverCustomizePage() {
     setEdgeCustomized,
     setCoverTitle,
     setStoreStickers,
+    setCoverImage,
     resetStore,
   } = useCoverStore();
   const saveCustomization = useSaveCoverCustomization();
@@ -84,8 +87,16 @@ export default function CoverCustomizePage() {
         }));
         setStoreStickers(restored);
       }
+      if (book.coverAssetId && !coverImage && book.coverImageUrl) {
+        setCoverImage({
+          assetId: book.coverAssetId,
+          thumbnailUrl: book.coverThumbnailUrl || book.coverImageUrl,
+          fullUrl: book.coverImageUrl,
+          dominantColor: book.coverDominantColor || null,
+        });
+      }
     }
-  }, [book?.templateId, book?.coverColor, book?.coverPattern, book?.spineColor, book?.spineCustomized, book?.edgeColor, book?.edgePattern, book?.edgeCustomized, book?.coverTitle, book?.stickers?.length]);
+  }, [book?.templateId, book?.coverColor, book?.coverPattern, book?.spineColor, book?.spineCustomized, book?.edgeColor, book?.edgePattern, book?.edgeCustomized, book?.coverTitle, book?.stickers?.length, book?.coverAssetId, book?.coverImageUrl]);
 
   const selectedTemplate = COVER_TEMPLATES.find((tpl) => tpl.id === selectedTemplateId) || null;
 
@@ -115,6 +126,7 @@ export default function CoverCustomizePage() {
         edgeCustomized,
         coverTitle,
         stickers: stickers.map(({ svgId, x, y, scale }) => ({ svgId, x, y, scale })),
+        coverAssetId: coverImage?.assetId || null,
       });
       resetStore();
       navigate('/shelf');
@@ -162,6 +174,7 @@ export default function CoverCustomizePage() {
           />
           <SpineCustomizeSection title={book?.title} />
           <EdgeCustomizeSection title={book?.title} />
+          <ImageUploadSection bookId={bookId} />
           <StickerPickerPanel />
           <StickerActions />
         </div>

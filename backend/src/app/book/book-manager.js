@@ -19,7 +19,10 @@ import {
   createActivityLog,
   createAsset,
   sumAssetBytesByAuthor,
+  findAssetsByBook,
 } from './book-dao.js';
+import { findAssetRecordById } from '../storage/storage-dao.js';
+import { getSignedUrl as getSignedUrlService } from '../storage/storage-service.js';
 
 const logger = pino({ name: 'book-manager', level: process.env.LOG_LEVEL || 'info' });
 
@@ -122,6 +125,7 @@ export async function updateBookManager(bookId, authorId, updates) {
   if (updates.edgePattern !== undefined) allowedFields.edgePattern = updates.edgePattern;
   if (updates.coverTitle !== undefined) allowedFields.coverTitle = updates.coverTitle;
   if (updates.stickers !== undefined) allowedFields.stickers = updates.stickers;
+  if (updates.coverAssetId !== undefined) allowedFields.coverAssetId = updates.coverAssetId;
 
   const updated = await updateBookById(bookId, allowedFields);
   logger.info({ bookId, authorId }, 'Book updated');
@@ -227,6 +231,7 @@ export async function publishBookManager(bookId, authorId) {
 /**
  * Get a book with its chapters and total word count for editing.
  * Ownership guard: only the author can view their book for editing.
+ * If the book has a coverAssetId, populates coverImageUrl, coverThumbnailUrl, and dominantColor.
  */
 export async function getBookForEditManager(bookId, authorId) {
   const result = await findBookWithChapters(bookId);
@@ -247,11 +252,37 @@ export async function getBookForEditManager(bookId, authorId) {
     throw err;
   }
 
+  // Populate cover image URLs if coverAssetId exists
+  let coverImageUrl = null;
+  let coverThumbnailUrl = null;
+  let dominantColor = null;
+
+  if (book.coverAssetId) {
+    try {
+      const coverAsset = await findAssetRecordById(book.coverAssetId.toString());
+      if (coverAsset) {
+        coverImageUrl = await getSignedUrlService(coverAsset.url);
+        dominantColor = coverAsset.dominantColor || null;
+
+        // Find the thumbnail asset for this book
+        const bookAssets = await findAssetsByBook(bookId, { type: 'cover_thumbnail' });
+        if (bookAssets.length > 0) {
+          coverThumbnailUrl = await getSignedUrlService(bookAssets[0].url);
+        }
+      }
+    } catch (err) {
+      logger.warn({ err, bookId }, 'Failed to populate cover image URLs — continuing without them');
+    }
+  }
+
   return {
     book,
     chapters,
     totalWordCount,
     lastEditedAt: book.updatedAt,
+    ...(coverImageUrl && { coverImageUrl }),
+    ...(coverThumbnailUrl && { coverThumbnailUrl }),
+    ...(dominantColor && { dominantColor }),
   };
 }
 
