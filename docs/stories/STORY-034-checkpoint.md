@@ -11,7 +11,7 @@
 - [x] model/schema — N/A (no new models; validation schema done with BackendDeveloper)
 - [x] reader-router.js + reader-manager.js — public chapter endpoint, validation schema
 - [x] app.js mount — mount reader-router at /api/v1/reader
-- [ ] tests — backend/src/app/reader/__tests__/reader-manager.test.js
+- [x] tests — backend/src/app/reader/__tests__/reader-manager.test.js
 
 ## FRONTEND
 - [x] ChapterDrawer, ChapterDrawerItem, NextChapterButton — responsive, a11y, framer-motion
@@ -21,7 +21,7 @@
 - [x] i18n — en/reader.json + pt-BR/reader.json (new keys)
 - [x] hooks/useChaptersQuery.js — verify refetchOnWindowFocus: false
 - [x] hooks/usePulledOutBook.js — pass chapterId query param on navigation
-- [ ] tests — ChapterDrawer, ChapterDrawerItem, NextChapterButton, hooks
+- [x] tests — ChapterDrawer, ChapterDrawerItem, NextChapterButton, hooks
 
 ## QUALIDADE E ENTREGA
 - [ ] TESTS (TestEngineer)
