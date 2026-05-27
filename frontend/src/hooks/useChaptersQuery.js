@@ -5,7 +5,7 @@ export default function useChaptersQuery(bookId) {
   return useQuery({
     queryKey: ['chapters', bookId],
     queryFn: async () => {
-      const { data } = await apiClient.get(`/v1/books/${bookId}/chapters`);
+      const { data } = await apiClient.get(`/v1/reader/${bookId}/chapters`);
       return data;
     },
     enabled: !!bookId,
