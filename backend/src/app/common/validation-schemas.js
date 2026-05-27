@@ -201,6 +201,13 @@ export const bookEditParamsSchema = z.object({
 });
 
 /**
+ * Params for GET /api/v1/reader/:bookId/chapters (public reader endpoint).
+ */
+export const readerChaptersParamsSchema = z.object({
+  bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
+});
+
+/**
  * Body for POST /api/v1/books (V2 — accepts both summary and description).
  * Normalizes summary → description.
  */
