@@ -100,10 +100,7 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead }) {
 
             <div className="w-full aspect-[3/4] rounded-lg overflow-hidden mb-4">
               <CoverDisplay
-                coverUrl={coverUrl}
-                title={title}
-                authorName={authorName}
-                spineColor={spineColor}
+                book={book}
                 className="w-full h-full"
               />
             </div>
