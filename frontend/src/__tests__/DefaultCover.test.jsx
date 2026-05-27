@@ -1,7 +1,8 @@
-// Contopia — DefaultCover Component Tests (STORY-012)
+// Contopia — DefaultCover Component Tests (STORY-012 + STORY-028)
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import DefaultCover from '../components/shelf/DefaultCover';
+import { DEFAULT_COVER_PALETTE } from '../lib/default-cover-palette';
 
 const baseProps = {
   title: 'My Little Pony',
@@ -10,7 +11,7 @@ const baseProps = {
   className: 'w-full h-full',
 };
 
-describe('DefaultCover', () => {
+describe('DefaultCover (STORY-028 rewrite)', () => {
   describe('rendering', () => {
     it('renders title text', () => {
       render(<DefaultCover {...baseProps} />);
@@ -22,7 +23,7 @@ describe('DefaultCover', () => {
       expect(screen.getByText('coverOverlay.authorBy')).toBeInTheDocument();
     });
 
-    it('does not render author when authorName is not provided', () => {
+    it('does not render author when authorName is empty', () => {
       render(<DefaultCover {...baseProps} authorName="" />);
       const author = screen.queryByText('coverOverlay.authorBy');
       expect(author).not.toBeInTheDocument();
@@ -42,22 +43,13 @@ describe('DefaultCover', () => {
 
     it('has role="img"', () => {
       render(<DefaultCover {...baseProps} />);
-      const img = screen.getByRole('img');
-      expect(img).toBeInTheDocument();
+      expect(screen.getByRole('img')).toBeInTheDocument();
     });
 
-    it('has aria-label', () => {
+    it('has aria-label with title', () => {
       render(<DefaultCover {...baseProps} />);
       const img = screen.getByRole('img');
       expect(img).toHaveAttribute('aria-label', 'coverOverlay.defaultCover');
-    });
-
-    it('has gradient background with spineColor', () => {
-      const { container } = render(<DefaultCover {...baseProps} />);
-      const wrapper = container.firstElementChild;
-      expect(wrapper).toHaveStyle({
-        background: 'linear-gradient(135deg, #4ECDC4 0%, #4ECDC499 100%)',
-      });
     });
 
     it('applies className prop', () => {
@@ -65,120 +57,102 @@ describe('DefaultCover', () => {
         <DefaultCover {...baseProps} className="custom-class" />
       );
       const wrapper = container.firstElementChild;
-      expect(wrapper).toHaveClass('custom-class', 'w-full', 'h-full', 'rounded-lg', 'flex', 'flex-col', 'items-center', 'justify-center', 'p-4');
+      expect(wrapper).toHaveClass('custom-class');
     });
 
-    it('renders without className prop', () => {
+    it('renders spine strip (first child)', () => {
+      const { container } = render(<DefaultCover {...baseProps} />);
+      const wrapper = container.firstElementChild;
+      const spineStrip = wrapper.children[0];
+      expect(spineStrip).toHaveStyle({ backgroundColor: '#4ECDC4' });
+    });
+
+    it('renders cover area (middle child) with background color from spineColor fallback', () => {
       const { container } = render(
-        <DefaultCover title="Test" authorName="Author" spineColor="#FF0000" />
+        <DefaultCover {...baseProps} spineColor={null} />
       );
       const wrapper = container.firstElementChild;
-      expect(wrapper).toHaveClass('rounded-lg', 'flex', 'flex-col', 'items-center', 'justify-center', 'p-4');
-    });
-  });
-
-  describe('text styling', () => {
-    it('uses text-gray-800 for title (contrast)', () => {
-      const { container } = render(<DefaultCover {...baseProps} />);
-      const title = container.querySelector('.text-gray-800');
-      expect(title).toBeInTheDocument();
-      expect(title).toHaveTextContent('My Little Pony');
+      const coverArea = wrapper.children[1];
+      expect(coverArea).toHaveStyle({ backgroundColor: expect.any(String) });
     });
 
-    it('uses text-gray-600 for author (contrast)', () => {
+    it('renders edge strip (last child) with darkened color', () => {
       const { container } = render(<DefaultCover {...baseProps} />);
-      const author = container.querySelector('.text-gray-600');
-      expect(author).toBeInTheDocument();
+      const wrapper = container.firstElementChild;
+      const edgeStrip = wrapper.children[2];
+      // #4ECDC4 darkened by 50 → #1C9B92
+      expect(edgeStrip).toHaveStyle({ backgroundColor: '#1C9B92' });
     });
 
-    it('title has correct font classes', () => {
-      const { container } = render(<DefaultCover {...baseProps} />);
-      const title = container.querySelector('.text-gray-800');
-      expect(title).toHaveClass('font-bold', 'text-lg', 'text-center', 'leading-tight', 'line-clamp-3');
+    it('uses book default_color when book prop is provided', () => {
+      const book = {
+        _id: 'test-id-123',
+        title: 'Book Title',
+        default_color: '#A78BFA',
+        authorName: 'Author',
+      };
+      const { container } = render(<DefaultCover book={book} />);
+      const wrapper = container.firstElementChild;
+      const coverArea = wrapper.children[1];
+      expect(coverArea).toHaveStyle({ backgroundColor: '#A78BFA' });
     });
 
-    it('author has correct font classes', () => {
-      const { container } = render(<DefaultCover {...baseProps} />);
-      const author = container.querySelector('.text-gray-600');
-      expect(author).toHaveClass('text-sm', 'mt-2');
+    it('derives color from book._id when no default_color', () => {
+      const book = {
+        _id: 'unique-id-456',
+        title: 'Book Title',
+        authorName: 'Author',
+      };
+      const { container } = render(<DefaultCover book={book} />);
+      const wrapper = container.firstElementChild;
+      const coverArea = wrapper.children[1];
+      const bgColor = coverArea.style.backgroundColor;
+      expect(bgColor).toBeTruthy();
     });
   });
 
   describe('edge cases', () => {
     it('renders with empty title', () => {
       render(<DefaultCover {...baseProps} title="" />);
-      const wrapper = screen.getByRole('img');
-      expect(wrapper).toBeInTheDocument();
+      expect(screen.getByRole('img')).toBeInTheDocument();
     });
 
     it('renders with null title', () => {
       render(<DefaultCover {...baseProps} title={null} />);
-      const wrapper = screen.getByRole('img');
-      expect(wrapper).toBeInTheDocument();
+      expect(screen.getByRole('img')).toBeInTheDocument();
     });
 
     it('renders with undefined title', () => {
       render(<DefaultCover {...baseProps} title={undefined} />);
-      const wrapper = screen.getByRole('img');
-      expect(wrapper).toBeInTheDocument();
+      expect(screen.getByRole('img')).toBeInTheDocument();
     });
 
     it('renders with null spineColor', () => {
-      const { container } = render(
-        <DefaultCover
-          {...baseProps}
-          spineColor={null}
-        />
-      );
-      const wrapper = container.firstElementChild;
-      // Should render without error (linear-gradient handles null)
-      expect(wrapper).toBeInTheDocument();
+      render(<DefaultCover {...baseProps} spineColor={null} />);
+      expect(screen.getByRole('img')).toBeInTheDocument();
     });
 
     it('renders with undefined spineColor', () => {
-      const { container } = render(
-        <DefaultCover
-          {...baseProps}
-          spineColor={undefined}
-        />
-      );
-      const wrapper = container.firstElementChild;
-      expect(wrapper).toBeInTheDocument();
+      render(<DefaultCover {...baseProps} spineColor={undefined} />);
+      expect(screen.getByRole('img')).toBeInTheDocument();
     });
 
     it('handles long title with line-clamp', () => {
       const longTitle = 'This is a very long title that should be truncated at three lines using the line-clamp-3 utility class to ensure it fits within the cover design';
-      render(
-        <DefaultCover
-          {...baseProps}
-          title={longTitle}
-        />
-      );
+      render(<DefaultCover {...baseProps} title={longTitle} />);
       expect(screen.getByText(longTitle)).toBeInTheDocument();
-      const title = screen.getByText(longTitle);
-      expect(title).toHaveClass('line-clamp-3');
+      const titleEl = screen.getByText(longTitle);
+      expect(titleEl).toHaveClass('line-clamp-3');
     });
 
-    it('handles special characters in title', () => {
-      const specialTitle = 'Title with <script> & "quotes"';
-      render(
-        <DefaultCover
-          {...baseProps}
-          title={specialTitle}
-        />
-      );
-      expect(screen.getByText(specialTitle)).toBeInTheDocument();
-    });
-
-    it('handles special characters in author name', () => {
-      const specialAuthor = 'Author & Co. "Special"';
-      render(
-        <DefaultCover
-          {...baseProps}
-          authorName={specialAuthor}
-        />
-      );
-      expect(screen.getByText('coverOverlay.authorBy')).toBeInTheDocument();
+    it('sanitizes script tags from title', () => {
+      const specialTitle = 'Title with <script>alert("xss")</script>';
+      render(<DefaultCover {...baseProps} title={specialTitle} />);
+      // DOMPurify removes script tags — rendered text should not contain <script>
+      const titleEl = screen.getByText((content) => content.includes('Title with'));
+      expect(titleEl).toBeInTheDocument();
+      // No script element in the DOM
+      expect(document.querySelector('script')).toBeNull();
     });
 
     it('handles whitespace in props', () => {
@@ -189,51 +163,27 @@ describe('DefaultCover', () => {
           spineColor="  #FF0000  "
         />
       );
-      // The text should be rendered as-is (use function matcher to avoid normalization)
-      const title = screen.getByText((content, element) => {
-        return element.textContent === '  My Title  ';
-      });
-      expect(title).toBeInTheDocument();
       expect(screen.getByText('coverOverlay.authorBy')).toBeInTheDocument();
     });
   });
 
-  describe('gradient background variations', () => {
-    it('renders correct gradient for red color', () => {
-      const { container } = render(
-        <DefaultCover
-          {...baseProps}
-          spineColor="#FF0000"
-        />
-      );
-      const wrapper = container.firstElementChild;
-      expect(wrapper).toHaveStyle({
-        background: 'linear-gradient(135deg, #FF0000 0%, #FF000099 100%)',
-      });
+  describe('text color', () => {
+    it('uses getDefaultTextColor to determine text color', () => {
+      const { container } = render(<DefaultCover {...baseProps} />);
+      const title = container.querySelector('.font-bold');
+      expect(title).toHaveStyle({ color: '#1A1A1A' }); // #4ECDC4 is light
     });
 
-    it('renders correct gradient for blue color', () => {
-      const { container } = render(
-        <DefaultCover
-          {...baseProps}
-          spineColor="#0000FF"
-        />
-      );
-      const wrapper = container.firstElementChild;
-      expect(wrapper).toHaveStyle({
-        background: 'linear-gradient(135deg, #0000FF 0%, #0000FF99 100%)',
-      });
-    });
-
-    it('renders correct gradient for hex color with alpha', () => {
-      const { container } = render(
-        <DefaultCover
-          {...baseProps}
-          spineColor="rgba(255, 0, 0, 0.5)"
-        />
-      );
-      const wrapper = container.firstElementChild;
-      expect(wrapper).toBeInTheDocument();
+    it('uses white text for dark backgrounds', () => {
+      const book = {
+        _id: 'dark-test',
+        title: 'Dark Title',
+        default_color: '#1E1B4B',
+        authorName: 'Author',
+      };
+      const { container } = render(<DefaultCover book={book} />);
+      const title = container.querySelector('.font-bold');
+      expect(title).toHaveStyle({ color: '#FFFFFF' });
     });
   });
 });
