@@ -23,7 +23,7 @@
 - [x] styles: Add subtle texture CSS for default cover
 
 ## QUALIDADE E ENTREGA
-- [ ] TESTS
+- [x] TESTS
 - [ ] QA
 - [ ] CODE REVIEW
 - [ ] MERGE REQUEST

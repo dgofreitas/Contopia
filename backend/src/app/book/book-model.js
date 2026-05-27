@@ -110,6 +110,7 @@ const bookSchema = new Schema(
       trim: true,
       maxlength: 30,
       default: 'sans-serif',
+      enum: ['sans-serif', 'serif'],
     },
     stickers: [{
       svgId: {
@@ -158,7 +159,7 @@ const bookSchema = new Schema(
 
 const DEFAULT_COVER_PALETTE = [
   '#F87171', '#2DD4BF', '#45B7D1', '#78C6A9',
-  '#A78BFA', '#A855F7', '#FB923C', '#84CC16',
+  '#A78BFA', '#9333EA', '#FB923C', '#84CC16',
   '#1E90FF', '#F472B6', '#1E1B4B', '#22C55E',
 ];
 

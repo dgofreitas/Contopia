@@ -64,11 +64,11 @@ describe('DEFAULT_COVER_PALETTE', () => {
   });
 
   it('matches backend DEFAULT_COVER_PALETTE hex values', () => {
-    // Backend palette: #F87171, #2DD4BF, #45B7D1, #78C6A9, #A78BFA, #A855F7,
+    // Backend palette: #F87171, #2DD4BF, #45B7D1, #78C6A9, #A78BFA, #9333EA,
     //                  #FB923C, #84CC16, #1E90FF, #F472B6, #1E1B4B, #22C55E
     const backendHexes = [
       '#F87171', '#2DD4BF', '#45B7D1', '#78C6A9',
-      '#A78BFA', '#A855F7', '#FB923C', '#84CC16',
+      '#A78BFA', '#9333EA', '#FB923C', '#84CC16',
       '#1E90FF', '#F472B6', '#1E1B4B', '#22C55E',
     ];
     const frontendHexes = DEFAULT_COVER_PALETTE.map((e) => e.hex);

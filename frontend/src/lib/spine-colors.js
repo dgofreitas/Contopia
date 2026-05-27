@@ -4,7 +4,7 @@ export const SPINE_PALETTE = [
   '#45B7D1', // Sky blue
   '#78C6A9', // Sage green
   '#FFEAA7', // Yellow
-  '#DDA0DD', // Plum
+  '#9333EA', // Plum
   '#98D8C8', // Mint
   '#A78BFA', // Lavender
   '#FB923C', // Tangerine

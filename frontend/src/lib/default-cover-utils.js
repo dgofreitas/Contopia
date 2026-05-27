@@ -9,6 +9,8 @@ export function getDefaultCoverColor(bookId) {
 
 export function getDefaultTextColor(bgHex) {
   if (!bgHex) return '#FFFFFF';
+  const entry = DEFAULT_COVER_PALETTE.find((c) => c.hex === bgHex);
+  if (entry) return entry.textColor;
   return isLightColor(bgHex) ? '#1A1A1A' : '#FFFFFF';
 }
 
