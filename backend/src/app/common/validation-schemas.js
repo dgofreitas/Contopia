@@ -99,6 +99,7 @@ export const bookUpdateSchema = z.object({
   spineCustomized: z.boolean().optional(),
   edgeColor: z.string().trim().max(7).regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   edgePattern: z.enum(['solid', 'gradient', 'marbling', 'dots', 'chevron']).optional(),
+  default_font: z.enum(['sans-serif', 'serif']).optional(),
   coverTitle: z.string().trim().max(120).optional().nullable(),
   stickers: z.array(stickerSchema).max(10).optional().default([]),
   coverAssetId: z.string().regex(objectIdRegex, 'Invalid asset ID format').optional().nullable(),
