@@ -1,3 +1,10 @@
+.default-cover-texture {
+  background-image: radial-gradient(circle, #000 1px, transparent 1px);
+  background-size: 8px 8px;
+  opacity: 0.03;
+  pointer-events: none;
+}
+
 /* Contopia — Cover Template Background Styles */
 
 @font-face {
