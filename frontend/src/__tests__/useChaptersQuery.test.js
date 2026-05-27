@@ -63,7 +63,7 @@ describe('useChaptersQuery', () => {
 
     const result = await config.queryFn();
 
-    expect(apiClient.get).toHaveBeenCalledWith('/v1/books/book123/chapters');
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/reader/book123/chapters');
     expect(result).toBe(chaptersData);
   });
 

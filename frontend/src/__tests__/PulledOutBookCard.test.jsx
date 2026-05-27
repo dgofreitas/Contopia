@@ -27,9 +27,10 @@ function renderPulledOutCard(book = baseBook, overrides = {}) {
 
 describe('PulledOutBookCard', () => {
   describe('rendering', () => {
-    it('renders the book title', () => {
+    it('renders the book title in h3 and inline cover', () => {
       renderPulledOutCard();
-      expect(screen.getByText('My Little Pony')).toBeInTheDocument();
+      const titles = screen.getAllByText('My Little Pony');
+      expect(titles).toHaveLength(2); // h3 header + inline cover span
     });
 
     it('sanitizes the title', () => {
@@ -78,11 +79,13 @@ describe('PulledOutBookCard', () => {
       expect(screen.queryByText((text) => text.includes('…'))).not.toBeInTheDocument();
     });
 
-    it('renders cover area as a button with view cover label', () => {
+    it('renders cover area as a div with role button and view cover label', () => {
       renderPulledOutCard();
       const coverButtons = screen.getAllByLabelText('coverOverlay.viewCover');
       expect(coverButtons.length).toBeGreaterThanOrEqual(1);
-      expect(coverButtons[0].tagName).toBe('BUTTON');
+      // Cover area is a div[role="button"], second is an actual button
+      expect(coverButtons[0].tagName).toBe('DIV');
+      expect(coverButtons[0]).toHaveAttribute('role', 'button');
     });
 
     it('has role="group" for a11y', () => {
@@ -278,7 +281,8 @@ describe('PulledOutBookCard', () => {
         summary: null,
       };
       renderPulledOutCard(nullSummaryBook);
-      expect(screen.getByText('Null Summary')).toBeInTheDocument();
+      const titles = screen.getAllByText('Null Summary');
+      expect(titles.length).toBe(2); // h3 + inline cover span
     });
   });
 });

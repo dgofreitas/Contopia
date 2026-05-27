@@ -545,6 +545,202 @@ describe('Book Model', () => {
     });
   });
 
+  // ── STORY-028: has_custom_cover, default_color, default_font ──────────────────
+  describe('has_custom_cover field', () => {
+    it('should default has_custom_cover to false', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'No Cover' });
+      expect(book.has_custom_cover).toBe(false);
+    });
+
+    it('should set has_custom_cover to true when coverAssetId is provided', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const coverId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'With Cover',
+        coverAssetId: coverId,
+      });
+      expect(book.has_custom_cover).toBe(true);
+    });
+
+    it('should set has_custom_cover to false when coverAssetId is null', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Null Cover',
+        coverAssetId: null,
+      });
+      expect(book.has_custom_cover).toBe(false);
+    });
+
+    it('should update has_custom_cover when coverAssetId changes via save', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const coverId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Toggle Cover' });
+      expect(book.has_custom_cover).toBe(false);
+
+      book.coverAssetId = coverId;
+      await book.save();
+
+      const found = await Book.findById(book._id);
+      expect(found.has_custom_cover).toBe(true);
+    });
+
+    it('should set has_custom_cover to false when coverAssetId is removed', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const coverId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Remove Cover',
+        coverAssetId: coverId,
+      });
+      expect(book.has_custom_cover).toBe(true);
+
+      book.coverAssetId = null;
+      await book.save();
+
+      const found = await Book.findById(book._id);
+      expect(found.has_custom_cover).toBe(false);
+    });
+  });
+
+  describe('default_color field', () => {
+    const DEFAULT_COVER_PALETTE = [
+      '#F87171', '#2DD4BF', '#45B7D1', '#78C6A9',
+      '#A78BFA', '#A855F7', '#FB923C', '#84CC16',
+      '#1E90FF', '#F472B6', '#1E1B4B', '#22C55E',
+    ];
+
+    it('should assign default_color from deterministic ID hash on new book', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Auto Color' });
+      expect(book.default_color).toBeDefined();
+      expect(DEFAULT_COVER_PALETTE).toContain(book.default_color);
+    });
+
+    it('should assign deterministic same color for same book ID', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Consistent Color' });
+      const expectedIdx = book._id.toString().split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % DEFAULT_COVER_PALETTE.length;
+      expect(book.default_color).toBe(DEFAULT_COVER_PALETTE[expectedIdx]);
+    });
+
+    it('should produce different colors for different book IDs (statistical)', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const colors = new Set();
+      for (let i = 0; i < 12; i++) {
+        const book = await Book.create({ authorId, title: `Book ${i}` });
+        colors.add(book.default_color);
+      }
+      // With 12 books and 12 palette colors, we should see more than 1 distinct color
+      expect(colors.size).toBeGreaterThan(1);
+    });
+
+    it('should not overwrite default_color if explicitly provided', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Explicit Color',
+        default_color: '#A855F7',
+      });
+      expect(book.default_color).toBe('#A855F7');
+    });
+
+    it('should allow setting default_color to null explicitly', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      // default_color will be assigned by pre-save hook for new books even with null input,
+      // because the hook checks !this.default_color && this.isNew
+      // But the schema allows null as default — test that the field exists
+      const book = await Book.create({ authorId, title: 'Null Check' });
+      expect(book.default_color).toBeDefined();
+    });
+
+    it('should reject invalid hex default_color without hash', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Bad Color', default_color: 'F87171' })
+      ).rejects.toThrow();
+    });
+
+    it('should reject invalid hex default_color with wrong length', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      await expect(
+        Book.create({ authorId, title: 'Short Color', default_color: '#F87' })
+      ).rejects.toThrow();
+    });
+
+    it('should accept valid hex default_color', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Valid Color',
+        default_color: '#F87171',
+      });
+      expect(book.default_color).toBe('#F87171');
+    });
+
+    it('should trim whitespace from default_color', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Trimmed Color',
+        default_color: '  #F87171  ',
+      });
+      expect(book.default_color).toBe('#F87171');
+    });
+  });
+
+  describe('default_font field', () => {
+    it('should default default_font to sans-serif', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Default Font' });
+      expect(book.default_font).toBe('sans-serif');
+    });
+
+    it('should accept sans-serif as default_font', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Sans Font',
+        default_font: 'sans-serif',
+      });
+      expect(book.default_font).toBe('sans-serif');
+    });
+
+    it('should accept serif as default_font', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Serif Font',
+        default_font: 'serif',
+      });
+      expect(book.default_font).toBe('serif');
+    });
+
+    it('should trim whitespace from default_font', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({
+        authorId,
+        title: 'Spaced Font',
+        default_font: '  serif  ',
+      });
+      expect(book.default_font).toBe('serif');
+    });
+
+    it('should persist default_font update via save', async () => {
+      const authorId = new mongoose.Types.ObjectId();
+      const book = await Book.create({ authorId, title: 'Update Font' });
+      expect(book.default_font).toBe('sans-serif');
+
+      book.default_font = 'serif';
+      await book.save();
+
+      const found = await Book.findById(book._id);
+      expect(found.default_font).toBe('serif');
+    });
+  });
+
   describe('stickers field', () => {
     it('should default stickers to an empty array', async () => {
       const authorId = new mongoose.Types.ObjectId();

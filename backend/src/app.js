@@ -10,6 +10,7 @@ import authRouter from './app/auth/auth-router.js';
 import bookRouter from './app/book/book-router.js';
 import chapterRouter from './app/editor/chapter-router.js';
 import storageRouter from './app/storage/storage-router.js';
+import readerRouter from './app/reader/reader-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
 import { rateLimitMiddleware } from './app/common/rate-limit-middleware.js';
 import { fail } from './app/common/response-envelope.js';
@@ -56,6 +57,9 @@ app.use('/api/auth', authRouter);
 
 // Readiness probe — public, no auth required (mounted BEFORE auth middleware)
 app.get('/api/v1/ready', readyHandler);
+
+// Reader routes — public chapter access (param validation only, no auth guard)
+app.use('/api/v1/reader', readerRouter);
 
 // V1 API routes — auth + per-user rate limiting applied at mount level
 app.use('/api/v1', authMiddleware, rateLimitMiddleware);

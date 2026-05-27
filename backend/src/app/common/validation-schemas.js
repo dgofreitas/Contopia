@@ -99,6 +99,7 @@ export const bookUpdateSchema = z.object({
   spineCustomized: z.boolean().optional(),
   edgeColor: z.string().trim().max(7).regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   edgePattern: z.enum(['solid', 'gradient', 'marbling', 'dots', 'chevron']).optional(),
+  default_font: z.enum(['sans-serif', 'serif']).optional(),
   coverTitle: z.string().trim().max(120).optional().nullable(),
   stickers: z.array(stickerSchema).max(10).optional().default([]),
   coverAssetId: z.string().regex(objectIdRegex, 'Invalid asset ID format').optional().nullable(),
@@ -196,6 +197,13 @@ export const chapterPutBodySchema = z.object({
  * Params for GET /api/v1/books/:bookId/edit.
  */
 export const bookEditParamsSchema = z.object({
+  bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
+});
+
+/**
+ * Params for GET /api/v1/reader/:bookId/chapters (public reader endpoint).
+ */
+export const readerChaptersParamsSchema = z.object({
   bookId: z.string().regex(objectIdRegex, 'Invalid book ID format'),
 });
 

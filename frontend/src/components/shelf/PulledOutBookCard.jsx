@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 import { deriveEdgeColor } from '../../lib/edge-utils';
 import { deriveSpineColor } from '../../lib/spine-color-utils';
+import { getDefaultTextColor } from '../../lib/default-cover-utils';
+import { getDefaultCoverColor } from '../../lib/default-cover-utils';
 import { COVER_TEMPLATES } from '../../lib/cover-templates';
 import '../../styles/cover.css';
 
@@ -31,6 +33,9 @@ function PulledOutBookCover({ book }) {
   const templateId = template ? template.id : null;
   const patternId = book.coverPattern && book.coverPattern !== 'none' ? book.coverPattern : null;
 
+  const defaultColor = book.default_color || getDefaultCoverColor(book._id);
+  const textColor = getDefaultTextColor(template ? coverBg : defaultColor);
+
   return (
     <div className="pulled-out-cover">
       <div className="pulled-out-cover__book">
@@ -42,7 +47,7 @@ function PulledOutBookCover({ book }) {
         )}
         <div
           className="absolute inset-0"
-          style={{ backgroundColor: coverBg }}
+          style={{ backgroundColor: templateId ? coverBg : defaultColor }}
           aria-hidden="true"
         />
         {patternId && (
@@ -56,6 +61,21 @@ function PulledOutBookCover({ book }) {
           style={{ backgroundColor: spineColor }}
           aria-hidden="true"
         />
+        {!templateId && (
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{ backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)', backgroundSize: '8px 8px' }}
+            aria-hidden="true"
+          />
+        )}
+        {!templateId && book.title && (
+          <span
+            className="relative z-10 font-bold text-center leading-tight line-clamp-3 px-2"
+            style={{ color: textColor, fontSize: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}
+          >
+            {sanitizeText(book.title)}
+          </span>
+        )}
         <div
           className={`pulled-out-cover__edge-strip cover-edge--${edgePattern}`}
           style={{

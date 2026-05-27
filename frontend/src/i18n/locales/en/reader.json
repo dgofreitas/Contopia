@@ -4,5 +4,13 @@
   "backToShelf": "Back to Bookshelf",
   "prevChapter": "Previous",
   "nextChapter": "Next",
-  "chapterOf": "Chapter {{current}} of {{total}}"
+  "chapterOf": "Chapter {{current}} of {{total}}",
+  "chapterList": "Chapters",
+  "chapterRead": "read",
+  "chapterUnread": "unread",
+  "chapterInProgress": "in progress",
+  "openChapterList": "Open chapter list",
+  "nextChapterBtn": "Next Chapter",
+  "navigatedToChapter": "Navigated to {{chapterTitle}}",
+  "close": "Close"
 }

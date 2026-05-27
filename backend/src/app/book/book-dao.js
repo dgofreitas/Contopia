@@ -10,6 +10,7 @@ export async function createBook(data) {
 }
 
 export async function findBookById(id) {
+  // lean({ virtuals: true }) includes has_custom_cover, default_color, default_font + spineColor getter
   return Book.findOne({ _id: id, deletedAt: null }).lean({ virtuals: true }).exec();
 }
 
@@ -19,6 +20,7 @@ export async function findBooksByAuthor(authorId, { status, limit = 50, skip = 0
   const sort = status === 'published'
     ? { publishedAt: -1, _id: -1 }
     : { createdAt: -1 };
+  // lean({ virtuals: true }) includes has_custom_cover, default_color, default_font + spineColor getter
   return Book.find(filter).sort(sort).skip(skip).limit(limit).lean({ virtuals: true }).exec();
 }
 
