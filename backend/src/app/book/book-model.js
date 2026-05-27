@@ -94,6 +94,23 @@ const bookSchema = new Schema(
       maxlength: 120,
       default: null,
     },
+    has_custom_cover: {
+      type: Boolean,
+      default: false,
+    },
+    default_color: {
+      type: String,
+      trim: true,
+      maxlength: 7,
+      default: null,
+      match: /^#[0-9a-fA-F]{6}$/,
+    },
+    default_font: {
+      type: String,
+      trim: true,
+      maxlength: 30,
+      default: 'sans-serif',
+    },
     stickers: [{
       svgId: {
         type: String,
@@ -136,6 +153,31 @@ const bookSchema = new Schema(
     collection: 'books',
   }
 );
+
+// ── Pre-Save Hooks ─────────────────────────────────────────────────────────────
+
+const DEFAULT_COVER_PALETTE = [
+  '#F87171', '#2DD4BF', '#45B7D1', '#78C6A9',
+  '#A78BFA', '#A855F7', '#FB923C', '#84CC16',
+  '#1E90FF', '#F472B6', '#1E1B4B', '#22C55E',
+];
+
+bookSchema.pre('save', function (next) {
+  this.has_custom_cover = this.coverAssetId != null;
+  next();
+});
+
+bookSchema.pre('save', function (next) {
+  if (!this.default_color && this.isNew) {
+    if (this._id) {
+      const idx = this._id.toString().split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % DEFAULT_COVER_PALETTE.length;
+      this.default_color = DEFAULT_COVER_PALETTE[idx];
+    } else {
+      this.default_color = DEFAULT_COVER_PALETTE[Math.floor(Math.random() * DEFAULT_COVER_PALETTE.length)];
+    }
+  }
+  next();
+});
 
 // Compound indexes with partial filter for soft delete
 bookSchema.index(
