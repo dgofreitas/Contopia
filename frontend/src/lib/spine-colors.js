@@ -6,6 +6,11 @@ export const SPINE_PALETTE = [
   '#FFEAA7', // Yellow
   '#DDA0DD', // Plum
   '#98D8C8', // Mint
+  '#A78BFA', // Lavender
+  '#FB923C', // Tangerine
+  '#1E90FF', // Ocean blue
+  '#1E1B4B', // Midnight
+  '#22C55E', // Forest
 ];
 
 export function isLightColor(hex) {
