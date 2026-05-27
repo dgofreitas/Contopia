@@ -8,31 +8,43 @@ function CoverSkeleton() {
   );
 }
 
-export default function CoverDisplay({ coverUrl, title, authorName, spineColor, className }) {
+export default function CoverDisplay({ coverUrl: coverUrlProp, title: titleProp, authorName: authorNameProp, spineColor: spineColorProp, className, book }) {
   const [imgState, setImgState] = useState('loading');
 
-  if (!coverUrl) {
-    return <DefaultCover title={title} authorName={authorName} spineColor={spineColor} className={className} />;
+  const coverUrl = book?.coverUrl || coverUrlProp;
+  const title = book?.title || titleProp;
+  const authorName = book?.authorName || authorNameProp;
+  const spineColor = book?.spineColor || spineColorProp;
+
+  const hasCustomCover = book?.has_custom_cover === true && coverUrl;
+  const templateId = book?.templateId;
+
+  if (hasCustomCover) {
+    const sanitizedUrl = sanitizeImageUrl(coverUrl);
+    if (!sanitizedUrl) {
+      return <DefaultCover book={book} title={title} authorName={authorName} spineColor={spineColor} className={className} />;
+    }
+
+    return (
+      <div className={`relative ${className || ''}`}>
+        {imgState === 'loading' && <CoverSkeleton />}
+        <img
+          src={sanitizedUrl}
+          alt={title}
+          onLoad={() => setImgState('loaded')}
+          onError={() => setImgState('error')}
+          className={`w-full h-full object-cover rounded-lg ${imgState !== 'loaded' ? 'invisible' : ''}`}
+        />
+        {imgState === 'error' && (
+          <DefaultCover book={book} title={title} authorName={authorName} spineColor={spineColor} />
+        )}
+      </div>
+    );
   }
 
-  const sanitizedUrl = sanitizeImageUrl(coverUrl);
-  if (!sanitizedUrl) {
-    return <DefaultCover title={title} authorName={authorName} spineColor={spineColor} className={className} />;
+  if (templateId) {
+    return <DefaultCover book={book} title={title} authorName={authorName} spineColor={spineColor} className={className} />;
   }
 
-  return (
-    <div className={`relative ${className || ''}`}>
-      {imgState === 'loading' && <CoverSkeleton />}
-      <img
-        src={sanitizedUrl}
-        alt={title}
-        onLoad={() => setImgState('loaded')}
-        onError={() => setImgState('error')}
-        className={`w-full h-full object-cover rounded-lg ${imgState !== 'loaded' ? 'invisible' : ''}`}
-      />
-      {imgState === 'error' && (
-        <DefaultCover title={title} authorName={authorName} spineColor={spineColor} />
-      )}
-    </div>
-  );
+  return <DefaultCover book={book} title={title} authorName={authorName} spineColor={spineColor} className={className} />;
 }
