@@ -38,5 +38,13 @@ export default function usePulledOutBook() {
     [pulledOutBookId],
   );
 
-  return { pulledOutBookId, pullOut, dismiss, placeBack, isPlacingBack, toggle, isPulledOut, duration };
+  const getReaderUrl = useCallback(
+    (bookId, chapterId) => {
+      const base = `/reader/${bookId}`;
+      return chapterId ? `${base}?chapter=${chapterId}` : base;
+    },
+    [],
+  );
+
+  return { pulledOutBookId, pullOut, dismiss, placeBack, isPlacingBack, toggle, isPulledOut, duration, getReaderUrl };
 }

@@ -32,7 +32,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   const { t } = useTranslation('shelf');
   const prefersReducedMotion = useReducedMotion();
   const navigate = useNavigate();
-  const { pulledOutBookId, toggle, placeBack, isPlacingBack } = usePulledOutBook();
+  const { pulledOutBookId, toggle, placeBack, isPlacingBack, getReaderUrl } = usePulledOutBook();
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
   const { width: viewportWidth } = useDebouncedResize();
@@ -116,7 +116,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
             key="overlay"
             book={pulledBook}
             onDismiss={handlePlaceBack}
-            onRead={() => navigate(`/reader/${pulledBook._id}`)}
+            onRead={() => navigate(getReaderUrl(pulledBook._id))}
             onEdit={() => navigate(`/editor/${pulledBook._id}`)}
             onDesignCover={() => navigate(`/cover/${pulledBook._id}`)}
             onViewCover={handleViewCover}
@@ -131,7 +131,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
           isOpen={coverOverlayOpen}
           book={pulledBook}
           onClose={handleCloseCover}
-          onRead={() => navigate(`/reader/${pulledBook._id}`)}
+          onRead={() => navigate(getReaderUrl(pulledBook._id))}
         />
       )}
     </section>

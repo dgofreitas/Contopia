@@ -4,23 +4,23 @@
 
 ## SDLC STATUS
 - [x] Technical Analysis — Architect
-- [ ] Implementation — TechLead
+- [x] Implementation — TechLead
 - [ ] Merge Request
 
 ## BACKEND
 - [x] model/schema — N/A (no new models; validation schema done with BackendDeveloper)
 - [x] reader-router.js + reader-manager.js — public chapter endpoint, validation schema
 - [x] app.js mount — mount reader-router at /api/v1/reader
-- [x] tests — backend/src/app/reader/__tests__/reader-manager.test.js
+- [ ] tests — backend/src/app/reader/__tests__/reader-manager.test.js
 
 ## FRONTEND
-- [ ] ChapterDrawer, ChapterDrawerItem, NextChapterButton — responsive, a11y, framer-motion
-- [ ] reader-store.js — Zustand for chapter nav state
-- [ ] useReadingProgressQuery.js + useUpdateReadingProgress.js — TanStack Query hooks
-- [ ] ReaderPage.jsx — integration of all components, chapter navigation
-- [ ] i18n — en/reader.json + pt-BR/reader.json (new keys)
-- [ ] hooks/useChaptersQuery.js — verify refetchOnWindowFocus: false
-- [ ] hooks/usePulledOutBook.js — pass chapterId query param on navigation
+- [x] ChapterDrawer, ChapterDrawerItem, NextChapterButton — responsive, a11y, framer-motion
+- [x] reader-store.js — Zustand for chapter nav state
+- [x] useReadingProgressQuery.js + useUpdateReadingProgress.js — TanStack Query hooks
+- [x] ReaderPage.jsx — integration of all components, chapter navigation
+- [x] i18n — en/reader.json + pt-BR/reader.json (new keys)
+- [x] hooks/useChaptersQuery.js — verify refetchOnWindowFocus: false
+- [x] hooks/usePulledOutBook.js — pass chapterId query param on navigation
 - [ ] tests — ChapterDrawer, ChapterDrawerItem, NextChapterButton, hooks
 
 ## QUALIDADE E ENTREGA

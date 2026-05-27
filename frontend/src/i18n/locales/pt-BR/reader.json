@@ -4,5 +4,13 @@
   "backToShelf": "Voltar para Estante",
   "prevChapter": "Anterior",
   "nextChapter": "Próximo",
-  "chapterOf": "Capítulo {{current}} de {{total}}"
+  "chapterOf": "Capítulo {{current}} de {{total}}",
+  "chapterList": "Capítulos",
+  "chapterRead": "lido",
+  "chapterUnread": "não lido",
+  "chapterInProgress": "em progresso",
+  "openChapterList": "Abrir lista de capítulos",
+  "nextChapterBtn": "Próximo Capítulo",
+  "navigatedToChapter": "Navegado para {{chapterTitle}}",
+  "close": "Fechar"
 }
