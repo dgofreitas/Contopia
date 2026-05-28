@@ -20,6 +20,6 @@
 
 ## QUALIDADE E ENTREGA
 - [x] TESTS
-- [x] QA
+- [x] QA ✅ R3 — security fix validated, zero regression
 - [x] CODE REVIEW
 - [ ] MERGE REQUEST
