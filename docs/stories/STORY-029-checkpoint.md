@@ -18,7 +18,7 @@
 - [x] component: ReaderSettings.jsx - font/theme settings panel (MVP)
 
 ## QUALIDADE E ENTREGA
-- [ ] TESTS
+- [x] TESTS
 - [ ] QA
 - [ ] CODE REVIEW
 - [ ] MERGE REQUEST
