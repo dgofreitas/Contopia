@@ -16,6 +16,7 @@ import ReaderProgressBar from '../../components/reader/ReaderProgressBar';
 import ReaderTapZones from '../../components/reader/ReaderTapZones';
 import ReaderSettings from '../../components/reader/ReaderSettings';
 import A11yAnnouncer from '../../components/common/A11yAnnouncer';
+import { sanitizeRichContent } from '../../lib/sanitize';
 
 const THEME_CONTENT_CLASSES = {
   light: 'bg-white text-gray-900',
@@ -94,8 +95,10 @@ export default function ReaderPage() {
     }
   }, [isFullscreen, storeIsFullscreen, storeEnterFullscreen, storeExitFullscreen]);
 
+  const currentChapter = chapters[currentChapterIndex];
+  const sanitizedContent = sanitizeRichContent(currentChapter?.content || '');
+
   useEffect(() => {
-    const currentChapter = chapters[currentChapterIndex];
     if (currentChapter && storeIsFullscreen) {
       setAnnouncement(t('readingAnnouncement', { bookTitle: book?.title || '', chapterTitle: currentChapter.title }));
     }
@@ -224,8 +227,6 @@ export default function ReaderPage() {
     showToolbar();
   }, [enterFullscreen, storeEnterFullscreen, showToolbar]);
 
-  const currentChapter = chapters[currentChapterIndex];
-
   const contentFontClass = FONT_SIZE_CLASSES[fontSize] || 'text-base';
   const themeContentClass = THEME_CONTENT_CLASSES[theme] || THEME_CONTENT_CLASSES.light;
   const themeProseClass = THEME_PROSE_CLASSES[theme] || THEME_PROSE_CLASSES.light;
@@ -271,7 +272,7 @@ export default function ReaderPage() {
               <h2 id="chapter-title" className="text-2xl font-bold mb-6">{currentChapter.title}</h2>
               <div
                 className="leading-relaxed whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: currentChapter.content || '' }}
+                dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                 tabIndex={0}
               />
             </motion.article>
@@ -354,7 +355,7 @@ export default function ReaderPage() {
             <h2 className="text-2xl font-bold text-gray-800 mb-6">{currentChapter.title}</h2>
             <div
               className="text-gray-700 leading-relaxed whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: currentChapter.content || '' }}
+              dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
           </motion.article>
         ) : (

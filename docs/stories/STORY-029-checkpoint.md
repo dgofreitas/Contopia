@@ -20,5 +20,5 @@
 ## QUALIDADE E ENTREGA
 - [x] TESTS
 - [x] QA
-- [ ] CODE REVIEW
+- [x] CODE REVIEW
 - [ ] MERGE REQUEST
