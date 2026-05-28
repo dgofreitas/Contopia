@@ -63,3 +63,19 @@
     outline: 3px solid #d97706;
   }
 }
+
+.reader-fullscreen-fallback .reader-fullscreen-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-fullscreen-container,
+  .reader-toolbar,
+  .reader-progress-bar,
+  .reader-tap-zones {
+    transition: none !important;
+    animation: none !important;
+  }
+}
