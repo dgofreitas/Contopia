@@ -13,15 +13,15 @@
 - [x] validation-schemas.js: Add `finished: z.boolean().optional()`
 
 ## FRONTEND
-- [x] useProgressSync.js: Local-first progress sync orchestrator
+- [ ] useProgressSync.js: Local-first progress sync orchestrator
 - [x] useAllReadingProgressQuery.js: Bulk progress fetch hook
-- [ ] ShelfProgressIndicator.jsx: Accessible progress bar overlay
-- [x] ReaderPage.jsx: Integrate progress write-back, finished state, restart flow
-- [x] reader-store.js: Add `localProgress`, `syncStatus` state + actions
-- [x] ReaderProgressBar.jsx: Accept server `percentage` prop
-- [ ] BookshelfGridLayout.jsx: Fetch all progress, pass to grid
-- [ ] BookSpine.jsx: Render `ShelfProgressIndicator` overlay
-- [ ] i18n shelf strings (en + pt-BR)
+- [x] ShelfProgressIndicator.jsx: Accessible progress bar overlay
+- [ ] ReaderPage.jsx: Integrate progress write-back, finished state, restart flow
+- [ ] reader-store.js: Add `localProgress`, `syncStatus` state + actions
+- [ ] ReaderProgressBar.jsx: Accept server `percentage` prop
+- [x] BookshelfGridLayout.jsx: Fetch all progress, pass to grid
+- [x] BookSpine.jsx: Render `ShelfProgressIndicator` overlay
+- [x] i18n shelf strings (en + pt-BR)
 
 ## QUALIDADE E ENTREGA
 - [ ] TESTS
