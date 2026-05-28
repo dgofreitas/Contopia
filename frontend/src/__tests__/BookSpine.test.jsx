@@ -110,6 +110,41 @@ describe('BookSpine', () => {
     expect(btn.style.boxShadow).toBeFalsy();
   });
 
+  // ── STORY-033: ShelfProgressIndicator integration ────────────
+
+  describe('progress integration (STORY-033)', () => {
+    it('renders ShelfProgressIndicator when progress is provided', () => {
+      const progress = { percentage: 60, finished: false };
+      const { container } = render(<BookSpine book={baseBook} progress={progress} />);
+      // Progressbar should be present
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('passes percentage to ShelfProgressIndicator', () => {
+      const progress = { percentage: 75, finished: false };
+      render(<BookSpine book={baseBook} progress={progress} />);
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '75');
+    });
+
+    it('passes finished flag to ShelfProgressIndicator', () => {
+      const progress = { percentage: 100, finished: true };
+      render(<BookSpine book={baseBook} progress={progress} />);
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '100');
+    });
+
+    it('does not render progress indicator when progress is not provided', () => {
+      render(<BookSpine book={baseBook} />);
+      expect(screen.queryByRole('progressbar')).toBeNull();
+    });
+
+    it('does not render progress indicator when progress is null', () => {
+      render(<BookSpine book={baseBook} progress={null} />);
+      expect(screen.queryByRole('progressbar')).toBeNull();
+    });
+  });
+
   describe('STORY-013: settle-back transition', () => {
     it('has CSS transition when not pulled out', () => {
       mockUseReducedMotion.mockReturnValue(false);

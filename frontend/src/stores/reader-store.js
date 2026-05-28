@@ -11,6 +11,8 @@ const useReaderStore = create((set, get) => ({
   isSettingsOpen: false,
   fontSize: 'medium',
   theme: 'light',
+  localProgress: null,
+  syncStatus: 'idle',
 
   setCurrentChapterIndex: (idx) => set({ currentChapterIndex: idx }),
   openChapterDrawer: () => set({ isChapterDrawerOpen: true }),
@@ -61,6 +63,9 @@ const useReaderStore = create((set, get) => ({
 
   setFontSize: (size) => set({ fontSize: size }),
   setTheme: (theme) => set({ theme }),
+
+  setLocalProgress: (progress) => set({ localProgress: progress }),
+  setSyncStatus: (status) => set({ syncStatus: status }),
 }));
 
 export default useReaderStore;

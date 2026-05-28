@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from 'flowbite-react';
 import { HiExclamationCircle } from 'react-icons/hi';
 import useBooksQuery from '../../hooks/useBooksQuery';
+import useAllReadingProgressQuery from '../../hooks/useAllReadingProgressQuery';
 import useBookStore from '../../stores/book-store';
 import BookshelfGrid from '../../components/shelf/BookshelfGrid';
 import ShelfSkeleton from '../../components/shelf/ShelfSkeleton';
@@ -13,11 +14,25 @@ import EmptyShelfState from '../../components/shelf/EmptyShelfState';
 export default function BookshelfGridLayout({ highlightBookId }) {
   const { t } = useTranslation('shelf');
   const { data, isLoading, isError, refetch } = useBooksQuery();
+  const { data: progressData } = useAllReadingProgressQuery();
   const setBooks = useBookStore((s) => s.setBooks);
   const highlightRef = useRef(null);
 
   const books = data?.data ?? [];
   const hasBooks = books.length > 0;
+
+  // Build a map of bookId → progress for quick lookup
+  const progressMap = useMemo(() => {
+    if (!progressData?.data) return {};
+    const map = {};
+    for (const entry of progressData.data) {
+      map[entry.bookId] = {
+        percentage: entry.percentage ?? 0,
+        finished: entry.finished ?? false,
+      };
+    }
+    return map;
+  }, [progressData]);
 
   // Sync to Zustand store when data arrives
   useEffect(() => {
@@ -77,9 +92,9 @@ export default function BookshelfGridLayout({ highlightBookId }) {
     }
 
     return (
-      <BookshelfGrid books={books} onBookClick={handleBookClick} highlightBookId={highlightBookId} highlightRef={highlightRef} />
+      <BookshelfGrid books={books} onBookClick={handleBookClick} highlightBookId={highlightBookId} highlightRef={highlightRef} progressMap={progressMap} />
     );
-  }, [isLoading, isError, books, hasBooks, t, handleRetry, handleBookClick, highlightBookId]);
+  }, [isLoading, isError, books, hasBooks, t, handleRetry, handleBookClick, highlightBookId, progressMap]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4">

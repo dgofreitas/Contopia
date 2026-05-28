@@ -35,5 +35,8 @@
   "goToShelf": "Go to my shelf",
   "draftsTitle": "My Drafts",
   "wordCount": "{{count}} words",
-  "emptyDraftsMessage": "No drafts — start writing!"
+  "emptyDraftsMessage": "No drafts — start writing!",
+  "progressLabel": "{{percentage}}% read",
+  "finishedLabel": "Finished",
+  "continueReadingLabel": "Continue reading"
 }

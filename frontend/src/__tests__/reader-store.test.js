@@ -14,6 +14,8 @@ describe('reader-store', () => {
       isSettingsOpen: false,
       fontSize: 'medium',
       theme: 'light',
+      localProgress: null,
+      syncStatus: 'idle',
     });
   });
 
@@ -28,6 +30,14 @@ describe('reader-store', () => {
 
     it('has isChapterDrawerOpen default of false', () => {
       expect(useReaderStore.getState().isChapterDrawerOpen).toBe(false);
+    });
+
+    it('has localProgress default of null (STORY-033)', () => {
+      expect(useReaderStore.getState().localProgress).toBeNull();
+    });
+
+    it('has syncStatus default of idle (STORY-033)', () => {
+      expect(useReaderStore.getState().syncStatus).toBe('idle');
     });
   });
 
@@ -348,6 +358,55 @@ describe('reader-store', () => {
       useReaderStore.getState().setFontSize('large');
       useReaderStore.getState().setTheme('sepia');
       expect(useReaderStore.getState().fontSize).toBe('large');
+    });
+  });
+
+  // ── STORY-033: Progress state ────────────────────────────────
+  describe('localProgress state (STORY-033)', () => {
+    it('defaults localProgress to null', () => {
+      expect(useReaderStore.getState().localProgress).toBeNull();
+    });
+
+    it('sets localProgress to an object', () => {
+      useReaderStore.getState().setLocalProgress({ percentage: 50, lastChapterId: 'ch1' });
+      const state = useReaderStore.getState();
+      expect(state.localProgress).toEqual({ percentage: 50, lastChapterId: 'ch1' });
+    });
+
+    it('sets localProgress to null', () => {
+      useReaderStore.getState().setLocalProgress({ percentage: 75 });
+      useReaderStore.getState().setLocalProgress(null);
+      expect(useReaderStore.getState().localProgress).toBeNull();
+    });
+
+    it('does not affect syncStatus when setting localProgress', () => {
+      useReaderStore.getState().setSyncStatus('saving');
+      useReaderStore.getState().setLocalProgress({ percentage: 25 });
+      expect(useReaderStore.getState().syncStatus).toBe('saving');
+    });
+  });
+
+  describe('syncStatus state (STORY-033)', () => {
+    it('sets syncStatus to saving', () => {
+      useReaderStore.getState().setSyncStatus('saving');
+      expect(useReaderStore.getState().syncStatus).toBe('saving');
+    });
+
+    it('sets syncStatus to error', () => {
+      useReaderStore.getState().setSyncStatus('error');
+      expect(useReaderStore.getState().syncStatus).toBe('error');
+    });
+
+    it('sets syncStatus back to idle', () => {
+      useReaderStore.getState().setSyncStatus('saving');
+      useReaderStore.getState().setSyncStatus('idle');
+      expect(useReaderStore.getState().syncStatus).toBe('idle');
+    });
+
+    it('does not affect localProgress when setting syncStatus', () => {
+      useReaderStore.getState().setLocalProgress({ percentage: 100 });
+      useReaderStore.getState().setSyncStatus('saving');
+      expect(useReaderStore.getState().localProgress).toEqual({ percentage: 100 });
     });
   });
 });
