@@ -35,5 +35,8 @@
   "goToShelf": "Ir para minha estante",
   "draftsTitle": "Meus Rascunhos",
   "wordCount": "{{count}} palavras",
-  "emptyDraftsMessage": "Nenhum rascunho — comece a escrever!"
+  "emptyDraftsMessage": "Nenhum rascunho — comece a escrever!",
+  "progressLabel": "{{percentage}}% lido",
+  "finishedLabel": "Concluído",
+  "continueReadingLabel": "Continuar lendo"
 }

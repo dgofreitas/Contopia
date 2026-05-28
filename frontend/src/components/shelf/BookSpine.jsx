@@ -5,9 +5,10 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 import { getTextColor, spineColorFromId } from '../../lib/spine-colors';
+import ShelfProgressIndicator from '../reader/ShelfProgressIndicator';
 
 const BookSpine = React.forwardRef(function BookSpine(
-  { book, onClick, isPulledOut, onPullOut, isHighlighted, highlightRef },
+  { book, onClick, isPulledOut, onPullOut, isHighlighted, highlightRef, progress },
   ref,
 ) {
   const { t } = useTranslation('shelf');
@@ -42,7 +43,7 @@ const BookSpine = React.forwardRef(function BookSpine(
       aria-label={t('ariaSpineLabel', { title })}
       aria-expanded={isPulledOut}
       tabIndex={isHighlighted ? 0 : undefined}
-      className={`flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[48px] min-h-[48px] select-none${isHighlighted ? ' book-highlight-ring' : ''}`}
+      className={`relative flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[48px] min-h-[48px] select-none${isHighlighted ? ' book-highlight-ring' : ''}`}
       style={{
         backgroundColor: spineColor,
         color: textColor,
@@ -63,6 +64,12 @@ const BookSpine = React.forwardRef(function BookSpine(
       >
         {title}
       </span>
+      {progress && (
+        <ShelfProgressIndicator
+          percentage={progress.percentage}
+          finished={progress.finished}
+        />
+      )}
     </motion.button>
   );
 });

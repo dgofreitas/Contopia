@@ -1,6 +1,6 @@
 import BookSpine from './BookSpine';
 
-export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, highlightBookId, highlightRef }) {
+export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, highlightBookId, highlightRef, progressMap = {} }) {
   const hasPlacingBack = placingBackBookId && books.some(b => b._id === placingBackBookId);
 
   return (
@@ -9,13 +9,14 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
         {books.map((book) => (
           <div key={book._id} className="shelf-spine-cell">
             <BookSpine
-              book={book}
-              onClick={() => onBookClick(book._id)}
-              isPulledOut={book._id === pulledOutBookId}
-              onPullOut={() => onBookClick(book._id)}
-              isHighlighted={book._id === highlightBookId}
-              highlightRef={book._id === highlightBookId ? highlightRef : undefined}
-            />
+               book={book}
+               onClick={() => onBookClick(book._id)}
+               isPulledOut={book._id === pulledOutBookId}
+               onPullOut={() => onBookClick(book._id)}
+               isHighlighted={book._id === highlightBookId}
+               highlightRef={book._id === highlightBookId ? highlightRef : undefined}
+               progress={progressMap[book._id]}
+             />
           </div>
         ))}
       </div>
