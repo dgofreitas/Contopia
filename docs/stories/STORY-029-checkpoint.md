@@ -12,10 +12,10 @@
 - [ ] page: ReaderPage.jsx - refactor for fullscreen mode, tap zones, toolbar integration
 - [x] i18n: en/reader.json + pt-BR/reader.json - add fullscreen/toolbar/settings strings
 - [x] hooks: useFullscreen.js - Fullscreen API hook with CSS fallback
-- [ ] component: ReaderToolbar.jsx - auto-hiding toolbar overlay
-- [ ] component: ReaderProgressBar.jsx - bottom progress indicator
-- [ ] component: ReaderTapZones.jsx - tap interaction overlay
-- [ ] component: ReaderSettings.jsx - font/theme settings panel (MVP)
+- [x] component: ReaderToolbar.jsx - auto-hiding toolbar overlay
+- [x] component: ReaderProgressBar.jsx - bottom progress indicator
+- [x] component: ReaderTapZones.jsx - tap interaction overlay
+- [x] component: ReaderSettings.jsx - font/theme settings panel (MVP)
 
 ## QUALIDADE E ENTREGA
 - [ ] TESTS
