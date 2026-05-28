@@ -4,12 +4,12 @@
 
 ## SDLC STATUS
 - [x] Technical Analysis - Architect
-- [ ] Implementation - TechLead
+- [x] Implementation - TechLead
 - [ ] Merge Request
 
 ## FRONTEND
 - [x] store: reader-store.js - add fullscreen + toolbar + settings state
-- [ ] page: ReaderPage.jsx - refactor for fullscreen mode, tap zones, toolbar integration
+- [x] page: ReaderPage.jsx - refactor for fullscreen mode, tap zones, toolbar integration
 - [x] i18n: en/reader.json + pt-BR/reader.json - add fullscreen/toolbar/settings strings
 - [x] hooks: useFullscreen.js - Fullscreen API hook with CSS fallback
 - [x] component: ReaderToolbar.jsx - auto-hiding toolbar overlay
