@@ -102,6 +102,21 @@ describe('ReaderToolbar', () => {
     });
   });
 
+  // ── bookTitle prop ───────────────────────────────────────────
+
+  describe('bookTitle prop (b28ae62 fix)', () => {
+    it('renders bookTitle in the toolbar when provided', () => {
+      render(<ReaderToolbar {...defaultProps} bookTitle="Test Book" />);
+      expect(screen.getByText('Test Book')).toBeInTheDocument();
+    });
+
+    it('renders bookTitle with aria-hidden="true"', () => {
+      render(<ReaderToolbar {...defaultProps} bookTitle="Test Book" />);
+      const titleSpan = screen.getByText('Test Book');
+      expect(titleSpan.getAttribute('aria-hidden')).toBe('true');
+    });
+  });
+
   // ── Escape key hides toolbar ─────────────────────────────────
 
   describe('Escape key', () => {
