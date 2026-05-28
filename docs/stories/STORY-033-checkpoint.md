@@ -6,7 +6,7 @@
 - [x] Technical Analysis — Architect
 - [x] Implementation — TechLead
 - [x] Tests — TestEngineer
-- [ ] Merge Request
+- [x] Merge Request
 
 ## BACKEND
 - [x] book-model.js: Add `finished` Boolean to readingProgressSchema
@@ -48,6 +48,6 @@ Coverage report:
 
 ## QUALIDADE E ENTREGA
 - [x] TESTS
-- [ ] QA
-- [ ] CODE REVIEW
-- [ ] MERGE REQUEST
+- [x] QA
+- [x] CODE REVIEW
+- [x] MERGE REQUEST
