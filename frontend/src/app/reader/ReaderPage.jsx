@@ -6,6 +6,7 @@ import { HiBookOpen, HiViewList, HiArrowsExpand } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
 import useReaderStore from '../../stores/reader-store';
 import useChaptersQuery from '../../hooks/useChaptersQuery';
+import useBookEditQuery from '../../hooks/useBookEditQuery';
 import useReadingProgressQuery from '../../hooks/useReadingProgressQuery';
 import useFullscreen from '../../hooks/useFullscreen';
 import ChapterDrawer from '../../components/reader/ChapterDrawer';
@@ -55,6 +56,7 @@ export default function ReaderPage() {
   const theme = useReaderStore((s) => s.theme);
 
   const { data: chapters = [], isLoading: chaptersLoading } = useChaptersQuery(bookId);
+  const { data: book } = useBookEditQuery(bookId);
   const { data: progress } = useReadingProgressQuery(bookId);
 
   const [announcement, setAnnouncement] = useState('');
@@ -95,7 +97,7 @@ export default function ReaderPage() {
   useEffect(() => {
     const currentChapter = chapters[currentChapterIndex];
     if (currentChapter && storeIsFullscreen) {
-      setAnnouncement(t('readingAnnouncement', { bookTitle: '', chapterTitle: currentChapter.title }));
+      setAnnouncement(t('readingAnnouncement', { bookTitle: book?.title || '', chapterTitle: currentChapter.title }));
     }
   }, [currentChapterIndex, chapters, storeIsFullscreen, t]);
 
@@ -143,6 +145,35 @@ export default function ReaderPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [storeIsFullscreen, currentChapterIndex, chapters.length, toggleChapterDrawer, exitFullscreen, storeExitFullscreen, setCurrentChapterIndex]);
+
+  useEffect(() => {
+    if (!storeIsFullscreen) return;
+
+    const handlePopState = (e) => {
+      if (window.confirm(t('exitConfirmation'))) {
+        exitFullscreen();
+        storeExitFullscreen();
+        navigate('/shelf');
+      } else {
+        e.preventDefault();
+        history.pushState({ reader: true }, '', window.location.href);
+      }
+    };
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = t('exitConfirmation');
+    };
+
+    history.pushState({ reader: true }, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [storeIsFullscreen, t, exitFullscreen, storeExitFullscreen, navigate]);
 
   const handleChapterSelect = useCallback(
     (chapter) => {
@@ -216,6 +247,7 @@ export default function ReaderPage() {
         <A11yAnnouncer message={announcement} />
 
         <ReaderToolbar
+          bookTitle={book?.title || ''}
           onBackToShelf={handleBackToShelf}
           onToggleChapterDrawer={handleToggleChapterDrawer}
           onOpenSettings={handleOpenSettings}
@@ -232,12 +264,15 @@ export default function ReaderPage() {
               initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
+              role="article"
+              aria-labelledby="chapter-title"
               className={`prose prose-lg max-w-none ${contentFontClass} ${themeProseClass}`}
             >
-              <h2 className="text-2xl font-bold mb-6">{currentChapter.title}</h2>
+              <h2 id="chapter-title" className="text-2xl font-bold mb-6">{currentChapter.title}</h2>
               <div
                 className="leading-relaxed whitespace-pre-wrap"
                 dangerouslySetInnerHTML={{ __html: currentChapter.content || '' }}
+                tabIndex={0}
               />
             </motion.article>
           ) : (

@@ -41,6 +41,10 @@ vi.mock('../hooks/useChaptersQuery', () => ({
   }),
 }));
 
+vi.mock('../hooks/useBookEditQuery', () => ({
+  default: () => ({ data: { title: 'Test Book' } }),
+}));
+
 vi.mock('../hooks/useReadingProgressQuery', () => ({
   default: () => ({ data: null }),
 }));
@@ -67,8 +71,9 @@ vi.mock('../components/reader/ChapterDrawer', () => ({
 }));
 
 vi.mock('../components/reader/ReaderToolbar', () => ({
-  default: ({ onBackToShelf, onToggleChapterDrawer, onOpenSettings }) => (
+  default: ({ bookTitle, onBackToShelf, onToggleChapterDrawer, onOpenSettings }) => (
     <div data-testid="reader-toolbar">
+      <span data-testid="toolbar-book-title">{bookTitle}</span>
       <button data-testid="back-to-shelf" onClick={onBackToShelf}>Back</button>
       <button data-testid="toggle-drawer" onClick={onToggleChapterDrawer}>Chapters</button>
       <button data-testid="open-settings" onClick={onOpenSettings}>Settings</button>

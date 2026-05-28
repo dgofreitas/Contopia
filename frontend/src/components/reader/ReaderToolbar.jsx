@@ -6,7 +6,7 @@ import useReaderStore from '../../stores/reader-store';
 
 const TOOLBAR_AUTO_HIDE_MS = 2000;
 
-export default function ReaderToolbar({ onBackToShelf, onToggleChapterDrawer, onOpenSettings }) {
+export default function ReaderToolbar({ bookTitle, onBackToShelf, onToggleChapterDrawer, onOpenSettings }) {
   const { t } = useTranslation('reader');
   const prefersReducedMotion = useReducedMotion();
   const isToolbarVisible = useReaderStore((s) => s.isToolbarVisible);
@@ -109,7 +109,7 @@ export default function ReaderToolbar({ onBackToShelf, onToggleChapterDrawer, on
           </button>
 
           <span className="text-sm font-semibold text-white/90 truncate mx-4 hidden sm:block" aria-hidden="true">
-            {''}
+            {bookTitle || ''}
           </span>
 
           <div className="flex items-center gap-2">
