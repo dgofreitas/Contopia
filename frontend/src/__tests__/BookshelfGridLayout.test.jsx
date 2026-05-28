@@ -5,8 +5,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import BookshelfGridLayout from '../app/shelf/BookshelfGridLayout';
 import * as useBooksQueryModule from '../hooks/useBooksQuery';
 
+const mockProgressData = vi.hoisted(() => ({ data: null }));
+
 vi.mock('../hooks/useBooksQuery', () => ({
   default: vi.fn(),
+}));
+
+vi.mock('../hooks/useAllReadingProgressQuery', () => ({
+  default: () => ({ data: mockProgressData.data }),
 }));
 
 vi.mock('../stores/book-store', () => ({
@@ -17,17 +23,21 @@ vi.mock('../stores/book-store', () => ({
 
 // setup.js already mocks react-i18next globally to pass through keys
 
-// Mock BookshelfGrid to expose the highlightRef
+// Mock BookshelfGrid to expose the highlightRef and verify progressMap
+let lastProgressMap = null;
 vi.mock('../components/shelf/BookshelfGrid', () => ({
-  default: ({ books, onBookClick, highlightBookId, highlightRef }) => (
-    <div data-testid="bookshelf-grid">
-      {books.map((book) => (
-        <div key={book._id} ref={highlightBookId === book._id ? highlightRef : null} data-book-id={book._id}>
-          {book.title}
-        </div>
-      ))}
-    </div>
-  ),
+  default: ({ books, onBookClick, highlightBookId, highlightRef, progressMap }) => {
+    lastProgressMap = progressMap;
+    return (
+      <div data-testid="bookshelf-grid">
+        {books.map((book) => (
+          <div key={book._id} ref={highlightBookId === book._id ? highlightRef : null} data-book-id={book._id}>
+            {book.title}
+          </div>
+        ))}
+      </div>
+    );
+  },
 }));
 
 // Mock ShelfSkeleton
@@ -181,5 +191,60 @@ describe('BookshelfGridLayout', () => {
       expect(text).not.toContain('ordenar');
       expect(text).not.toContain('order');
     }
+  });
+
+  // ── STORY-033: Progress integration ──────────────────────────
+
+  describe('reading progress integration (STORY-033)', () => {
+    it('does not crash when progressData is null (no reading progress)', () => {
+      mockProgressData.data = null;
+      useBooksQueryModule.default.mockReturnValue({
+        data: { data: [{ _id: '1', title: 'Book' }] },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+      expect(() => renderWithProviders(<BookshelfGridLayout />)).not.toThrow();
+    });
+
+    it('passes progressMap to BookshelfGrid when progress data exists', () => {
+      mockProgressData.data = [
+        { bookId: '1', percentage: 75, finished: false },
+        { bookId: '2', percentage: 100, finished: true },
+      ];
+      useBooksQueryModule.default.mockReturnValue({
+        data: {
+          data: [
+            { _id: '1', title: 'Book 1' },
+            { _id: '2', title: 'Book 2' },
+            { _id: '3', title: 'Book 3' },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+      renderWithProviders(<BookshelfGridLayout />);
+      // Should render books without crashing
+      expect(screen.getByText('Book 1')).toBeInTheDocument();
+      expect(screen.getByText('Book 2')).toBeInTheDocument();
+    });
+
+    it('displays books correctly alongside progress', () => {
+      mockProgressData.data = [
+        { bookId: '1', percentage: 50, finished: false },
+      ];
+      useBooksQueryModule.default.mockReturnValue({
+        data: { data: [{ _id: '1', title: 'Reading Progress Book' }] },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+      renderWithProviders(<BookshelfGridLayout />);
+      expect(screen.getByText('Reading Progress Book')).toBeInTheDocument();
+    });
   });
 });

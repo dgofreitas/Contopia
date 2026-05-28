@@ -63,6 +63,40 @@ describe('ReaderProgressBar', () => {
     });
   });
 
+  // ── STORY-033: percentage prop ──────────────────────────────
+
+  describe('percentage prop (STORY-033)', () => {
+    it('uses percentage prop when provided instead of chapter-based calculation', () => {
+      render(<ReaderProgressBar currentChapterIndex={0} totalChapters={10} percentage={65} />);
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '65');
+    });
+
+    it('clamps percentage above 100 to 100', () => {
+      render(<ReaderProgressBar currentChapterIndex={0} totalChapters={10} percentage={150} />);
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '100');
+    });
+
+    it('clamps percentage below 0 to 0', () => {
+      render(<ReaderProgressBar currentChapterIndex={0} totalChapters={10} percentage={-10} />);
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '0');
+    });
+
+    it('falls back to chapter-based calculation when percentage is null', () => {
+      render(<ReaderProgressBar currentChapterIndex={4} totalChapters={10} percentage={null} />);
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '50');
+    });
+
+    it('uses percentage=0 when explicitly set to 0', () => {
+      render(<ReaderProgressBar currentChapterIndex={5} totalChapters={10} percentage={0} />);
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '0');
+    });
+  });
+
   // ── Negative: edge cases ─────────────────────────────────────
 
   describe('edge cases', () => {
