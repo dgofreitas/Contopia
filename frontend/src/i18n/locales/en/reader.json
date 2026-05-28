@@ -32,5 +32,8 @@
   "readingAnnouncement": "Reading {{bookTitle}}, Chapter {{chapterTitle}}",
   "tapCenter": "Toggle toolbar",
   "tapLeft": "Previous chapter",
-  "tapRight": "Next chapter"
+  "tapRight": "Next chapter",
+  "theEnd": "The End",
+  "finishedMessage": "You've finished reading \"{{bookTitle}}\"!",
+  "restartBook": "Read Again"
 }

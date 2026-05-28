@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useMemo } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from 'flowbite-react';
@@ -8,6 +8,7 @@ import useReaderStore from '../../stores/reader-store';
 import useChaptersQuery from '../../hooks/useChaptersQuery';
 import useBookEditQuery from '../../hooks/useBookEditQuery';
 import useReadingProgressQuery from '../../hooks/useReadingProgressQuery';
+import useProgressSync from '../../hooks/useProgressSync';
 import useFullscreen from '../../hooks/useFullscreen';
 import ChapterDrawer from '../../components/reader/ChapterDrawer';
 import NextChapterButton from '../../components/reader/NextChapterButton';
@@ -59,12 +60,25 @@ export default function ReaderPage() {
   const { data: chapters = [], isLoading: chaptersLoading } = useChaptersQuery(bookId);
   const { data: book } = useBookEditQuery(bookId);
   const { data: progress } = useReadingProgressQuery(bookId);
+  const { saveProgress, localProgress: syncedProgress } = useProgressSync(bookId);
 
   const [announcement, setAnnouncement] = useState('');
+  const [isFinished, setIsFinished] = useState(false);
+
+  // Determine the effective progress: prefer merged progress, fall back to server progress
+  const effectiveProgress = syncedProgress || progress;
+  const progressPercentage = effectiveProgress?.percentage != null
+    ? effectiveProgress.percentage
+    : null;
 
   useEffect(() => {
     const chapterParam = searchParams.get('chapter');
     if (chapters.length === 0) return;
+
+    // Check if book is already finished
+    if (effectiveProgress?.finished) {
+      setIsFinished(true);
+    }
 
     if (chapterParam) {
       const idx = chapters.findIndex((c) => c._id === chapterParam);
@@ -74,8 +88,8 @@ export default function ReaderPage() {
       }
     }
 
-    if (progress?.lastChapterId) {
-      const idx = chapters.findIndex((c) => c._id === progress.lastChapterId);
+    if (effectiveProgress?.lastChapterId) {
+      const idx = chapters.findIndex((c) => c._id === effectiveProgress.lastChapterId);
       if (idx >= 0) {
         setCurrentChapterIndex(idx);
         return;
@@ -83,7 +97,7 @@ export default function ReaderPage() {
     }
 
     setCurrentChapterIndex(0);
-  }, [chapters, progress, searchParams, setCurrentChapterIndex]);
+  }, [chapters, effectiveProgress, searchParams, setCurrentChapterIndex]);
 
   useEffect(() => {
     if (isFullscreen !== storeIsFullscreen) {
@@ -97,6 +111,52 @@ export default function ReaderPage() {
 
   const currentChapter = chapters[currentChapterIndex];
   const sanitizedContent = sanitizeRichContent(currentChapter?.content || '');
+
+  // Save progress on chapter change
+  const prevChapterIndexRef = useRef(currentChapterIndex);
+  useEffect(() => {
+    if (chapters.length === 0 || !bookId) return;
+
+    // Skip initial mount — progress is restored by position-restore effect
+    if (prevChapterIndexRef.current === currentChapterIndex && !prevChapterIndexRef.current) {
+      prevChapterIndexRef.current = currentChapterIndex;
+      return;
+    }
+    prevChapterIndexRef.current = currentChapterIndex;
+
+    const percentage = ((currentChapterIndex + 1) / chapters.length) * 100;
+    const currentChapter = chapters[currentChapterIndex];
+    const isLastChapter = currentChapterIndex === chapters.length - 1;
+    const finished = isLastChapter && percentage >= 99;
+
+    if (currentChapter) {
+      saveProgress({
+        lastChapterId: currentChapter._id,
+        lastPosition: 0,
+        percentage: Math.min(100, Math.round(percentage * 10) / 10),
+        finished,
+        _immediate: true,
+      });
+
+      if (finished) {
+        setIsFinished(true);
+      }
+    }
+  }, [currentChapterIndex, chapters, bookId, saveProgress]);
+
+  // Handle restart: go back to beginning
+  const handleRestart = useCallback(() => {
+    setCurrentChapterIndex(0);
+    setIsFinished(false);
+    saveProgress({
+      lastChapterId: null,
+      lastPosition: 0,
+      percentage: 0,
+      finished: false,
+      _immediate: true,
+    });
+    setAnnouncement(t('navigatedToChapter', { chapterTitle: chapters[0]?.title || '' }));
+  }, [chapters, setCurrentChapterIndex, saveProgress, t]);
 
   useEffect(() => {
     if (currentChapter && storeIsFullscreen) {
@@ -259,7 +319,27 @@ export default function ReaderPage() {
             onPreviousChapter={handlePreviousChapter}
             onNextChapter={handleNextChapter}
           />
-          {currentChapter ? (
+          {isFinished ? (
+            <div
+              className="flex flex-col items-center justify-center gap-6 py-20"
+              role="alert"
+              aria-live="assertive"
+            >
+              <h2 className="text-3xl font-bold text-gray-800" aria-label={t('theEnd')}>
+                {t('theEnd')}
+              </h2>
+              <p className="text-gray-600 text-lg">{t('finishedMessage', { bookTitle: book?.title || '' })}</p>
+              <Button
+                onClick={handleRestart}
+                color="amber"
+                size="lg"
+                className="mt-4 focus:ring-2 focus:ring-amber-300"
+                aria-label={t('restartBook')}
+              >
+                {t('restartBook')}
+              </Button>
+            </div>
+          ) : currentChapter ? (
             <motion.article
               key={currentChapter._id}
               initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
@@ -287,6 +367,7 @@ export default function ReaderPage() {
         <ReaderProgressBar
           currentChapterIndex={currentChapterIndex}
           totalChapters={chapters.length}
+          percentage={progressPercentage}
         />
 
         <ChapterDrawer
@@ -344,7 +425,27 @@ export default function ReaderPage() {
       </header>
 
       <section className="flex-1 overflow-y-auto px-4 py-8 max-w-2xl mx-auto w-full" aria-label={t('title')}>
-        {currentChapter ? (
+        {isFinished ? (
+          <div
+            className="flex flex-col items-center justify-center gap-6 py-20"
+            role="alert"
+            aria-live="assertive"
+          >
+            <h2 className="text-3xl font-bold text-gray-800" aria-label={t('theEnd')}>
+              {t('theEnd')}
+            </h2>
+            <p className="text-gray-600 text-lg">{t('finishedMessage', { bookTitle: book?.title || '' })}</p>
+            <Button
+              onClick={handleRestart}
+              color="amber"
+              size="lg"
+              className="mt-4 focus:ring-2 focus:ring-amber-300"
+              aria-label={t('restartBook')}
+            >
+              {t('restartBook')}
+            </Button>
+          </div>
+        ) : currentChapter ? (
           <motion.article
             key={currentChapter._id}
             initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}

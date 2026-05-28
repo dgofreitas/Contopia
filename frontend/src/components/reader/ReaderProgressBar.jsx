@@ -1,13 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 
-export default function ReaderProgressBar({ currentChapterIndex, totalChapters }) {
+export default function ReaderProgressBar({ currentChapterIndex, totalChapters, percentage }) {
   const { t } = useTranslation('reader');
   const prefersReducedMotion = useReducedMotion();
 
   if (totalChapters <= 0) return null;
 
-  const progress = ((currentChapterIndex + 1) / totalChapters) * 100;
+  // Use server/local percentage if provided; otherwise estimate from chapter index
+  const progress = percentage != null
+    ? Math.min(100, Math.max(0, percentage))
+    : ((currentChapterIndex + 1) / totalChapters) * 100;
 
   return (
     <div

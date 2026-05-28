@@ -14,7 +14,7 @@
   "navigatedToChapter": "Navegado para {{chapterTitle}}",
   "close": "Fechar",
   "enterFullscreen": "Entrar em Tela Cheia",
-  "exitFullscreen": "Sair da Tela Cheia",
+  "exitFullscreen": "Sair de Tela Cheia",
   "settings": "Configurações",
   "backToShelfFullscreen": "Voltar para Estante",
   "toggleToolbar": "Alternar barra de ferramentas",
@@ -32,5 +32,8 @@
   "readingAnnouncement": "Lendo {{bookTitle}}, Capítulo {{chapterTitle}}",
   "tapCenter": "Alternar barra de ferramentas",
   "tapLeft": "Capítulo anterior",
-  "tapRight": "Próximo capítulo"
+  "tapRight": "Próximo capítulo",
+  "theEnd": "Fim",
+  "finishedMessage": "Você terminou de ler \"{{bookTitle}}\"!",
+  "restartBook": "Ler Novamente"
 }
