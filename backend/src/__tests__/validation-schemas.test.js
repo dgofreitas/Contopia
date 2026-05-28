@@ -1,6 +1,6 @@
 // Contopia — Validation Schemas Tests
 import { describe, it, expect } from 'vitest';
-import { registerSchema, resendSchema, childLoginSchema, bookUpdateSchema, stickerSchema } from '../app/common/validation-schemas.js';
+import { registerSchema, resendSchema, childLoginSchema, bookUpdateSchema, stickerSchema, progressUpdateSchema } from '../app/common/validation-schemas.js';
 
 describe('Validation Schemas', () => {
   describe('registerSchema', () => {
@@ -407,6 +407,78 @@ describe('Validation Schemas', () => {
       expect(result.data.coverTitle).toBe('Custom Cover');
       expect(result.data.stickers).toHaveLength(1);
       expect(result.data.stickers[0].svgId).toBe('star');
+    });
+  });
+
+  describe('progressUpdateSchema — STORY-033', () => {
+    it('should accept valid progress update with all fields', () => {
+      const result = progressUpdateSchema.safeParse({
+        lastChapterId: '507f1f77bcf86cd799439011',
+        lastPosition: 42,
+        percentage: 75,
+        finished: true,
+      });
+      expect(result.success).toBe(true);
+      expect(result.data.lastChapterId).toBe('507f1f77bcf86cd799439011');
+      expect(result.data.lastPosition).toBe(42);
+      expect(result.data.percentage).toBe(75);
+      expect(result.data.finished).toBe(true);
+    });
+
+    it('should accept progress update with only percentage', () => {
+      const result = progressUpdateSchema.safeParse({ percentage: 50 });
+      expect(result.success).toBe(true);
+      expect(result.data.percentage).toBe(50);
+    });
+
+    it('should accept progress update with finished = true', () => {
+      const result = progressUpdateSchema.safeParse({ finished: true });
+      expect(result.success).toBe(true);
+      expect(result.data.finished).toBe(true);
+    });
+
+    it('should accept progress update with finished = false', () => {
+      const result = progressUpdateSchema.safeParse({ finished: false });
+      expect(result.success).toBe(true);
+      expect(result.data.finished).toBe(false);
+    });
+
+    it('should accept empty progress update (all optional)', () => {
+      const result = progressUpdateSchema.safeParse({});
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept lastChapterId as null', () => {
+      const result = progressUpdateSchema.safeParse({ lastChapterId: null });
+      expect(result.success).toBe(true);
+      expect(result.data.lastChapterId).toBeNull();
+    });
+
+    it('should reject non-boolean finished value', () => {
+      const result = progressUpdateSchema.safeParse({ finished: 'yes' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject numeric finished value', () => {
+      const result = progressUpdateSchema.safeParse({ finished: 1 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject percentage below 0', () => {
+      const result = progressUpdateSchema.safeParse({ percentage: -1 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject percentage above 100', () => {
+      const result = progressUpdateSchema.safeParse({ percentage: 101 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept finished alongside percentage', () => {
+      const result = progressUpdateSchema.safeParse({ percentage: 99, finished: true });
+      expect(result.success).toBe(true);
+      expect(result.data.percentage).toBe(99);
+      expect(result.data.finished).toBe(true);
     });
   });
 });

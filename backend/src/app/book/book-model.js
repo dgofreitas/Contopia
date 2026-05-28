@@ -353,6 +353,10 @@ const readingProgressSchema = new Schema(
       min: 0,
       max: 100,
     },
+    finished: {
+      type: Boolean,
+      default: false,
+    },
     deletedAt: {
       type: Date,
       default: null,

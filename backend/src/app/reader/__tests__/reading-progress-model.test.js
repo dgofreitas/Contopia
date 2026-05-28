@@ -203,4 +203,43 @@ describe('ReadingProgress Model', () => {
       expect(ReadingProgress.collection.collectionName).toBe('reading_progress');
     });
   });
+
+  describe('finished field (STORY-033)', () => {
+    it('should default finished to false', async () => {
+      const progress = await ReadingProgress.create({
+        userId: new mongoose.Types.ObjectId(),
+        bookId: new mongoose.Types.ObjectId(),
+      });
+      expect(progress.finished).toBe(false);
+    });
+
+    it('should accept finished = true', async () => {
+      const progress = await ReadingProgress.create({
+        userId: new mongoose.Types.ObjectId(),
+        bookId: new mongoose.Types.ObjectId(),
+        percentage: 99,
+        finished: true,
+      });
+      expect(progress.finished).toBe(true);
+    });
+
+    it('should accept finished = false explicitly', async () => {
+      const progress = await ReadingProgress.create({
+        userId: new mongoose.Types.ObjectId(),
+        bookId: new mongoose.Types.ObjectId(),
+        finished: false,
+      });
+      expect(progress.finished).toBe(false);
+    });
+
+    it('should coerce non-boolean finished to boolean (Mongoose coercion)', async () => {
+      // Mongoose coerces 'yes' to true for Boolean fields — not a strict validator
+      const progress = await ReadingProgress.create({
+        userId: new mongoose.Types.ObjectId(),
+        bookId: new mongoose.Types.ObjectId(),
+        finished: 'yes',
+      });
+      expect(progress.finished).toBe(true);
+    });
+  });
 });

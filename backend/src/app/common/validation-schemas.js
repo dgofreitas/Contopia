@@ -153,6 +153,7 @@ export const progressUpdateSchema = z.object({
   lastChapterId: z.string().regex(objectIdRegex, 'Invalid chapter ID format').optional().nullable(),
   lastPosition: z.number().min(0).optional(),
   percentage: z.number().min(0).max(100).optional(),
+  finished: z.boolean().optional(),
 });
 
 // ── STORY-005: New Schemas ────────────────────────────────────────────────────

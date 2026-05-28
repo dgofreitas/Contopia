@@ -354,14 +354,21 @@ export async function getChaptersByBookManager(bookId, authorId) {
 /**
  * Update or create reading progress for a user + book.
  */
-export async function updateReadingProgressManager(userId, bookId, { lastChapterId, lastPosition, percentage }) {
+export async function updateReadingProgressManager(userId, bookId, { lastChapterId, lastPosition, percentage, finished }) {
   const update = {};
   if (lastChapterId !== undefined) update.lastChapterId = lastChapterId;
   if (lastPosition !== undefined) update.lastPosition = lastPosition;
   if (percentage !== undefined) update.percentage = percentage;
 
+  // Auto-set finished based on percentage threshold (STORY-033 AC3)
+  if (percentage !== undefined) {
+    update.finished = percentage >= 99;
+  } else if (finished !== undefined) {
+    update.finished = finished;
+  }
+
   const progress = await upsertReadingProgress(userId, bookId, update);
-  logger.info({ userId, bookId, percentage: progress.percentage }, 'Reading progress updated');
+  logger.info({ userId, bookId, percentage: progress.percentage, finished: progress.finished }, 'Reading progress updated');
   return progress;
 }
 
