@@ -8,14 +8,14 @@ import { sanitizeRichContent } from '../../lib/sanitize';
  * @param {Object} props.chapter - Chapter object with _id, title, content
  * @param {number} props.index - Chapter index in the book
  * @param {Function} props.onVisible - Callback(index) when chapter header becomes visible
- * @param {string} props.fontSize - Font size class key ('small'|'medium'|'large')
+ * @param {string} props.fontSize - Font size key ('small'|'medium'|'large')
  * @param {string} props.themeProseClass - Prose theme class string
  * @param {Function} props.observeRef - Callback to register element with IntersectionObserver
  */
-const FONT_SIZE_CLASSES = {
-  small: 'text-sm',
-  medium: 'text-base',
-  large: 'text-lg',
+const FONT_SIZE_SCALE = {
+  small: '87.5%',
+  medium: '100%',
+  large: '150%',
 };
 
 export default function ScrollChapterMarker({ chapter, index, onVisible, fontSize, themeProseClass, observeRef }) {
@@ -70,7 +70,7 @@ export default function ScrollChapterMarker({ chapter, index, onVisible, fontSiz
   }, []);
 
   const headingId = `chapter-heading-${chapter._id}`;
-  const contentFontClass = FONT_SIZE_CLASSES[fontSize] || 'text-base';
+  const fontSizeScale = FONT_SIZE_SCALE[fontSize] || '100%';
 
   return (
     <div
@@ -88,7 +88,8 @@ export default function ScrollChapterMarker({ chapter, index, onVisible, fontSiz
         {chapter.title}
       </h2>
       <div
-        className={`prose prose-lg max-w-none ${contentFontClass} ${themeProseClass}`}
+        className={`prose prose-lg max-w-none ${themeProseClass}`}
+        style={{ fontSize: fontSizeScale }}
         dangerouslySetInnerHTML={{ __html: sanitizeRichContent(chapter.content) }}
         tabIndex={0}
       />

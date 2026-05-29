@@ -51,5 +51,8 @@
   "endScrollMessage": "Você chegou ao fim do livro.",
   "chapterVisible": "Lendo agora: {{title}}",
   "scrollModeDescription": "Role continuamente pelo livro",
-  "paginatedModeDescription": "Vire as páginas uma de cada vez"
+  "paginatedModeDescription": "Vire as páginas uma de cada vez",
+  "fontSizeChanged": "Tamanho da fonte alterado para {{size}}",
+  "themeChanged": "Tema alterado para {{theme}}",
+  "readingModeChanged": "Modo de leitura alterado para {{mode}}"
 }

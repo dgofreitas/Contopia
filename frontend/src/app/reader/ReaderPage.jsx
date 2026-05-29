@@ -5,6 +5,8 @@ import { Button } from 'flowbite-react';
 import { HiBookOpen, HiViewList, HiArrowsExpand } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
 import useReaderStore from '../../stores/reader-store';
+import useSystemColorScheme from '../../hooks/useSystemColorScheme';
+import useReaderPreferences from '../../hooks/useReaderPreferences';
 import useChaptersQuery from '../../hooks/useChaptersQuery';
 import useBookEditQuery from '../../hooks/useBookEditQuery';
 import useReadingProgressQuery from '../../hooks/useReadingProgressQuery';
@@ -26,19 +28,21 @@ import { useScrollProgress } from '../../hooks/useScrollProgress';
 const THEME_CONTENT_CLASSES = {
   light: 'bg-white text-gray-900',
   sepia: 'bg-amber-50 text-amber-900',
-  dark: 'bg-gray-900 text-gray-100',
+  dark: 'bg-gray-900 text-gray-50',
 };
 
-const FONT_SIZE_CLASSES = {
-  small: 'text-sm',
-  medium: 'text-base',
-  large: 'text-lg',
+// Percentage-based font scaling that respects system font size.
+// Applied via CSS custom property --reader-font-size on the root container.
+const FONT_SIZE_SCALE = {
+  small: '87.5%',
+  medium: '100%',
+  large: '150%',
 };
 
 const THEME_PROSE_CLASSES = {
   light: 'prose-headings:text-gray-800 prose-p:text-gray-700',
   sepia: 'prose-headings:text-amber-800 prose-p:text-amber-800',
-  dark: 'prose-headings:text-gray-100 prose-p:text-gray-200',
+  dark: 'prose-headings:text-gray-50 prose-p:text-gray-200',
 };
 
 export default function ReaderPage() {
@@ -48,6 +52,12 @@ export default function ReaderPage() {
   const [searchParams] = useSearchParams();
   const prefersReducedMotion = useReducedMotion();
   const { isFullscreen, enterFullscreen, exitFullscreen } = useFullscreen();
+
+  // System color scheme detection (first-visit default)
+  useSystemColorScheme();
+
+  // Backend sync for reader preferences
+  useReaderPreferences();
 
   // Store state
   const currentChapterIndex = useReaderStore((s) => s.currentChapterIndex);
@@ -173,7 +183,7 @@ export default function ReaderPage() {
   const sanitizedContent = sanitizeRichContent(currentChapter?.content || '');
 
   // Content font/theme classes
-  const contentFontClass = FONT_SIZE_CLASSES[fontSize] || 'text-base';
+  const fontSizeScale = FONT_SIZE_SCALE[fontSize] || '100%';
   const themeContentClass = THEME_CONTENT_CLASSES[theme] || THEME_CONTENT_CLASSES.light;
   const themeProseClass = THEME_PROSE_CLASSES[theme] || THEME_PROSE_CLASSES.light;
 
@@ -626,7 +636,7 @@ export default function ReaderPage() {
           onChapterSelect={handleChapterSelect}
         />
 
-        <ReaderSettings onRepaginate={handleRepaginate} />
+        <ReaderSettings onRepaginate={handleRepaginate} onReaderSettingChange={setAnnouncement} />
       </div>
     );
 
@@ -746,7 +756,7 @@ export default function ReaderPage() {
                 aria-labelledby="chapter-title"
                 aria-label={t('pageOf', { current: currentPageIndex + 1, total: totalPagesInChapter })}
               >
-                <div className={`prose prose-lg max-w-none ${contentFontClass} ${themeProseClass}`}>
+                <div className={`prose prose-lg max-w-none ${themeProseClass}`} style={{ fontSize: fontSizeScale }}>
                   <h2 id="chapter-title" className="text-2xl font-bold mb-6">{currentChapter.title}</h2>
                   <div
                     className="leading-relaxed whitespace-pre-wrap"
@@ -851,7 +861,8 @@ export default function ReaderPage() {
             initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
-            className={`prose prose-lg max-w-none ${contentFontClass} ${themeProseClass}`}
+            className={`prose prose-lg max-w-none ${themeProseClass}`}
+            style={{ fontSize: fontSizeScale }}
           >
             <h2 className="text-2xl font-bold text-gray-800 mb-6">{currentChapter.title}</h2>
             <div
