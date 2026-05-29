@@ -8,9 +8,11 @@ import ChapterDrawerItem from '../components/reader/ChapterDrawerItem';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options) => {
-      if (options && typeof options === 'object') {
-        return key.replace(/{{\s*(\w+)\s*}}/g, (_, k) => options[k] ?? '');
+      // chapterAriaLabel: produce predictable template string from options
+      if (key === 'chapterAriaLabel' && options) {
+        return `Chapter ${options.number}: ${options.title}, ${options.status}`;
       }
+      // Default: return key as-is (other i18n keys)
       return key;
     },
   }),
@@ -62,7 +64,7 @@ describe('ChapterDrawerItem', () => {
       expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'false');
     });
 
-    it('has aria-label with title and status for unread', () => {
+    it('has aria-label with number, title, and status for unread', () => {
       render(
         <ChapterDrawerItem
           chapter={chapter}
@@ -72,11 +74,10 @@ describe('ChapterDrawerItem', () => {
         />
       );
       const option = screen.getByRole('option');
-      expect(option.getAttribute('aria-label')).toContain('The Beginning');
-      expect(option.getAttribute('aria-label')).toContain('chapterUnread');
+      expect(option.getAttribute('aria-label')).toContain('1: The Beginning, chapterUnread');
     });
 
-    it('has aria-label with title and status for read', () => {
+    it('has aria-label with number, title, and status for read', () => {
       render(
         <ChapterDrawerItem
           chapter={chapter}
@@ -86,10 +87,10 @@ describe('ChapterDrawerItem', () => {
         />
       );
       const option = screen.getByRole('option');
-      expect(option.getAttribute('aria-label')).toContain('chapterRead');
+      expect(option.getAttribute('aria-label')).toContain('1: The Beginning, chapterRead');
     });
 
-    it('has aria-label with title and status for in-progress', () => {
+    it('has aria-label with number, title, and status for in-progress', () => {
       render(
         <ChapterDrawerItem
           chapter={chapter}
@@ -99,7 +100,22 @@ describe('ChapterDrawerItem', () => {
         />
       );
       const option = screen.getByRole('option');
-      expect(option.getAttribute('aria-label')).toContain('chapterInProgress');
+      expect(option.getAttribute('aria-label')).toContain('1: The Beginning, chapterInProgress');
+    });
+
+    it('appends currentChapter suffix when isCurrent=true', () => {
+      render(
+        <ChapterDrawerItem
+          chapter={chapter}
+          status="unread"
+          isCurrent={true}
+          onClick={vi.fn()}
+        />
+      );
+      const option = screen.getByRole('option');
+      const label = option.getAttribute('aria-label');
+      expect(label).toContain('1: The Beginning, chapterUnread');
+      expect(label).toContain(', currentChapter');
     });
 
     it('has tabIndex=0 for keyboard focus', () => {

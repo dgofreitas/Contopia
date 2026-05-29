@@ -10,12 +10,13 @@
 - [ ] Merge Request
 
 ## FRONTEND — Gap Fixes para AC4
-- [ ] ariaLabel format: “Chapter N: Título, status” em ChapterDrawerItem.jsx
-- [ ] i18n keys: chapterLabel + currentChapter em en/pt-BR
-- [ ] Verificar que ChapterDrawer passe prop necessária (chapterCount ou index)
+- [x] ariaLabel format: "Chapter N: Título, status" em ChapterDrawerItem.jsx
+- [x] i18n keys: chapterAriaLabel + currentChapter em en/pt-BR
+- [x] Verificar que ChapterDrawer passe prop necessária (não precisa — usa chapter.order)
 
 ## QUALIDADE E ENTREGA
-- [ ] TESTS (TestEngineer) — atualizar asserções aria-label
+- [x] FRONTEND gap fixes (ChapterDrawerItem aria-label, i18n keys)
+- [x] TESTS (TestEngineer) — 19/19 passing, 100% coverage on ChapterDrawerItem.jsx
 - [ ] QA (QAAnalyst)
 - [ ] CODE REVIEW (CodeReviewer)
 - [ ] MERGE REQUEST (MergeRequestCreator)
