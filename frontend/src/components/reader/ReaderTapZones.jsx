@@ -2,16 +2,20 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import useReaderStore from '../../stores/reader-store';
 
-export default function ReaderTapZones({ onPreviousChapter, onNextChapter }) {
+/**
+ * ReaderTapZones — Three-zone tap overlay for paginated reading.
+ * Left 30% = previous page, Center 40% = toggle toolbar, Right 30% = next page.
+ */
+export default function ReaderTapZones({ onPreviousPage, onNextPage }) {
   const { t } = useTranslation('reader');
   const toggleToolbar = useReaderStore((s) => s.toggleToolbar);
 
   const handleLeftTap = useCallback(
     (e) => {
       e.preventDefault();
-      onPreviousChapter();
+      onPreviousPage();
     },
-    [onPreviousChapter],
+    [onPreviousPage],
   );
 
   const handleCenterTap = useCallback(
@@ -25,9 +29,9 @@ export default function ReaderTapZones({ onPreviousChapter, onNextChapter }) {
   const handleRightTap = useCallback(
     (e) => {
       e.preventDefault();
-      onNextChapter();
+      onNextPage();
     },
-    [onNextChapter],
+    [onNextPage],
   );
 
   return (
@@ -36,21 +40,21 @@ export default function ReaderTapZones({ onPreviousChapter, onNextChapter }) {
       aria-hidden="true"
     >
       <button
-        className="w-[15%] h-full cursor-pointer focus:outline-none focus:ring-0 active:bg-transparent hover:bg-transparent bg-transparent"
+        className="w-[30%] h-full cursor-pointer focus:outline-none focus:ring-0 active:bg-transparent hover:bg-transparent bg-transparent"
         onClick={handleLeftTap}
-        aria-label={t('tapLeft')}
+        aria-label={t('tapLeftPage')}
         tabIndex={-1}
       />
       <button
-        className="w-[70%] h-full cursor-pointer focus:outline-none focus:ring-0 active:bg-transparent hover:bg-transparent bg-transparent"
+        className="w-[40%] h-full cursor-pointer focus:outline-none focus:ring-0 active:bg-transparent hover:bg-transparent bg-transparent"
         onClick={handleCenterTap}
         aria-label={t('tapCenter')}
         tabIndex={-1}
       />
       <button
-        className="w-[15%] h-full cursor-pointer focus:outline-none focus:ring-0 active:bg-transparent hover:bg-transparent bg-transparent"
+        className="w-[30%] h-full cursor-pointer focus:outline-none focus:ring-0 active:bg-transparent hover:bg-transparent bg-transparent"
         onClick={handleRightTap}
-        aria-label={t('tapRight')}
+        aria-label={t('tapRightPage')}
         tabIndex={-1}
       />
     </div>

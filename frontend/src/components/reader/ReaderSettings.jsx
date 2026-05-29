@@ -19,7 +19,7 @@ const THEME_CONFIG = {
   dark: { label: 'settingsThemeDark', bg: 'bg-gray-900', text: 'text-gray-100', border: 'border-gray-700' },
 };
 
-export default function ReaderSettings() {
+export default function ReaderSettings({ onRepaginate }) {
   const { t } = useTranslation('reader');
   const prefersReducedMotion = useReducedMotion();
   const isSettingsOpen = useReaderStore((s) => s.isSettingsOpen);
@@ -29,6 +29,25 @@ export default function ReaderSettings() {
   const theme = useReaderStore((s) => s.theme);
   const setTheme = useReaderStore((s) => s.setTheme);
   const panelRef = useRef(null);
+
+  // Track previous font size and theme to trigger repagination on changes
+  const prevFontSizeRef = useRef(fontSize);
+  const prevThemeRef = useRef(theme);
+
+  // Trigger repagination when font size or theme changes
+  useEffect(() => {
+    if (prevFontSizeRef.current !== fontSize || prevThemeRef.current !== theme) {
+      prevFontSizeRef.current = fontSize;
+      prevThemeRef.current = theme;
+      if (onRepaginate) {
+        // Delay repagination to allow CSS to reflow
+        const timer = setTimeout(() => {
+          onRepaginate();
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [fontSize, theme, onRepaginate]);
 
   useEffect(() => {
     if (!isSettingsOpen) return;

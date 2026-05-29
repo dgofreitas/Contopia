@@ -33,9 +33,15 @@
   "tapCenter": "Alternar barra de ferramentas",
   "tapLeft": "Capítulo anterior",
   "tapRight": "Próximo capítulo",
+  "tapLeftPage": "Página anterior",
+  "tapRightPage": "Próxima página",
   "theEnd": "Fim",
   "finishedMessage": "Você terminou de ler \"{{bookTitle}}\"!",
   "restartBook": "Ler Novamente",
   "chapterAriaLabel": "Capítulo {{number}}: {{title}}, {{status}}",
-  "currentChapter": "capítulo atual"
+  "currentChapter": "capítulo atual",
+  "pageOf": "Página {{current}} de {{total}}",
+  "chapterTransition": "Capítulo {{title}}",
+  "pageNext": "Próxima página",
+  "pagePrevious": "Página anterior"
 }
