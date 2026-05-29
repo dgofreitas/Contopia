@@ -7,6 +7,7 @@ import useReaderStore from '../../stores/reader-store';
 const FONT_SIZES = ['small', 'medium', 'large'];
 const THEMES = ['light', 'sepia', 'dark'];
 
+// Font size labels for settings buttons (visual size only)
 const FONT_SIZE_CLASSES = {
   small: 'text-sm',
   medium: 'text-base',
@@ -16,10 +17,14 @@ const FONT_SIZE_CLASSES = {
 const THEME_CONFIG = {
   light: { label: 'settingsThemeLight', bg: 'bg-white', text: 'text-gray-900', border: 'border-gray-200' },
   sepia: { label: 'settingsThemeSepia', bg: 'bg-amber-50', text: 'text-amber-900', border: 'border-amber-200' },
-  dark: { label: 'settingsThemeDark', bg: 'bg-gray-900', text: 'text-gray-100', border: 'border-gray-700' },
+  dark: { label: 'settingsThemeDark', bg: 'bg-gray-900', text: 'text-gray-50', border: 'border-gray-700' },
 };
 
-export default function ReaderSettings({ onRepaginate }) {
+/**
+ * @param {Function} props.onRepaginate - Callback to trigger repagination on font/theme change
+ * @param {Function} props.onReaderSettingChange - Callback for a11y announcements: (message) => void
+ */
+export default function ReaderSettings({ onRepaginate, onReaderSettingChange }) {
   const { t } = useTranslation('reader');
   const prefersReducedMotion = useReducedMotion();
   const isSettingsOpen = useReaderStore((s) => s.isSettingsOpen);
@@ -163,6 +168,9 @@ export default function ReaderSettings({ onRepaginate }) {
                 <button
                   onClick={() => {
                     setReadingMode('paginated');
+                    if (onReaderSettingChange) {
+                      onReaderSettingChange(t('readingModeChanged', { mode: t('paginatedMode') }));
+                    }
                     setTimeout(() => closeSettings(), prefersReducedMotion ? 0 : 300);
                   }}
                   className={`flex-1 py-3 px-4 rounded-lg border-2 text-center font-medium transition-colors focus:ring-2 focus:ring-amber-300 focus:outline-none flex items-center justify-center gap-2 ${
@@ -181,6 +189,9 @@ export default function ReaderSettings({ onRepaginate }) {
                 <button
                   onClick={() => {
                     setReadingMode('scroll');
+                    if (onReaderSettingChange) {
+                      onReaderSettingChange(t('readingModeChanged', { mode: t('scrollMode') }));
+                    }
                     setTimeout(() => closeSettings(), prefersReducedMotion ? 0 : 300);
                   }}
                   className={`flex-1 py-3 px-4 rounded-lg border-2 text-center font-medium transition-colors focus:ring-2 focus:ring-amber-300 focus:outline-none flex items-center justify-center gap-2 ${
@@ -207,7 +218,12 @@ export default function ReaderSettings({ onRepaginate }) {
                 {FONT_SIZES.map((size) => (
                   <button
                     key={size}
-                    onClick={() => setFontSize(size)}
+                    onClick={() => {
+                      setFontSize(size);
+                      if (onReaderSettingChange) {
+                        onReaderSettingChange(t('fontSizeChanged', { size: t(`settingsFontSize${size.charAt(0).toUpperCase() + size.slice(1)}`) }));
+                      }
+                    }}
                     className={`flex-1 py-3 px-4 rounded-lg border-2 text-center font-medium transition-colors focus:ring-2 focus:ring-amber-300 focus:outline-none ${
                       fontSize === size
                         ? 'border-amber-600 bg-amber-50 text-amber-700'
@@ -231,7 +247,12 @@ export default function ReaderSettings({ onRepaginate }) {
                   return (
                     <button
                       key={themeKey}
-                      onClick={() => setTheme(themeKey)}
+                      onClick={() => {
+                        setTheme(themeKey);
+                        if (onReaderSettingChange) {
+                          onReaderSettingChange(t('themeChanged', { theme: t(cfg.label) }));
+                        }
+                      }}
                       className={`flex-1 py-3 px-4 rounded-lg border-2 text-center font-medium transition-colors focus:ring-2 focus:ring-amber-300 focus:outline-none ${cfg.bg} ${cfg.text} ${cfg.border} ${
                         theme === themeKey
                           ? 'border-amber-600 ring-2 ring-amber-300'
