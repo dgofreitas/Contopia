@@ -13,15 +13,18 @@ export default function ReaderProgressBar({
   currentChapterIndex,
   totalChapters,
   percentage,
+  scrollProgress,
 }) {
   const { t } = useTranslation('reader');
   const prefersReducedMotion = useReducedMotion();
 
   if (totalChapters <= 0 && totalPagesInBook <= 0) return null;
 
-  // Prefer page-based progress when available
+  // If scroll progress is provided (scroll mode), use it directly
   let progress;
-  if (totalPagesInBook > 0) {
+  if (scrollProgress != null) {
+    progress = scrollProgress;
+  } else if (totalPagesInBook > 0) {
     progress = totalPagesInBook > 0
       ? ((currentPageOffsetInBook) / totalPagesInBook) * 100
       : 0;

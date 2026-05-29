@@ -12,6 +12,7 @@ export default function ReaderToolbar({ bookTitle, onBackToShelf, onToggleChapte
   const isToolbarVisible = useReaderStore((s) => s.isToolbarVisible);
   const showToolbar = useReaderStore((s) => s.showToolbar);
   const hideToolbar = useReaderStore((s) => s.hideToolbar);
+  const readingMode = useReaderStore((s) => s.readingMode);
   const toolbarRef = useRef(null);
   const autoHideTimerRef = useRef(null);
 
@@ -112,24 +113,30 @@ export default function ReaderToolbar({ bookTitle, onBackToShelf, onToggleChapte
             {bookTitle || ''}
           </span>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onToggleChapterDrawer}
-              className="p-2 rounded-lg hover:bg-white/20 focus:ring-2 focus:ring-amber-300 focus:outline-none transition-colors"
-              aria-label={t('openChapterList')}
-              title={t('chapterList')}
-            >
-              <HiViewList className="w-5 h-5" aria-hidden="true" />
-            </button>
-            <button
-              onClick={onOpenSettings}
-              className="p-2 rounded-lg hover:bg-white/20 focus:ring-2 focus:ring-amber-300 focus:outline-none transition-colors"
-              aria-label={t('settings')}
-              title={t('settings')}
-            >
-              <HiCog className="w-5 h-5" aria-hidden="true" />
-            </button>
-          </div>
+           <div className="flex items-center gap-2">
+             <button
+               onClick={onToggleChapterDrawer}
+               className="p-2 rounded-lg hover:bg-white/20 focus:ring-2 focus:ring-amber-300 focus:outline-none transition-colors"
+               aria-label={t('openChapterList')}
+               title={t('chapterList')}
+             >
+               <HiViewList className="w-5 h-5" aria-hidden="true" />
+             </button>
+             <span
+               className="text-xs font-medium text-white/60 px-2 py-1 rounded bg-white/10"
+               aria-label={readingMode === 'scroll' ? t('scrollMode') : t('paginatedMode')}
+             >
+               {readingMode === 'scroll' ? t('scrollMode') : t('paginatedMode')}
+             </span>
+             <button
+               onClick={onOpenSettings}
+               className="p-2 rounded-lg hover:bg-white/20 focus:ring-2 focus:ring-amber-300 focus:outline-none transition-colors"
+               aria-label={t('settings')}
+               title={t('settings')}
+             >
+               <HiCog className="w-5 h-5" aria-hidden="true" />
+             </button>
+           </div>
         </motion.header>
       )}
     </AnimatePresence>
