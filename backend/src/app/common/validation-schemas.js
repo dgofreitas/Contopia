@@ -222,3 +222,18 @@ export const bookCreateSchemaV2 = z.object({
   description: data.summary || data.description || '',
   language: data.language,
 }));
+
+// ── Reader Preferences Schemas (STORY-032) ──────────────────────────────────────
+
+/**
+ * Reader preferences update schema — partial update.
+ * Only whitelist enum values; missing fields are kept as-is.
+ */
+export const readerPreferencesSchema = z.object({
+  fontSize: z.enum(['small', 'medium', 'large']).optional(),
+  theme: z.enum(['light', 'sepia', 'dark']).optional(),
+  readingMode: z.enum(['paginated', 'scroll']).optional(),
+}).strict().refine(
+  (data) => data.fontSize !== undefined || data.theme !== undefined || data.readingMode !== undefined,
+  { message: 'At least one preference field must be provided' },
+);
