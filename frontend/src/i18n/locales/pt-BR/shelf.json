@@ -38,5 +38,12 @@
   "emptyDraftsMessage": "Nenhum rascunho — comece a escrever!",
   "progressLabel": "{{percentage}}% lido",
   "finishedLabel": "Concluído",
-  "continueReadingLabel": "Continuar lendo"
+  "continueReadingLabel": "Continuar lendo",
+  "sort.buttonLabel": "Organizar livros",
+  "sort.alphabetical": "Alfabética (A→Z)",
+  "sort.favorites": "Favoritos",
+  "sort.recentlyRead": "Lidos recentemente",
+  "sort.favoritesDisabled": "Em breve!",
+  "sort.menuLabel": "Opções de organização",
+  "sort.optionAria": "Organizar por {{mode}}"
 }
