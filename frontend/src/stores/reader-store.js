@@ -14,7 +14,14 @@ const useReaderStore = create((set, get) => ({
   localProgress: null,
   syncStatus: 'idle',
 
-  setCurrentChapterIndex: (idx) => set({ currentChapterIndex: idx }),
+  // Pagination state
+  currentPageIndex: 0,
+  totalPagesInChapter: 1,
+  totalPagesInBook: 0,
+  isPageAnimating: false,
+  currentPageOffsetInBook: 0,
+
+  setCurrentChapterIndex: (idx) => set({ currentChapterIndex: idx, currentPageIndex: 0 }),
   openChapterDrawer: () => set({ isChapterDrawerOpen: true }),
   closeChapterDrawer: () => set({ isChapterDrawerOpen: false }),
   toggleChapterDrawer: () => set((s) => ({ isChapterDrawerOpen: !s.isChapterDrawerOpen })),
@@ -66,6 +73,38 @@ const useReaderStore = create((set, get) => ({
 
   setLocalProgress: (progress) => set({ localProgress: progress }),
   setSyncStatus: (status) => set({ syncStatus: status }),
+
+  // Pagination actions
+  setCurrentPageIndex: (idx) => {
+    const state = get();
+    const clamped = Math.max(0, Math.min(idx, state.totalPagesInChapter - 1));
+    set({ currentPageIndex: clamped, currentPageOffsetInBook: clamped });
+  },
+
+  setTotalPagesInChapter: (total) => set({ totalPagesInChapter: Math.max(1, total) }),
+  setTotalPagesInBook: (total) => set({ totalPagesInBook: total }),
+  setIsPageAnimating: (val) => set({ isPageAnimating: val }),
+  setCurrentPageOffsetInBook: (offset) => set({ currentPageOffsetInBook: offset }),
+
+  nextPage: () => {
+    const { currentPageIndex, totalPagesInChapter, isPageAnimating } = get();
+    if (isPageAnimating) return false;
+    if (currentPageIndex < totalPagesInChapter - 1) {
+      set({ isPageAnimating: true, currentPageIndex: currentPageIndex + 1 });
+      return false;
+    }
+    return true; // Signal: at end of chapter
+  },
+
+  previousPage: () => {
+    const { currentPageIndex, isPageAnimating } = get();
+    if (isPageAnimating) return false;
+    if (currentPageIndex > 0) {
+      set({ isPageAnimating: true, currentPageIndex: currentPageIndex - 1 });
+      return false;
+    }
+    return true; // Signal: at start of chapter
+  },
 }));
 
 export default useReaderStore;

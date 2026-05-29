@@ -1,16 +1,37 @@
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 
-export default function ReaderProgressBar({ currentChapterIndex, totalChapters, percentage }) {
+/**
+ * ReaderProgressBar — Page-based reading progress bar.
+ *
+ * Shows progress based on currentPageOffsetInBook / totalPagesInBook * 100.
+ * Falls back to chapter-based progress (currentChapterIndex / totalChapters) when page data is unavailable.
+ */
+export default function ReaderProgressBar({
+  currentPageOffsetInBook,
+  totalPagesInBook,
+  currentChapterIndex,
+  totalChapters,
+  percentage,
+}) {
   const { t } = useTranslation('reader');
   const prefersReducedMotion = useReducedMotion();
 
-  if (totalChapters <= 0) return null;
+  if (totalChapters <= 0 && totalPagesInBook <= 0) return null;
 
-  // Use server/local percentage if provided; otherwise estimate from chapter index
-  const progress = percentage != null
-    ? Math.min(100, Math.max(0, percentage))
-    : ((currentChapterIndex + 1) / totalChapters) * 100;
+  // Prefer page-based progress when available
+  let progress;
+  if (totalPagesInBook > 0) {
+    progress = totalPagesInBook > 0
+      ? ((currentPageOffsetInBook) / totalPagesInBook) * 100
+      : 0;
+  } else if (percentage != null) {
+    progress = percentage;
+  } else {
+    progress = ((currentChapterIndex + 1) / totalChapters) * 100;
+  }
+
+  progress = Math.min(100, Math.max(0, progress));
 
   return (
     <div
