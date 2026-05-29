@@ -31,6 +31,9 @@ permission:
     "*": "deny"
     "ContextScout": "allow"
     "ExternalScout": "allow"
+  read:
+    "*": "allow"
+    "**/rtk/tee/**": "deny"
 ---
 
 # BackendDeveloper

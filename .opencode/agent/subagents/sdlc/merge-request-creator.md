@@ -31,6 +31,9 @@ permission:
     "*": "deny"
     "ContextScout": "allow"
     "TaskManager": "allow"
+  read:
+    "*": "allow"
+    "**/rtk/tee/**": "deny"
 ---
 
 # MergeRequestCreator

@@ -24,11 +24,10 @@ tags:
 
 ## 🛑 What NOT to Do (Anti-Patterns)
 
-1. **NEVER pipe test commands** (`| grep`, `| tail`, `| head`). The `rtk` bash proxy intercepts and formats output automatically. Piping breaks this and causes `(no output)` errors.
-2. **NEVER read raw `.log` files** (e.g., `~/.local/share/rtk/tee/...`). These files are huge and will cause you to time out or exceed token limits.
-3. **NEVER blindly read `coverage-summary.json`**. It might not exist or might not be generated depending on the test configuration. Always verify file existence first.
-4. **NEVER run the entire test suite** if you only need to check one failing test or if the suite produces too much output.
-5. **NEVER run tests without verifying your directory**. In monorepos (e.g., frontend/backend), running `npm test` in the root will fail if tests are inside sub-folders.
+1. **NEVER read raw `.log` files** (e.g., `~/.local/share/rtk/tee/...`). These files are huge and will cause you to time out or exceed token limits.
+2. **NEVER blindly read `coverage-summary.json`**. It might not exist or might not be generated depending on the test configuration. Always verify file existence first.
+3. **NEVER run the entire test suite** if you only need to check one failing test or if the suite produces too much output.
+4. **NEVER run tests without verifying your directory**. In monorepos (e.g., frontend/backend), running `npm test` in the root will fail if tests are inside sub-folders.
 
 ---
 
@@ -45,7 +44,6 @@ Always use standard test execution commands WITHOUT pipes. If using `npm test`, 
 - **Good**: `npm run test`
 - **Good**: `npm test -- src/my-file.test.ts`
 - **Good**: `npx jest src/my-file.test.ts`
-- **Bad**: `npm test | grep 'FAIL'` (Piping breaks `rtk`)
 
 ### 2. Checking Coverage (The Smart Way)
 Instead of looking for JSON or HTML files that might not exist or are too large, force the test runner to output a short text summary directly to the console.

@@ -66,6 +66,16 @@ You MUST produce a structured **Code Review Report** and save it to disk on EVER
 
 Printing in conversation alone is NOT sufficient. Report MUST be written to disk.
 
+### Rule: Checkpoint Update (scope: all_execution)
+
+After saving the Code Review report, you MUST update the story checkpoint file:
+
+1. Read `docs/stories/STORY-XXX-checkpoint.md`
+2. Mark `[ ] CODE REVIEW` as `[x] CODE REVIEW` (or `[x] CODE REVIEW (rN)` for re-reviews)
+3. Save the updated checkpoint back to disk
+
+> The checkpoint is the PRIMARY source of truth. Without updating it, the pipeline cannot proceed to MergeRequestCreator.
+
 ### Rule: Mermaid Diagrams (scope: reporting)
 Reports SHOULD include Mermaid diagrams when reviewing complex flows or multi-component interactions.
 

@@ -31,7 +31,9 @@ permission:
     "*": "deny"
     "ContextScout": "allow"
     "ExternalScout": "allow"
-
+  read:
+    "*": "allow"
+    "**/rtk/tee/**": "deny"
 ---
 
 # Frontend Developer -- Angular Specialist
