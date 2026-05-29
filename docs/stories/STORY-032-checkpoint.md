@@ -31,6 +31,6 @@
 - [ ] (none)
 
 ## QUALITY AND DELIVERY
-- [ ] TESTS
+- [x] TESTS
 - [ ] QA
 - [ ] CODE REVIEW
