@@ -21,6 +21,10 @@ const useReaderStore = create((set, get) => ({
   isPageAnimating: false,
   currentPageOffsetInBook: 0,
 
+  // Reading mode state
+  readingMode: 'paginated', // 'paginated' | 'scroll'
+  scrollPosition: 0,
+
   setCurrentChapterIndex: (idx) => set({ currentChapterIndex: idx, currentPageIndex: 0 }),
   openChapterDrawer: () => set({ isChapterDrawerOpen: true }),
   closeChapterDrawer: () => set({ isChapterDrawerOpen: false }),
@@ -85,6 +89,10 @@ const useReaderStore = create((set, get) => ({
   setTotalPagesInBook: (total) => set({ totalPagesInBook: total }),
   setIsPageAnimating: (val) => set({ isPageAnimating: val }),
   setCurrentPageOffsetInBook: (offset) => set({ currentPageOffsetInBook: offset }),
+
+  // Reading mode actions
+  setReadingMode: (mode) => set({ readingMode: mode }),
+  setScrollPosition: (offset) => set({ scrollPosition: offset }),
 
   nextPage: () => {
     const { currentPageIndex, totalPagesInChapter, isPageAnimating } = get();

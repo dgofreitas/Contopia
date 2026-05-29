@@ -43,5 +43,13 @@
   "pageOf": "Page {{current}} of {{total}}",
   "chapterTransition": "Chapter {{title}}",
   "pageNext": "Next page",
-  "pagePrevious": "Previous page"
+  "pagePrevious": "Previous page",
+  "scrollMode": "Scroll Mode",
+  "paginatedMode": "Page Mode",
+  "scrollModeToggle": "Reading Mode",
+  "scrollProgress": "Reading progress: {{percentage}}%",
+  "endScrollMessage": "You've reached the end of the book.",
+  "chapterVisible": "Now reading: {{title}}",
+  "scrollModeDescription": "Scroll continuously through the book",
+  "paginatedModeDescription": "Turn pages one at a time"
 }

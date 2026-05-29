@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { HiX } from 'react-icons/hi';
+import { HiX, HiBookOpen, HiDocumentText } from 'react-icons/hi';
 import useReaderStore from '../../stores/reader-store';
 
 const FONT_SIZES = ['small', 'medium', 'large'];
@@ -28,6 +28,8 @@ export default function ReaderSettings({ onRepaginate }) {
   const setFontSize = useReaderStore((s) => s.setFontSize);
   const theme = useReaderStore((s) => s.theme);
   const setTheme = useReaderStore((s) => s.setTheme);
+  const readingMode = useReaderStore((s) => s.readingMode);
+  const setReadingMode = useReaderStore((s) => s.setReadingMode);
   const panelRef = useRef(null);
 
   // Track previous font size and theme to trigger repagination on changes
@@ -152,6 +154,50 @@ export default function ReaderSettings({ onRepaginate }) {
                 <HiX className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
+
+            <section className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
+                {t('scrollModeToggle')}
+              </h3>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setReadingMode('paginated');
+                    setTimeout(() => closeSettings(), prefersReducedMotion ? 0 : 300);
+                  }}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 text-center font-medium transition-colors focus:ring-2 focus:ring-amber-300 focus:outline-none flex items-center justify-center gap-2 ${
+                    readingMode === 'paginated'
+                      ? 'border-amber-600 bg-amber-50 text-amber-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                  aria-pressed={readingMode === 'paginated'}
+                >
+                  <HiBookOpen className="w-5 h-5" aria-hidden="true" />
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-semibold">{t('paginatedMode')}</span>
+                    <span className="text-xs opacity-70">{t('paginatedModeDescription')}</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    setReadingMode('scroll');
+                    setTimeout(() => closeSettings(), prefersReducedMotion ? 0 : 300);
+                  }}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 text-center font-medium transition-colors focus:ring-2 focus:ring-amber-300 focus:outline-none flex items-center justify-center gap-2 ${
+                    readingMode === 'scroll'
+                      ? 'border-amber-600 bg-amber-50 text-amber-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                  aria-pressed={readingMode === 'scroll'}
+                >
+                  <HiDocumentText className="w-5 h-5" aria-hidden="true" />
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-semibold">{t('scrollMode')}</span>
+                    <span className="text-xs opacity-70">{t('scrollModeDescription')}</span>
+                  </div>
+                </button>
+              </div>
+            </section>
 
             <section className="mb-6">
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">

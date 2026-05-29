@@ -18,8 +18,10 @@ import ReaderTapZones from '../../components/reader/ReaderTapZones';
 import ReaderSettings from '../../components/reader/ReaderSettings';
 import PageTurnAnimation from '../../components/reader/PageTurnAnimation';
 import ChapterTransitionCard from '../../components/reader/ChapterTransitionCard';
+import ScrollChapterMarker from '../../components/reader/ScrollChapterMarker';
 import A11yAnnouncer from '../../components/common/A11yAnnouncer';
 import { sanitizeRichContent } from '../../lib/sanitize';
+import { useScrollProgress } from '../../hooks/useScrollProgress';
 
 const THEME_CONTENT_CLASSES = {
   light: 'bg-white text-gray-900',
@@ -68,6 +70,8 @@ export default function ReaderPage() {
   const setCurrentPageOffsetInBook = useReaderStore((s) => s.setCurrentPageOffsetInBook);
   const nextPage = useReaderStore((s) => s.nextPage);
   const previousPage = useReaderStore((s) => s.previousPage);
+  const readingMode = useReaderStore((s) => s.readingMode);
+  const setScrollPosition = useReaderStore((s) => s.setScrollPosition);
 
   // Data hooks
   const { data: chapters = [], isLoading: chaptersLoading } = useChaptersQuery(bookId);
@@ -82,12 +86,83 @@ export default function ReaderPage() {
   const [showChapterTransition, setShowChapterTransition] = useState(false);
   const [chapterTransitionTitle, setChapterTransitionTitle] = useState('');
 
+  // Scroll mode state
+  const [scrollFinished, setScrollFinished] = useState(false);
+  const scrollContainerRef = useRef(null);
+  const [currentVisibleChapter, setCurrentVisibleChapter] = useState(0);
+  const [scrollProgressValue, setScrollProgressValue] = useState(0);
+
   // Refs
   const contentContainerRef = useRef(null);
   const contentInnerRef = useRef(null);
   const prevChapterIndexRef = useRef(currentChapterIndex);
 
-  // Determine the effective progress
+  // Scroll progress hook (always called, conditionally used)
+  const handleChapterVisible = useCallback((idx) => {
+    setCurrentVisibleChapter(idx);
+    setAnnouncement(t('chapterVisible', { title: chapters[idx]?.title || '' }));
+  }, [chapters, t]);
+
+  const handleProgressUpdate = useCallback(({ scrollProgress, scrollOffset }) => {
+    setScrollProgressValue(scrollProgress);
+    setScrollPosition(scrollOffset);
+  }, [setScrollPosition]);
+
+  const { observeChapter } = useScrollProgress({
+    scrollContainerRef,
+    chapters,
+    onChapterVisible: handleChapterVisible,
+    onProgressUpdate: handleProgressUpdate,
+  });
+
+  // Sentinel observer for "The End" detection
+  const scrollEndSentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (readingMode !== 'scroll' || !scrollEndSentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !scrollFinished) {
+          setScrollFinished(true);
+          setAnnouncement(t('endScrollMessage'));
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(scrollEndSentinelRef.current);
+    return () => observer.disconnect();
+  }, [readingMode, scrollFinished, t]);
+
+  // Position preservation on mode switch
+  const prevReadingModeRef = useRef(readingMode);
+
+  useEffect(() => {
+    // Skip on initial mount
+    if (prevReadingModeRef.current === readingMode) return;
+
+    // Paginated → Scroll: scroll to approximate position
+    if (prevReadingModeRef.current === 'paginated' && readingMode === 'scroll') {
+      // Delay to allow DOM rendering of scroll container
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current && chapters.length > 0) {
+          const scrollOffset = (currentChapterIndex / chapters.length) * scrollContainerRef.current.scrollHeight;
+          scrollContainerRef.current.scrollTo({ top: scrollOffset, behavior: 'instant' });
+        }
+      }, 100);
+      prevReadingModeRef.current = readingMode;
+      return () => clearTimeout(timer);
+    }
+
+    // Scroll → Paginated: use visible chapter from IntersectionObserver
+    if (prevReadingModeRef.current === 'scroll' && readingMode === 'paginated') {
+      setCurrentChapterIndex(currentVisibleChapter);
+      setAnnouncement(t('navigatedToChapter', { chapterTitle: chapters[currentVisibleChapter]?.title || '' }));
+    }
+
+    prevReadingModeRef.current = readingMode;
+  }, [readingMode, currentChapterIndex, chapters.length, currentVisibleChapter, setCurrentChapterIndex, t]);
   const effectiveProgress = syncedProgress || progress;
   const progressPercentage = effectiveProgress?.percentage != null
     ? effectiveProgress.percentage
@@ -334,6 +409,10 @@ export default function ReaderPage() {
     setCurrentChapterIndex(0);
     setCurrentPageIndex(0);
     setIsFinished(false);
+    setScrollFinished(false);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'instant' });
+    }
     saveProgress({
       lastChapterId: null,
       lastPosition: 0,
@@ -356,7 +435,7 @@ export default function ReaderPage() {
     }
   }, [currentChapterIndex, chapters, storeIsFullscreen, t, currentChapter, book?.title, currentPageIndex, totalPagesInChapter]);
 
-  // Keyboard navigation — page-based
+  // Keyboard navigation — page-based or scroll-based
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -382,7 +461,27 @@ export default function ReaderPage() {
         return;
       }
 
-      // Page navigation
+      // Scroll mode keyboard navigation
+      if (readingMode === 'scroll') {
+        if (e.key === 'Home') {
+          e.preventDefault();
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'instant' : 'smooth' });
+          }
+          return;
+        }
+        if (e.key === 'End') {
+          e.preventDefault();
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: prefersReducedMotion ? 'instant' : 'smooth' });
+          }
+          return;
+        }
+        // PageDown/PageUp — native scroll handled by browser
+        return;
+      }
+
+      // Paginated mode navigation
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
         handleNextPage();
@@ -411,7 +510,7 @@ export default function ReaderPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [storeIsFullscreen, toggleChapterDrawer, exitFullscreen, storeExitFullscreen, handleNextPage, handlePreviousPage, setCurrentPageIndex, totalPagesInChapter, t]);
+  }, [storeIsFullscreen, toggleChapterDrawer, exitFullscreen, storeExitFullscreen, handleNextPage, handlePreviousPage, setCurrentPageIndex, totalPagesInChapter, t, readingMode, prefersReducedMotion]);
 
   // Browser history / exit handling
   useEffect(() => {
@@ -493,9 +592,10 @@ export default function ReaderPage() {
     );
   }
 
-  // Fullscreen paginated view
+  // Fullscreen view — paginated or scroll mode
   if (storeIsFullscreen) {
-    return (
+    // Shared fullscreen structure
+    const fullscreenShell = (contentArea) => (
       <div
         className={`reader-fullscreen-container fixed inset-0 z-50 flex flex-col overscroll-contain ${themeContentClass}`}
         style={{ overscrollBehavior: 'contain' }}
@@ -509,6 +609,91 @@ export default function ReaderPage() {
           onOpenSettings={handleOpenSettings}
         />
 
+        {contentArea}
+
+        <ReaderProgressBar
+          currentPageOffsetInBook={currentPageOffsetInBookValue}
+          totalPagesInBook={totalPagesInBookValue}
+          currentChapterIndex={readingMode === 'scroll' ? currentVisibleChapter : currentChapterIndex}
+          totalChapters={chapters.length}
+          percentage={progressPercentage}
+          scrollProgress={readingMode === 'scroll' ? scrollProgressValue : undefined}
+        />
+
+        <ChapterDrawer
+          chapters={chapters}
+          progress={progress}
+          onChapterSelect={handleChapterSelect}
+        />
+
+        <ReaderSettings onRepaginate={handleRepaginate} />
+      </div>
+    );
+
+    // Scroll mode
+    if (readingMode === 'scroll') {
+      return fullscreenShell(
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain px-4 py-8 max-w-2xl mx-auto w-full scroll-smooth"
+          style={{ overscrollBehavior: 'contain' }}
+          ref={scrollContainerRef}
+          tabIndex={0}
+          role="document"
+          aria-label={t('title')}
+        >
+          {chapters.length > 0 ? (
+            <>
+              {chapters.map((chapter, index) => (
+                <ScrollChapterMarker
+                  key={chapter._id}
+                  chapter={chapter}
+                  index={index}
+                  onVisible={(idx) => {
+                    setCurrentVisibleChapter(idx);
+                  }}
+                  fontSize={fontSize}
+                  themeProseClass={themeProseClass}
+                  observeRef={observeChapter}
+                />
+              ))}
+              {/* End sentinel */}
+              <div ref={scrollEndSentinelRef} className="h-1" aria-hidden="true" />
+              {/* "The End" inline at bottom of scroll */}
+              {(scrollFinished || isFinished) && (
+                <div
+                  className="flex flex-col items-center justify-center gap-6 py-20"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  <h2 className="text-3xl font-bold" aria-label={t('theEnd')}>
+                    {t('theEnd')}
+                  </h2>
+                  <p className="text-lg opacity-80">{t('finishedMessage', { bookTitle: book?.title || '' })}</p>
+                  <Button
+                    onClick={handleRestart}
+                    color="amber"
+                    size="lg"
+                    className="mt-4 focus:ring-2 focus:ring-amber-300"
+                    aria-label={t('restartBook')}
+                  >
+                    {t('restartBook')}
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-4 py-20">
+              <HiBookOpen className="w-16 h-16 text-purple-400" aria-hidden="true" />
+              <p className="text-lg opacity-70">{t('subtitle')}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Paginated mode (existing behavior)
+    return fullscreenShell(
+      <>
         <div
           className="flex-1 overflow-hidden px-4 py-8 max-w-2xl mx-auto w-full relative"
           ref={contentContainerRef}
@@ -579,28 +764,12 @@ export default function ReaderPage() {
           )}
         </div>
 
-        <ReaderProgressBar
-          currentPageOffsetInBook={currentPageOffsetInBookValue}
-          totalPagesInBook={totalPagesInBookValue}
-          currentChapterIndex={currentChapterIndex}
-          totalChapters={chapters.length}
-          percentage={progressPercentage}
-        />
-
-        <ChapterDrawer
-          chapters={chapters}
-          progress={progress}
-          onChapterSelect={handleChapterSelect}
-        />
-
-        <ReaderSettings onRepaginate={handleRepaginate} />
-
         <ChapterTransitionCard
           title={chapterTransitionTitle}
           visible={showChapterTransition}
           onDismiss={handleDismissTransition}
         />
-      </div>
+      </>
     );
   }
 
