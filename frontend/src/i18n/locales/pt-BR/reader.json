@@ -35,5 +35,7 @@
   "tapRight": "Próximo capítulo",
   "theEnd": "Fim",
   "finishedMessage": "Você terminou de ler \"{{bookTitle}}\"!",
-  "restartBook": "Ler Novamente"
+  "restartBook": "Ler Novamente",
+  "chapterAriaLabel": "Capítulo {{number}}: {{title}}, {{status}}",
+  "currentChapter": "capítulo atual"
 }

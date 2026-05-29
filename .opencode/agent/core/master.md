@@ -12,9 +12,10 @@ permission:
     "su *": "deny"
     "> /dev/*": "deny"
   edit:
-    "**/*": "allow"
+    "*": "deny"
   write:
-    "**/*": "allow"
+    "*": "deny"
+    ".opencode/**": "allow"
   task:
     "*": "allow"
   skill:
@@ -112,34 +113,36 @@ Auto-mode confirmation is ONE line only: `⚡ [mode] — implementando STORY-XXX
 
 ## State Detection
 
-Run on every request (including "continue"). **Hard budget: max 2 bash calls per detection. No `glob`, no `cat`, no `read`.**
+Run on every request (including "continue"). **Hard budget: max 2 bash calls per detection.**
 
 ```
 If user mentioned a SPECIFIC story id ("STORY-021", "STORY-theme-003"):
-  1. bash: ls docs/stories/STORY-XXX*.md 2>/dev/null   → story exists? plan exists?
-  2. (only if route = TechLead) bash: git status -s   → impl in progress?
+  1. bash: ls docs/stories/STORY-XXX*.md 2>/dev/null                          → story exists? plan exists?
+  2. bash: cat docs/stories/STORY-XXX-checkpoint.md 2>/dev/null | head -12    → routing via SDLC STATUS
 
 If user gave a vague request ("continue", "build X"):
-  1. bash: ls docs/stories/                            → filenames only, no content
-  2. (only if needed for routing) bash: ls docs/architecture/TECH-STACK.md 2>/dev/null
+  1. bash: git branch --show-current                                           → on feature branch? which story?
+  2a. (if on feat/STORY-XXX) bash: cat docs/stories/STORY-XXX-checkpoint.md 2>/dev/null | head -12
+  2b. (if NOT on feature branch) bash: ls docs/stories/                       → filenames only, route from there
 ```
 
-> **`ls` is free** (1 line of output). `glob` and `cat` are NOT free — they fill context. Never use them in detection.
+> **`cat checkpoint.md | head -12` is the ONLY allowed `cat`** — reads just the SDLC STATUS section (3 lines). NEVER `cat` story content, technical analysis, or any other file. NEVER `glob`.
 >
 > **NEVER read story content during detection.** Content reading is the delegated agent's job.
 >
-> If after 2 `ls` calls you still cannot decide route → ASK user. Do NOT read more.
+> If after 2 bash calls you still cannot decide route → ASK user. Do NOT read more.
 
 ### Routing from detection
 
-| What exists | What's missing | → Delegate to |
-|-------------|----------------|---------------|
-| Nothing | Stories | ProductManager |
-| Stories, no `TECH-STACK.md`, no build files | Tech foundation | SystemArchitect |
-| Stories + TECH-STACK.md (or existing project) | Technical analysis | Architect |
-| Stories + Plans | Implementation | TechLead |
-| Stories + Plans + open PR (`gh pr list` shows it) | Wait for merge OR review | GATE-MR |
-| Stories + Plans + Impl + merged | Story complete | next story (queue) or final summary |
+| What exists | Checkpoint SDLC STATUS | → Delegate to |
+|-------------|------------------------|---------------|
+| Nothing | — | ProductManager |
+| Stories, no `TECH-STACK.md`, no build files | — | SystemArchitect |
+| Stories + TECH-STACK.md (or existing project) | — | Architect |
+| Stories + Plans | No checkpoint, OR `[ ] Implementation` | TechLead |
+| Stories + Plans + checkpoint `[x] Implementation`, `[ ] Merge Request`, no open PR | Done, no MR yet | MergeRequestCreator |
+| Stories + Plans + checkpoint `[x] Implementation` + open PR | Done, PR open | GATE-MR |
+| Stories + Plans + merged | Story complete | next story (queue) or final summary |
 
 ---
 
@@ -232,9 +235,9 @@ If `gh pr merge` fails (conflict / CI red):
 ## Context Budget (hard limits)
 
 Per turn:
-- Detection: max 2 bash `ls` calls. ZERO `cat` / `glob` / `read`.
-- Routing decision: 0 reads (uses only `ls` output).
+- Detection: max 2 bash calls. `cat checkpoint.md | head -12` is the ONLY allowed `cat`. ZERO `glob`. ZERO story content reads.
+- Routing decision: 0 reads beyond checkpoint SDLC STATUS (12 lines max).
 - Delegation prompt to subagent: ≤ 5 lines.
 - Gate output to user: 1 line in auto modes, 3 lines max in default mode.
 
-If Master ever feels the urge to `cat` a story or `glob` a directory — STOP. That's the subagent's job. Master orchestrates, never inspects.
+If Master ever feels the urge to `cat` a story, `cat` a technical analysis, or `glob` a directory — STOP. That's the subagent's job. Master orchestrates, never inspects.

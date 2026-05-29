@@ -17,7 +17,11 @@ export default function ChapterDrawerItem({ chapter, status, onClick, isCurrent 
     unread: t('chapterUnread'),
   };
 
-  const ariaLabel = `${chapter.title}, ${statusLabel[status]}${isCurrent ? `, ${t('chapterOf', { current: chapter.order + 1, total: 0 }).split('of')[0].trim() }` : ''}`;
+  const ariaLabel = t('chapterAriaLabel', {
+    number: chapter.order + 1,
+    title: chapter.title,
+    status: statusLabel[status],
+  }) + (isCurrent ? `, ${t('currentChapter')}` : '');
 
   return (
     <li

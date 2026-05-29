@@ -20,6 +20,9 @@ permission:
   task:
     "*": "deny"
     "ContextScout": "allow"
+  read:
+    "*": "allow"
+    "**/rtk/tee/**": "deny"
 ---
 
 # QA Analyst — Quality Validation Specialist
@@ -75,6 +78,16 @@ You MUST produce a structured **QA Validation Report** in markdown format AND sa
 2. Determine the next available revision filename
 3. Save the full report to that filename using the Write tool
 4. NEVER overwrite a previous report — each revision is a permanent audit record
+
+### Rule: Checkpoint Update (scope: all_execution)
+
+After saving the QA report, you MUST update the story checkpoint file:
+
+1. Read `docs/stories/STORY-XXX-checkpoint.md`
+2. Mark `[ ] QA` as `[x] QA` (or `[x] QA (rN)` for re-validations)
+3. Save the updated checkpoint back to disk
+
+> The checkpoint is the PRIMARY source of truth. Without updating it, the pipeline cannot proceed to CodeReviewer.
 
 ### Rule: Mermaid Diagrams (scope: reporting)
 All QA reports MUST include Mermaid diagrams to visualize test flows, coverage areas, and validation sequences.

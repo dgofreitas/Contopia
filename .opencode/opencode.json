@@ -53,13 +53,13 @@
       }
     },
     "ProductManager": {
-      "model": "ollama-cloud/kimi-k2.6",
+      "model": "ollama-cloud/deepseek-v4-pro",
       "options": {
         "timeout": 1800000
       }
     },
     "ProductOwner": {
-      "model": "ollama-cloud/kimi-k2.6",
+      "model": "ollama-cloud/deepseek-v4-pro",
       "options": {
         "timeout": 1800000
       }

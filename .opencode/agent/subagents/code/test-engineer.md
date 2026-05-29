@@ -30,6 +30,9 @@ permission:
   task:
     "*": "deny"
     "ContextScout": "allow"
+  read:
+    "*": "allow"
+    "**/rtk/tee/**": "deny"
 ---
 
 # TestEngineer
@@ -131,6 +134,16 @@ You MUST produce a structured **Test Report** and save it to disk at the end of 
 
 **Save to:** `docs/stories/STORY-XXX-test-report.md` — this is the canonical path that QAAnalyst and CodeReviewer consume.
 Do NOT make QAAnalyst re-run tests — they read this file directly.
+
+### Rule: Checkpoint Update (scope: all_execution)
+
+After saving the Test Report, you MUST update the story checkpoint file:
+
+1. Read `docs/stories/STORY-XXX-checkpoint.md`
+2. Mark `[ ] TESTS` as `[x] TESTS` with coverage summary (e.g., `[x] TESTS — 49 passing, 94% coverage`)
+3. Save the updated checkpoint back to disk
+
+> The checkpoint is the PRIMARY source of truth. Without updating it, the TechLead cannot verify tests completed before delegating to QAAnalyst.
 
 ### Rule: Mermaid Diagrams (scope: reporting)
 Reports SHOULD include Mermaid diagrams when testing complex flows or integration scenarios.
