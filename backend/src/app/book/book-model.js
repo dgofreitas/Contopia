@@ -75,6 +75,10 @@ const bookSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isFavorited: {
+      type: Boolean,
+      default: false,
+    },
     edgeColor: {
       type: String,
       trim: true,
