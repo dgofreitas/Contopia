@@ -10,6 +10,7 @@ import usePulledOutBook from '../../hooks/usePulledOutBook';
 import useDebouncedResize from '../../hooks/useDebouncedResize';
 import useFavoriteToggle from '../../hooks/useFavoriteToggle';
 import useSortAnimation from '../../hooks/useSortAnimation';
+import { staggerConfig } from '../../lib/animation/stagger.js';
 
 function chunkArray(arr, size) {
   const chunks = [];
@@ -33,14 +34,13 @@ function computeItemsPerRow(viewportWidth) {
 
 export default function BookshelfGrid({ books, onBookClick, highlightBookId, highlightRef, progressMap = {} }) {
   const { t } = useTranslation('shelf');
-  const prefersReducedMotion = useReducedMotion();
   const navigate = useNavigate();
   const { pulledOutBookId, toggle, placeBack, isPlacingBack, getReaderUrl } = usePulledOutBook();
   const favoriteMutation = useFavoriteToggle();
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
   const { width: viewportWidth } = useDebouncedResize();
-  const { sortGeneration, getTransition } = useSortAnimation();
+  const { sortGeneration, getTransition, prefersReducedMotion } = useSortAnimation();
 
   const rows = useMemo(() => {
     const itemsPerRow = computeItemsPerRow(viewportWidth);
@@ -85,9 +85,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
         hidden: { opacity: 0 },
         visible: {
           opacity: 1,
-          transition: {
-            staggerChildren: 0.03,
-          },
+          transition: staggerConfig(),
         },
       };
 

@@ -6,12 +6,12 @@ import CoverDisplay from './CoverDisplay';
 import FavoriteToggle from './FavoriteToggle';
 import { sanitizeText } from '../../lib/sanitize';
 import { spineColorFromId } from '../../lib/spine-colors';
-
-const EASE_OUT = [0.25, 0.1, 0.25, 1];
+import { EASINGS } from '../../lib/animation/config.js';
+import { useReducedMotionConfig } from '../../lib/animation/reduced-motion.js';
 
 export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavoriteToggle }) {
   const { t } = useTranslation('shelf');
-  const prefersReducedMotion = useReducedMotion();
+  const { prefersReducedMotion, duration } = useReducedMotionConfig();
   const overlayRef = useRef(null);
   const firstBtnRef = useRef(null);
 
@@ -78,7 +78,7 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavorite
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
+            transition={{ duration: duration(0.15) }}
             onClick={handleClose}
             className="fixed inset-0 bg-black/50 z-[60]"
             aria-hidden="true"
@@ -92,7 +92,7 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavorite
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: EASE_OUT }}
+            transition={{ duration: duration(0.2), ease: EASINGS.easeOut }}
             style={{ willChange: 'transform' }}
             className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-[90vw] max-w-sm max-h-[90vh] overflow-y-auto"
           >

@@ -1,13 +1,11 @@
 import { useMemo } from 'react';
 import { useReducedMotion, getDuration } from '../lib/animation-engine/index.js';
 import useBookStore from '../stores/book-store';
-
-const MAX_STAGGER_MS = 300;
-const STAGGER_PER_INDEX_MS = 30;
+import { STAGGER_PER_INDEX_MS, MAX_STAGGER_MS } from '../lib/animation-engine/index.js';
 
 export default function useSortAnimation() {
-  const prefersReducedMotion = useReducedMotion();
   const sortGeneration = useBookStore((s) => s.sortGeneration);
+  const prefersReducedMotion = useReducedMotion();
 
   const getTransition = useMemo(() => {
     return (index) => {
