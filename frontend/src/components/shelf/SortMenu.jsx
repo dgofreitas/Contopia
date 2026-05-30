@@ -4,7 +4,7 @@ import { HiSortAscending, HiClock, HiHeart } from 'react-icons/hi';
 
 const SORT_OPTIONS = [
   { mode: 'alphabetical', icon: HiSortAscending },
-  { mode: 'favorites', icon: HiHeart, disabled: true },
+  { mode: 'favorites', icon: HiHeart },
   { mode: 'recently-read', icon: HiClock },
 ];
 
@@ -42,21 +42,18 @@ export default function SortMenu({ currentSort, onSortChange, isOpen, onClose })
 
   const handleKeyDown = useCallback(
     (e, index) => {
-      const enabledOptions = SORT_OPTIONS.filter((o) => !o.disabled);
-      const enabledIndex = enabledOptions.findIndex((o) => o.mode === SORT_OPTIONS[index].mode);
-      const enabledCount = enabledOptions.length;
+      const optionCount = SORT_OPTIONS.length;
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        const next = (enabledIndex + 1) % enabledCount;
-        const nextMode = enabledOptions[next].mode;
-        const nextIndex = SORT_OPTIONS.findIndex((o) => o.mode === nextMode);
+        const next = (index + 1) % optionCount;
+        const nextMode = SORT_OPTIONS[next].mode;
         const btn = menuRef.current?.querySelector(`[data-sort-mode="${nextMode}"]`);
         btn?.focus();
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        const prev = (enabledIndex - 1 + enabledCount) % enabledCount;
-        const prevMode = enabledOptions[prev].mode;
+        const prev = (index - 1 + optionCount) % optionCount;
+        const prevMode = SORT_OPTIONS[prev].mode;
         const btn = menuRef.current?.querySelector(`[data-sort-mode="${prevMode}"]`);
         btn?.focus();
       } else if (e.key === 'Tab') {
@@ -94,34 +91,23 @@ export default function SortMenu({ currentSort, onSortChange, isOpen, onClose })
             role="menuitemradio"
             aria-checked={isActive}
             aria-label={t('sort.optionAria', { mode: label })}
-            disabled={option.disabled}
             onClick={() => {
-              if (!option.disabled) {
-                onSortChange(option.mode);
-                onClose();
-              }
+              onSortChange(option.mode);
+              onClose();
             }}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={`
               flex items-center gap-3 w-full px-4 py-3 text-left min-h-[48px] min-w-[48px]
               transition-colors duration-150
               ${
-                option.disabled
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : isActive
-                    ? 'bg-amber-50 text-amber-700 font-semibold'
-                    : 'text-gray-700 hover:bg-amber-50 hover:text-amber-700'
+                isActive
+                  ? 'bg-amber-50 text-amber-700 font-semibold'
+                  : 'text-gray-700 hover:bg-amber-50 hover:text-amber-700'
               }
             `}
-            title={option.disabled ? t('sort.favoritesDisabled') : undefined}
           >
             <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             <span className="flex-1">{label}</span>
-            {option.disabled && (
-              <span className="text-xs text-gray-300 ml-2 italic">
-                {t('sort.favoritesDisabled')}
-              </span>
-            )}
           </button>
         );
       })}

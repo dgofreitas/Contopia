@@ -394,6 +394,66 @@ describe('Book Manager — STORY-021', () => {
       expect(updateCall).not.toHaveProperty('spineCustomized');
     });
 
+    // ── STORY-036: isFavorited ──────────────────────────────────────────────
+    it('should update isFavorited to true when provided', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, isFavorited: true });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { isFavorited: true });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { isFavorited: true });
+      expect(result.isFavorited).toBe(true);
+    });
+
+    it('should update isFavorited to false when provided', async () => {
+      const mockBook = createMockBook({ isFavorited: true });
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({ ...mockBook, isFavorited: false });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, { isFavorited: false });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, { isFavorited: false });
+      expect(result.isFavorited).toBe(false);
+    });
+
+    it('should not include isFavorited in update when undefined', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue(mockBook);
+
+      await bookManager.updateBookManager(bookId, AUTHOR_ID, { title: 'New Title' });
+
+      const updateCall = bookDao.updateBookById.mock.calls[0][1];
+      expect(updateCall).not.toHaveProperty('isFavorited');
+    });
+
+    it('should update isFavorited alongside other fields', async () => {
+      const mockBook = createMockBook();
+      bookDao.findBookById.mockResolvedValue(mockBook);
+      bookDao.updateBookById.mockResolvedValue({
+        ...mockBook,
+        title: 'Updated',
+        isFavorited: true,
+        spineColor: '#45B7D1',
+      });
+
+      const result = await bookManager.updateBookManager(bookId, AUTHOR_ID, {
+        title: 'Updated',
+        isFavorited: true,
+        spineColor: '#45B7D1',
+      });
+
+      expect(bookDao.updateBookById).toHaveBeenCalledWith(bookId, {
+        title: 'Updated',
+        isFavorited: true,
+        spineColor: '#45B7D1',
+      });
+      expect(result.title).toBe('Updated');
+      expect(result.isFavorited).toBe(true);
+      expect(result.spineColor).toBe('#45B7D1');
+    });
+
     it('should update spineColor and spineCustomized alongside other fields', async () => {
       const mockBook = createMockBook();
       bookDao.findBookById.mockResolvedValue(mockBook);

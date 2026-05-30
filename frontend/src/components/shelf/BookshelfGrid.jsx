@@ -7,6 +7,7 @@ import PulledOutOverlay from './PulledOutOverlay';
 import CoverOverlay from './CoverOverlay';
 import usePulledOutBook from '../../hooks/usePulledOutBook';
 import useDebouncedResize from '../../hooks/useDebouncedResize';
+import useFavoriteToggle from '../../hooks/useFavoriteToggle';
 
 function chunkArray(arr, size) {
   const chunks = [];
@@ -33,6 +34,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   const prefersReducedMotion = useReducedMotion();
   const navigate = useNavigate();
   const { pulledOutBookId, toggle, placeBack, isPlacingBack, getReaderUrl } = usePulledOutBook();
+  const favoriteMutation = useFavoriteToggle();
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
   const { width: viewportWidth } = useDebouncedResize();
@@ -47,6 +49,10 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
     onBookClick?.(bookId);
   }, [onBookClick, toggle]);
 
+  const pulledBook = pulledOutBookId
+    ? books.find((b) => b._id === pulledOutBookId)
+    : null;
+
   const handleViewCover = useCallback(() => {
     setCoverOverlayOpen(true);
   }, []);
@@ -60,9 +66,13 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
     placeBack();
   }, [placeBack]);
 
-  const pulledBook = pulledOutBookId
-    ? books.find((b) => b._id === pulledOutBookId)
-    : null;
+  const handleFavoriteToggle = useCallback(() => {
+    if (!pulledBook) return;
+    favoriteMutation.mutate({
+      bookId: pulledBook._id,
+      isFavorited: !pulledBook.isFavorited,
+    });
+  }, [pulledBook, favoriteMutation]);
 
   const triggerRef = spineRefs.current[pulledOutBookId];
 
@@ -135,6 +145,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
           book={pulledBook}
           onClose={handleCloseCover}
           onRead={() => navigate(getReaderUrl(pulledBook._id))}
+          onFavoriteToggle={handleFavoriteToggle}
         />
       )}
     </section>

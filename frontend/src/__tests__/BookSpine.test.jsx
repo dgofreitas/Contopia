@@ -110,6 +110,40 @@ describe('BookSpine', () => {
     expect(btn.style.boxShadow).toBeFalsy();
   });
 
+  // ── STORY-036: Heart indicator ──────────────────────────────
+
+  describe('heart indicator (STORY-036)', () => {
+    it('renders heart SVG when book.isFavorited is true', () => {
+      const favBook = { ...baseBook, isFavorited: true };
+      const { container } = render(<BookSpine book={favBook} />);
+      const svg = container.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+      // Heart SVG is filled #FF6B6B
+      expect(svg).toHaveAttribute('fill', '#FF6B6B');
+    });
+
+    it('does not render heart SVG when book.isFavorited is false', () => {
+      const nonFavBook = { ...baseBook, isFavorited: false };
+      const { container } = render(<BookSpine book={nonFavBook} />);
+      const svg = container.querySelector('svg');
+      // The progress bar SVG is separate; the heart SVG has fill="#FF6B6B"
+      expect(svg?.getAttribute('fill')).not.toBe('#FF6B6B');
+    });
+
+    it('does not render heart SVG when isFavorited is undefined', () => {
+      const { container } = render(<BookSpine book={baseBook} />);
+      const hearts = container.querySelectorAll('svg[fill="#FF6B6B"]');
+      expect(hearts).toHaveLength(0);
+    });
+
+    it('heart SVG has aria-hidden="true"', () => {
+      const favBook = { ...baseBook, isFavorited: true };
+      const { container } = render(<BookSpine book={favBook} />);
+      const svg = container.querySelector('svg[fill="#FF6B6B"]');
+      expect(svg).toHaveAttribute('aria-hidden', 'true');
+    });
+  });
+
   // ── STORY-033: ShelfProgressIndicator integration ────────────
 
   describe('progress integration (STORY-033)', () => {

@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import CoverDisplay from './CoverDisplay';
+import FavoriteToggle from './FavoriteToggle';
 import { sanitizeText } from '../../lib/sanitize';
 import { spineColorFromId } from '../../lib/spine-colors';
 
 const EASE_OUT = [0.25, 0.1, 0.25, 1];
 
-export default function CoverOverlay({ isOpen, book, onClose, onRead }) {
+export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavoriteToggle }) {
   const { t } = useTranslation('shelf');
   const prefersReducedMotion = useReducedMotion();
   const overlayRef = useRef(null);
@@ -115,7 +116,11 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead }) {
               <p className="text-xs text-gray-600 leading-relaxed mb-4">{summary}</p>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <FavoriteToggle
+                isFavorited={book.isFavorited}
+                onToggle={onFavoriteToggle}
+              />
               <button
                 ref={firstBtnRef}
                 onClick={onRead}

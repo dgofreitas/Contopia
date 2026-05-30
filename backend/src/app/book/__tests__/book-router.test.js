@@ -774,6 +774,80 @@ describe('Book Router', () => {
       expect(res.body.data.spineColor).toBe('#4ecdc4');
     });
 
+    // ── STORY-036: isFavorited ──────────────────────────────────────────────
+    it('PATCH — should update isFavorited to true', async () => {
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Fav Book' });
+
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ isFavorited: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.isFavorited).toBe(true);
+    });
+
+    it('PATCH — should update isFavorited to false', async () => {
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Unfav Book', isFavorited: true });
+
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ isFavorited: false });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.isFavorited).toBe(false);
+    });
+
+    it('PATCH — should reject non-boolean isFavorited (string)', async () => {
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Bad Fav' });
+
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ isFavorited: 'true' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('PATCH — should reject non-boolean isFavorited (number)', async () => {
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Num Fav' });
+
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ isFavorited: 1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('PATCH — should update isFavorited alongside other fields', async () => {
+      const book = await Book.create({ authorId: CHILD_ID, title: 'Multi Fav' });
+
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${book._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ title: 'Updated Fav', isFavorited: true, spineColor: '#FF6B6B' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.title).toBe('Updated Fav');
+      expect(res.body.data.isFavorited).toBe(true);
+    });
+
+    it('PATCH — should return 403 when updating isFavorited on another user\'s book', async () => {
+      const otherBook = await Book.create({ authorId: OTHER_CHILD_ID, title: 'Not Mine' });
+
+      const res = await request(testApp)
+        .patch(`/api/v1/books/${otherBook._id}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ isFavorited: true });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
     it('PATCH — should accept null spineColor and null coverColor to reset customization', async () => {
       // Arrange: create with colors set
       const book = await Book.create({
