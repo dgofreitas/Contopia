@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { m, AnimatePresence } from 'framer-motion';
-import { useReducedMotion } from '../../lib/animation-engine/index.js';
+import { m } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import CoverDisplay from './CoverDisplay';
 import FavoriteToggle from './FavoriteToggle';
@@ -70,77 +69,73 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavorite
   }, [isOpen, handleClose]);
 
   return (
-    <AnimatePresence>
-      {isOpen && book && (
-        <>
-          <m.div
-            key="cover-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: duration(0.15) }}
-            onClick={handleClose}
-            className="fixed inset-0 bg-black/50 z-[60]"
-            aria-hidden="true"
+    <>
+      <m.div
+        key="cover-backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: duration(0.15) }}
+        onClick={handleClose}
+        className="fixed inset-0 bg-black/50 z-[60]"
+        aria-hidden="true"
+      />
+      <m.div
+        key="cover-modal"
+        ref={overlayRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('coverOverlay.ariaLabel', { title })}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: duration(0.2), ease: EASINGS.easeOut }}
+        style={{ willChange: 'transform' }}
+        className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-[90vw] max-w-sm max-h-[90vh] overflow-y-auto"
+      >
+        <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">
+          {t('coverOverlay.title')}
+        </h2>
+
+        <div className="w-full aspect-[3/4] rounded-lg overflow-hidden mb-4">
+          <CoverDisplay
+            book={book}
+            className="w-full h-full"
           />
-          <m.div
-            key="cover-modal"
-            ref={overlayRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('coverOverlay.ariaLabel', { title })}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: duration(0.2), ease: EASINGS.easeOut }}
-            style={{ willChange: 'transform' }}
-            className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-[90vw] max-w-sm max-h-[90vh] overflow-y-auto"
+        </div>
+
+        <h3 className="text-base font-bold text-gray-800 mb-1">{title}</h3>
+        {authorName && (
+          <p className="text-sm text-gray-500 mb-2">
+            {t('coverOverlay.authorBy', { name: authorName })}
+          </p>
+        )}
+        {summary && (
+          <p className="text-xs text-gray-600 leading-relaxed mb-4">{summary}</p>
+        )}
+
+        <div className="flex gap-2 items-center">
+          <FavoriteToggle
+            isFavorited={book.isFavorited}
+            onToggle={onFavoriteToggle}
+          />
+          <button
+            ref={firstBtnRef}
+            onClick={onRead}
+            aria-label={t('coverOverlay.readBook')}
+            className="flex-1 text-sm font-semibold py-2 px-4 rounded bg-amber-600 text-white hover:bg-amber-700 focus:ring-2 focus:ring-amber-300 focus:outline-none"
           >
-            <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">
-              {t('coverOverlay.title')}
-            </h2>
-
-            <div className="w-full aspect-[3/4] rounded-lg overflow-hidden mb-4">
-              <CoverDisplay
-                book={book}
-                className="w-full h-full"
-              />
-            </div>
-
-            <h3 className="text-base font-bold text-gray-800 mb-1">{title}</h3>
-            {authorName && (
-              <p className="text-sm text-gray-500 mb-2">
-                {t('coverOverlay.authorBy', { name: authorName })}
-              </p>
-            )}
-            {summary && (
-              <p className="text-xs text-gray-600 leading-relaxed mb-4">{summary}</p>
-            )}
-
-            <div className="flex gap-2 items-center">
-              <FavoriteToggle
-                isFavorited={book.isFavorited}
-                onToggle={onFavoriteToggle}
-              />
-              <button
-                ref={firstBtnRef}
-                onClick={onRead}
-                aria-label={t('coverOverlay.readBook')}
-                className="flex-1 text-sm font-semibold py-2 px-4 rounded bg-amber-600 text-white hover:bg-amber-700 focus:ring-2 focus:ring-amber-300 focus:outline-none"
-              >
-                {t('coverOverlay.readBook')}
-              </button>
-              <button
-                onClick={handleClose}
-                aria-label={t('coverOverlay.close')}
-                className="flex-1 text-sm font-semibold py-2 px-4 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
-              >
-                {t('coverOverlay.close')}
-              </button>
-            </div>
-          </m.div>
-        </>
-      )}
-    </AnimatePresence>
+            {t('coverOverlay.readBook')}
+          </button>
+          <button
+            onClick={handleClose}
+            aria-label={t('coverOverlay.close')}
+            className="flex-1 text-sm font-semibold py-2 px-4 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
+          >
+            {t('coverOverlay.close')}
+          </button>
+        </div>
+      </m.div>
+    </>
   );
 }
