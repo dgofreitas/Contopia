@@ -13,14 +13,14 @@
 - [x] book-manager.js: Add isFavorited to allowedFields
 
 ## FRONTEND
-- [ ] FavoriteToggle.jsx: New heart button component
-- [ ] useFavoriteToggle.js: New mutation hook with optimistic update
-- [ ] CoverOverlay.jsx: Add FavoriteToggle
-- [ ] BookSpine.jsx: Add heart indicator SVG
-- [ ] BookshelfGrid.jsx: Wire toggle handler
-- [ ] SortMenu.jsx: Enable favorites option
-- [ ] sort-books.js: Implement case 'favorites'
-- [ ] i18n (en + pt-BR): Add favorite keys, remove favoritesDisabled
+- [x] FavoriteToggle.jsx: New heart button component
+- [x] useFavoriteToggle.js: New mutation hook with optimistic update
+- [x] CoverOverlay.jsx: Add FavoriteToggle
+- [x] BookSpine.jsx: Add heart indicator SVG
+- [x] BookshelfGrid.jsx: Wire toggle handler
+- [x] SortMenu.jsx: Enable favorites option
+- [x] sort-books.js: Implement case 'favorites'
+- [x] i18n (en + pt-BR): Add favorite keys, remove favoritesDisabled
 
 ## QUALIDADE E ENTREGA
 - [ ] TESTS

@@ -34,6 +34,13 @@ export function sortByRecentlyRead(books, progressMap = {}) {
   });
 }
 
+export function sortByFavorites(books) {
+  return [...books].sort((a, b) => {
+    if (a.isFavorited === b.isFavorited) return 0;
+    return a.isFavorited ? -1 : 1;
+  });
+}
+
 export function sortBooks(books, sortMode, progressMap) {
   if (!books || books.length === 0) return books ?? [];
 
@@ -43,6 +50,7 @@ export function sortBooks(books, sortMode, progressMap) {
     case 'recently-read':
       return sortByRecentlyRead(books, progressMap);
     case 'favorites':
+      return sortByFavorites(books);
     default:
       return books;
   }

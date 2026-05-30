@@ -43,7 +43,11 @@
   "sort.alphabetical": "Alfabética (A→Z)",
   "sort.favorites": "Favoritos",
   "sort.recentlyRead": "Lidos recentemente",
-  "sort.favoritesDisabled": "Em breve!",
   "sort.menuLabel": "Opções de organização",
-  "sort.optionAria": "Organizar por {{mode}}"
+  "sort.optionAria": "Organizar por {{mode}}",
+  "favorite.add": "Adicionar aos favoritos",
+  "favorite.remove": "Remover dos favoritos",
+  "favorite.heartLabel": "Favoritar",
+  "favorite.toastAdded": "Adicionado aos favoritos!",
+  "favorite.toastRemoved": "Removido dos favoritos"
 }
