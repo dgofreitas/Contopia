@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 import CoverDisplay from './CoverDisplay';
 import FavoriteToggle from './FavoriteToggle';
@@ -72,7 +73,7 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavorite
     <AnimatePresence>
       {isOpen && book && (
         <>
-          <motion.div
+          <m.div
             key="cover-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -82,7 +83,7 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavorite
             className="fixed inset-0 bg-black/50 z-[60]"
             aria-hidden="true"
           />
-          <motion.div
+          <m.div
             key="cover-modal"
             ref={overlayRef}
             role="dialog"
@@ -137,7 +138,7 @@ export default function CoverOverlay({ isOpen, book, onClose, onRead, onFavorite
                 {t('coverOverlay.close')}
               </button>
             </div>
-          </motion.div>
+          </m.div>
         </>
       )}
     </AnimatePresence>

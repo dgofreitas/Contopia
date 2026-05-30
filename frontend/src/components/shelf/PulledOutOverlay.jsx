@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 import PulledOutBookCard from './PulledOutBookCard';
 
@@ -71,7 +72,7 @@ export default function PulledOutOverlay({
     <AnimatePresence>
       {book && (
         <>
-          <motion.div
+          <m.div
             key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -81,7 +82,7 @@ export default function PulledOutOverlay({
             className="fixed inset-0 bg-black/30 z-40"
             aria-hidden="true"
           />
-          <motion.div
+          <m.div
             key="card"
             ref={overlayRef}
             role="dialog"
@@ -114,7 +115,7 @@ export default function PulledOutOverlay({
             >
               {t('pullOut.ariaDismiss')}
             </button>
-          </motion.div>
+          </m.div>
         </>
       )}
     </AnimatePresence>

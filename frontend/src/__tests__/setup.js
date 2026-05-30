@@ -7,6 +7,14 @@ if (!globalThis.requestIdleCallback) {
 
 Object.defineProperty(navigator, 'onLine', { writable: true, value: true });
 
+vi.mock('framer-motion', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    m: actual.motion,
+  };
+});
+
 // Mock window.matchMedia for responsive components (Flowbite, etc.)
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

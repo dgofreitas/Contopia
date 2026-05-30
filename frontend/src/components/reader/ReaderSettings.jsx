@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 import { HiX, HiBookOpen, HiDocumentText } from 'react-icons/hi';
 import useReaderStore from '../../stores/reader-store';
@@ -128,7 +129,7 @@ export default function ReaderSettings({ onRepaginate, onReaderSettingChange }) 
     <AnimatePresence>
       {isSettingsOpen && (
         <>
-          <motion.div
+          <m.div
             key="settings-backdrop"
             initial={backdropVariants.initial}
             animate={backdropVariants.animate}
@@ -138,7 +139,7 @@ export default function ReaderSettings({ onRepaginate, onReaderSettingChange }) 
             onClick={handleBackdropClick}
             aria-hidden="true"
           />
-          <motion.div
+          <m.div
             key="settings-panel"
             ref={panelRef}
             role="dialog"
@@ -266,7 +267,7 @@ export default function ReaderSettings({ onRepaginate, onReaderSettingChange }) 
                 })}
               </div>
             </section>
-          </motion.div>
+          </m.div>
         </>
       )}
     </AnimatePresence>

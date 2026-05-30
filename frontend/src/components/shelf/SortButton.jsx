@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { HiSortAscending, HiClock, HiHeart } from 'react-icons/hi';
 import SortMenu from './SortMenu';
 import useSortPreference from '../../hooks/useSortPreference';
@@ -35,7 +35,7 @@ export default function SortButton() {
 
   return (
     <div className="relative">
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+      <m.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
         <button
           onClick={handleToggle}
           aria-label={t('sort.buttonLabel')}
@@ -45,7 +45,7 @@ export default function SortButton() {
         >
           <CurrentIcon className="w-5 h-5" aria-hidden="true" />
         </button>
-      </motion.div>
+      </m.div>
 
       <SortMenu
         currentSort={sortMode}

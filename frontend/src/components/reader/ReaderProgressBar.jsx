@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 
 /**
  * ReaderProgressBar — Page-based reading progress bar.
@@ -45,7 +46,7 @@ export default function ReaderProgressBar({
       aria-valuemax={100}
       aria-label={t('progressLabel')}
     >
-      <motion.div
+      <m.div
         className="h-full bg-amber-600/70"
         initial={false}
         animate={{ width: `${progress}%` }}

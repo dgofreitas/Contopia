@@ -13,6 +13,11 @@ vi.mock('framer-motion', () => ({
       <button {...props} data-motion="true">{children}</button>
     ),
   },
+  m: {
+    button: ({ children, whileTap, transition, initial, animate, key, ...props }) => (
+      <button {...props} data-motion="true">{children}</button>
+    ),
+  },
 }));
 
 describe('FavoriteToggle', () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -56,7 +57,7 @@ export default function ChapterTransitionCard({ title, visible, onDismiss }) {
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
+        <m.div
           key="chapter-transition"
           variants={fadeVariants}
           initial="initial"
@@ -82,7 +83,7 @@ export default function ChapterTransitionCard({ title, visible, onDismiss }) {
               {title}
             </h2>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

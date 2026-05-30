@@ -13,7 +13,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { HiChevronLeft, HiChevronRight, HiMenuAlt2 } from 'react-icons/hi';
 import ChapterListItem from './ChapterListItem';
 import AddChapterButton from './AddChapterButton';
@@ -209,7 +209,7 @@ export default function ChapterSidebar({
           {isMobileOpen && (
             <>
               {/* Overlay */}
-              <motion.div
+              <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -219,7 +219,7 @@ export default function ChapterSidebar({
               />
 
               {/* Drawer */}
-              <motion.div
+              <m.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
@@ -235,7 +235,7 @@ export default function ChapterSidebar({
                 <div className="overflow-y-auto" style={{ maxHeight: 'calc(40vh - 24px)' }}>
                   {chapterList}
                 </div>
-              </motion.div>
+              </m.div>
             </>
           )}
         </AnimatePresence>

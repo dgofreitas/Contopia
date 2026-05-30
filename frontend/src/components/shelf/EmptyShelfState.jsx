@@ -1,6 +1,7 @@
 // Contopia — EmptyShelfState
 // Shown when user has no published books
-import { motion, useReducedMotion } from 'framer-motion';
+import { m } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { Button } from 'flowbite-react';
 import { HiPlus } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
@@ -31,15 +32,15 @@ export default function EmptyShelfState() {
       aria-live="polite"
       className="flex flex-col items-center justify-center space-y-6 py-12 md:py-16"
     >
-      <motion.div {...floatAnimation} aria-hidden="true">
+      <m.div {...floatAnimation} aria-hidden="true">
         <EmptyShelfIllustration />
-      </motion.div>
+      </m.div>
 
       <h2 className="text-xl md:text-2xl font-bold text-gray-700">{t('emptyTitle')}</h2>
 
       <p className="text-gray-500 max-w-sm">{t('emptyHint')}</p>
 
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+      <m.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
         <Button
           onClick={() => navigate('/editor/new')}
           className="bg-amber-600 hover:bg-amber-700 focus:ring-amber-300 text-white font-semibold py-3 px-6 rounded-xl flex items-center gap-2 min-h-[48px] min-w-[48px]"
@@ -48,7 +49,7 @@ export default function EmptyShelfState() {
           <HiPlus className="w-5 h-5" />
           {t('writeFirstBook')}
         </Button>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

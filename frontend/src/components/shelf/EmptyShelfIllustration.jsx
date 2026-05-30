@@ -1,6 +1,6 @@
 // Contopia — EmptyShelfIllustration
 // Friendly SVG character waving next to an empty bookshelf
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 export default function EmptyShelfIllustration({ className }) {
   return (
@@ -54,7 +54,7 @@ export default function EmptyShelfIllustration({ className }) {
         <circle cx="90" cy="132" r="6" fill="#f87171" opacity="0.35" />
         <circle cx="140" cy="132" r="6" fill="#f87171" opacity="0.35" />
 
-        <motion.path
+        <m.path
           d="M155 182 Q176 150 170 116"
           stroke="#f59e0b"
           strokeWidth="11"

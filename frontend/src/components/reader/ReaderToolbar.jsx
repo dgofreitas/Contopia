@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 import { HiArrowLeft, HiViewList, HiCog } from 'react-icons/hi';
 import useReaderStore from '../../stores/reader-store';
@@ -88,7 +89,7 @@ export default function ReaderToolbar({ bookTitle, onBackToShelf, onToggleChapte
   return (
     <AnimatePresence>
       {isToolbarVisible && (
-        <motion.header
+        <m.header
           ref={toolbarRef}
           role="toolbar"
           aria-label={t('toggleToolbar')}
@@ -137,7 +138,7 @@ export default function ReaderToolbar({ bookTitle, onBackToShelf, onToggleChapte
                <HiCog className="w-5 h-5" aria-hidden="true" />
              </button>
            </div>
-        </motion.header>
+        </m.header>
       )}
     </AnimatePresence>
   );
