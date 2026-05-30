@@ -11,7 +11,7 @@ import {
 } from '../../hooks/useBookPullOut';
 
 const BookSpine = React.forwardRef(function BookSpine(
-  { book, onClick, isPulledOut, isReversing, onAnimationComplete, isHighlighted, highlightRef, progress, animationTransition },
+  { book, onClick, isPulledOut, isReversing, animationPhase, onPlaceBackComplete, onAnimationComplete, isHighlighted, highlightRef, progress, animationTransition },
   ref,
 ) {
   const { t } = useTranslation('shelf');
@@ -24,19 +24,23 @@ const BookSpine = React.forwardRef(function BookSpine(
     ? { type: 'tween', duration: 0.15, ease: 'easeOut' }
     : { type: 'spring', stiffness: 300, damping: 20 });
 
-  const willChangeStyle = animationTransition && !prefersReducedMotion
+  // TODO: STORY-039 — migrate to animation engine
+  const willChangeStyle = (animationPhase !== 'idle' || animationTransition) && !prefersReducedMotion
     ? { willChange: 'transform' }
     : {};
 
   const variants = prefersReducedMotion ? PULL_OUT_VARIANTS_REDUCED : PULL_OUT_VARIANTS;
 
-  const variantName = isReversing
-    ? 'reversing'
-    : isPulledOut
-      ? 'pulled'
-      : 'rest';
+  // TODO: STORY-039 — migrate variant selection to animation engine
+  const variantName = animationPhase === 'placeBack'
+    ? 'placeBack'
+    : isReversing
+      ? 'reversing'
+      : isPulledOut
+        ? 'pulled'
+        : 'rest';
 
-  const pullOutStyle = isPulledOut
+  const pullOutStyle = isPulledOut || animationPhase === 'placeBack'
     ? { zIndex: 50, transformOrigin: 'center bottom' }
     : {};
 
@@ -57,7 +61,9 @@ const BookSpine = React.forwardRef(function BookSpine(
       variants={variants}
       animate={variantName}
       onAnimationComplete={() => {
-        if (isPulledOut && !isReversing) {
+        if (animationPhase === 'placeBack') {
+          onPlaceBackComplete?.();
+        } else if (isPulledOut && !isReversing) {
           onAnimationComplete?.();
         }
       }}

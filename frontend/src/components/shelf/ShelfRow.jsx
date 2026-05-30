@@ -1,7 +1,7 @@
 import { m } from 'framer-motion';
 import BookSpine from './BookSpine';
 
-export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, isReversing, highlightBookId, highlightRef, progressMap = {}, rowIndex, getTransition, onAnimationComplete }) {
+export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, isReversing, animationPhase, onPlaceBackComplete, highlightBookId, highlightRef, progressMap = {}, rowIndex, getTransition, onAnimationComplete }) {
   const hasPlacingBack = placingBackBookId && books.some(b => b._id === placingBackBookId);
 
   return (
@@ -19,6 +19,8 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
                 onClick={() => onBookClick(book._id)}
                 isPulledOut={book._id === pulledOutBookId}
                 isReversing={isThisBookReversing}
+                animationPhase={book._id === pulledOutBookId ? animationPhase : 'idle'}
+                onPlaceBackComplete={onPlaceBackComplete}
                 onAnimationComplete={onAnimationComplete}
                 isHighlighted={book._id === highlightBookId}
                 highlightRef={book._id === highlightBookId ? highlightRef : undefined}

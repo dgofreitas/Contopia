@@ -36,6 +36,17 @@ const PULL_OUT_VARIANTS = {
       ease: REVERSE_EASING,
     },
   },
+  placeBack: {
+    scale: 1,
+    y: 0,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 25,
+      mass: 0.8,
+    },
+  },
 };
 
 const PULL_OUT_VARIANTS_REDUCED = {
@@ -68,6 +79,16 @@ const PULL_OUT_VARIANTS_REDUCED = {
     opacity: 1,
     transition: {
       duration: 0,
+    },
+  },
+  placeBack: {
+    scale: 1,
+    y: 0,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    opacity: 1,
+    transition: {
+      duration: 0,
+      opacity: { duration: 0.15 },
     },
   },
 };
