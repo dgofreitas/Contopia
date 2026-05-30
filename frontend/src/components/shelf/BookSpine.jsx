@@ -1,7 +1,8 @@
 // Contopia — BookSpine
 // Individual book spine rendered as a button with vertical text
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 import { getTextColor, spineColorFromId } from '../../lib/spine-colors';
@@ -42,7 +43,7 @@ const BookSpine = React.forwardRef(function BookSpine(
   }
 
   return (
-    <motion.button
+    <m.button
       ref={isHighlighted ? highlightRef : ref}
       layout
       transition={layoutTransition}
@@ -91,7 +92,7 @@ const BookSpine = React.forwardRef(function BookSpine(
           finished={progress.finished}
         />
       )}
-    </motion.button>
+    </m.button>
   );
 });
 

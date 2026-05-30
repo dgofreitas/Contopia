@@ -1,11 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { useReducedMotion, getDuration } from '../lib/animation-engine/index.js';
 
 export default function usePulledOutBook() {
   const [pulledOutBookId, setPulledOutBookId] = useState(null);
   const [isPlacingBack, setIsPlacingBack] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const duration = prefersReducedMotion ? 0 : 0.3;
+  const duration = getDuration(prefersReducedMotion ? 'micro' : 'entrance') / 1000;
   const placeBackTimeoutRef = useRef(null);
 
   const pullOut = useCallback((bookId) => {

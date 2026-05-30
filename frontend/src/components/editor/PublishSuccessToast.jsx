@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 export default function PublishSuccessToast({ isOpen, onDismiss, bookId }) {
   const { t } = useTranslation('shelf');
@@ -23,7 +23,7 @@ export default function PublishSuccessToast({ isOpen, onDismiss, bookId }) {
       role="status"
       className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
     >
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
@@ -45,7 +45,7 @@ export default function PublishSuccessToast({ isOpen, onDismiss, bookId }) {
         >
           ✕
         </button>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

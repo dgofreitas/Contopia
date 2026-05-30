@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { Button } from 'flowbite-react';
 import { HiBookOpen, HiViewList, HiArrowsExpand } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
@@ -856,7 +857,7 @@ export default function ReaderPage() {
             </Button>
           </div>
         ) : currentChapter ? (
-          <motion.article
+          <m.article
             key={currentChapter._id}
             initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -869,7 +870,7 @@ export default function ReaderPage() {
               className="text-gray-700 leading-relaxed whitespace-pre-wrap"
               dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
-          </motion.article>
+          </m.article>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4 py-20">
             <HiBookOpen className="w-16 h-16 text-purple-400" aria-hidden="true" />

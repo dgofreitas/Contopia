@@ -162,12 +162,12 @@ describe('usePulledOutBook', () => {
       expect(result.current.duration).toBe(0.3);
     });
 
-    it('returns 0 when prefers-reduced-motion is true', async () => {
+    it('returns micro duration when prefers-reduced-motion is true', async () => {
       mockUseReducedMotion.mockReturnValue(true);
 
       const { result } = renderHook(() => usePulledOutBook());
 
-      expect(result.current.duration).toBe(0);
+      expect(result.current.duration).toBe(0.15);
     });
   });
 
@@ -237,7 +237,7 @@ describe('usePulledOutBook', () => {
       expect(result.current.isPlacingBack).toBe(false);
     });
 
-    it('uses 0ms duration when reduced motion is enabled', () => {
+    it('uses micro duration when reduced motion is enabled', () => {
       mockUseReducedMotion.mockReturnValue(true);
       const { result } = renderHook(() => usePulledOutBook());
 
@@ -248,9 +248,8 @@ describe('usePulledOutBook', () => {
 
       expect(result.current.isPlacingBack).toBe(true);
 
-      // Advance timers by 0ms (immediate)
       act(() => {
-        vi.advanceTimersByTime(0);
+        vi.advanceTimersByTime(150);
       });
 
       expect(result.current.pulledOutBookId).toBeNull();

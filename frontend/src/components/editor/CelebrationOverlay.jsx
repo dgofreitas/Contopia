@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 
 const SHAPES = [
   { x: '10%', delay: 0, size: 12, color: '#f59e0b' },
@@ -30,7 +31,7 @@ export default function CelebrationOverlay() {
           aria-hidden="true"
         >
           {SHAPES.map((shape, i) => (
-            <motion.div
+            <m.div
               key={i}
               initial={{ opacity: 0, y: '100vh' }}
               animate={{ opacity: [0, 1, 1, 0], y: ['-10vh', '40vh', '0vh'] }}

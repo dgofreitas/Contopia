@@ -12,6 +12,11 @@ vi.mock('framer-motion', () => ({
       <header ref={ref} {...props}>{children}</header>
     )),
   },
+  m: {
+    header: React.forwardRef(({ children, ...props }, ref) => (
+      <header ref={ref} {...props}>{children}</header>
+    )),
+  },
   AnimatePresence: ({ children }) => children,
   useReducedMotion: () => false,
 }));

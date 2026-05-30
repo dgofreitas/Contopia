@@ -10,6 +10,11 @@ vi.mock('framer-motion', () => ({
       <div data-testid="celebration-particle" {...props}>{children}</div>
     ),
   },
+  m: {
+    div: ({ children, initial, animate, transition, exit, ...props }) => (
+      <div data-testid="celebration-particle" {...props}>{children}</div>
+    ),
+  },
   AnimatePresence: ({ children }) => children,
   useReducedMotion: () => mockUseReducedMotion(),
 }));

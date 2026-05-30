@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { m, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import ShelfRow from './ShelfRow';
@@ -103,7 +104,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
       className="w-full px-4 md:px-6 lg:px-8 lg:max-w-5xl lg:mx-auto py-6"
     >
       <LayoutGroup>
-      <motion.div
+      <m.div
         key={sortGeneration}
         variants={containerVariants}
         initial={prefersReducedMotion ? undefined : 'hidden'}
@@ -115,7 +116,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
           flatIndex += row.length;
 
           return (
-            <motion.div key={rowIndex} variants={spineVariants}>
+            <m.div key={rowIndex} variants={spineVariants}>
               <ShelfRow
                 books={row}
                 onBookClick={handleBookClick}
@@ -127,10 +128,10 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
                 rowIndex={rowStartIndex}
                 getTransition={getTransition}
               />
-            </motion.div>
+            </m.div>
           );
         })}
-      </motion.div>
+      </m.div>
       </LayoutGroup>
 
       <AnimatePresence>

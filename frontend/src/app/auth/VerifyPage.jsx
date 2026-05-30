@@ -1,7 +1,7 @@
 // Contopia — VerifyPage
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import VerificationStatus from '../../components/auth/VerificationStatus';
 import RegisterForm from '../../components/auth/RegisterForm';
 import useVerify from '../../hooks/useVerify';
@@ -43,7 +43,7 @@ export default function VerifyPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-      <motion.div
+            <m.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -53,7 +53,7 @@ export default function VerifyPage() {
           <VerificationStatus status={status} onResend={() => setShowResendForm(true)} />
 
           {showResendForm && (
-            <motion.div
+      <m.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-6"
@@ -63,10 +63,10 @@ export default function VerifyPage() {
                 isPending={registerMutation.isPending}
                 serverError={registerMutation.error ? registerMutation.getErrorMessage(registerMutation.error) : null}
               />
-            </motion.div>
+            </m.div>
           )}
         </div>
-      </motion.div>
+      </m.div>
     </main>
   );
 }

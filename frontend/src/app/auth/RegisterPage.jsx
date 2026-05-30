@@ -1,6 +1,6 @@
 // Contopia — RegisterPage
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Alert } from 'flowbite-react';
 import { HiMail } from 'react-icons/hi';
 import RegisterForm from '../../components/auth/RegisterForm';
@@ -22,7 +22,7 @@ export default function RegisterPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-      <motion.div
+            <m.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -34,7 +34,7 @@ export default function RegisterPage() {
           </h1>
 
           {registered || (data && !error) ? (
-            <motion.div
+      <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4 }}
@@ -49,7 +49,7 @@ export default function RegisterPage() {
                 <span className="font-semibold">{t('register.success')}</span>
                 <p className="mt-1 text-sm">{t('register.checkEmail')}</p>
               </Alert>
-            </motion.div>
+            </m.div>
           ) : (
             <>
               {error && (
@@ -69,7 +69,7 @@ export default function RegisterPage() {
         <p className="mt-6 text-center text-sm text-gray-500">
           COPPA compliant · We only collect what's needed
         </p>
-      </motion.div>
+      </m.div>
     </main>
   );
 }

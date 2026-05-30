@@ -1,6 +1,5 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { useReducedMotionConfig } from '../../lib/animation/reduced-motion.js';
-import { slideVariants } from '../../lib/animation/variants.js';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion, getDuration, getEasing } from '../../lib/animation-engine/index.js';
 
 export default function PageTurnAnimation({
   children,
@@ -19,18 +18,21 @@ export default function PageTurnAnimation({
 
   return (
     <AnimatePresence mode="wait" onExitComplete={onAnimationComplete}>
-      <motion.div
+      <m.div
         key={pageKey}
         variants={variants}
         initial="initial"
         animate="animate"
         exit="exit"
-        transition={variants.transition}
+transition={{
+          duration: getDuration('entrance') / 1000,
+          ease: getEasing('easeOut'),
+        }}
         className="page-turn-container will-change-transform"
         style={{ willChange: 'transform' }}
       >
         {children}
-      </motion.div>
+      </m.div>
     </AnimatePresence>
   );
 }

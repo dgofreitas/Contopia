@@ -17,6 +17,14 @@ vi.mock('framer-motion', () => ({
       <nav onClick={onClick} {...rest}>{children}</nav>
     ),
   },
+  m: {
+    div: ({ children, onClick, ...rest }) => (
+      <div onClick={onClick} {...rest}>{children}</div>
+    ),
+    nav: ({ children, onClick, ...rest }) => (
+      <nav onClick={onClick} {...rest}>{children}</nav>
+    ),
+  },
   AnimatePresence: ({ children }) => <>{children}</>,
 }));
 

@@ -11,6 +11,11 @@ vi.mock('framer-motion', () => ({
       <div ref={ref} data-testid="motion-div" {...props}>{children}</div>
     )),
   },
+  m: {
+    div: React.forwardRef(({ children, ...props }, ref) => (
+      <div ref={ref} data-testid="motion-div" {...props}>{children}</div>
+    )),
+  },
   AnimatePresence: ({ children, onExitComplete }) => (
     <div data-testid="animate-presence">{children}</div>
   ),

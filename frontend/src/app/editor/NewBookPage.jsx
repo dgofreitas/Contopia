@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { m } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { HiPencilAlt } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -43,11 +44,11 @@ export default function NewBookPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-teal-50 p-4">
-      <motion.div {...fadeUpProps} className="w-full max-w-lg text-center">
+      <m.div {...fadeUpProps} className="w-full max-w-lg text-center">
         <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
-          <motion.div {...iconProps}>
+          <m.div {...iconProps}>
             <HiPencilAlt className="w-16 h-16 text-teal-500 mx-auto" aria-hidden="true" />
-          </motion.div>
+          </m.div>
 
           <h1 className="text-3xl font-bold text-gray-800">
             {t('createBook.title')}
@@ -65,7 +66,7 @@ export default function NewBookPage() {
             />
           </div>
         </div>
-      </motion.div>
+      </m.div>
     </main>
   );
 }

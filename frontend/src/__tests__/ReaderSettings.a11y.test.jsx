@@ -7,7 +7,15 @@ import useReaderStore from '../stores/reader-store';
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }) => {
-      // Filter out framer-motion specific props
+      const {
+        initial, animate, exit, transition, variants,
+        onAnimationComplete, ...rest
+      } = props;
+      return <div {...rest}>{children}</div>;
+    },
+  },
+  m: {
+    div: ({ children, ...props }) => {
       const {
         initial, animate, exit, transition, variants,
         onAnimationComplete, ...rest

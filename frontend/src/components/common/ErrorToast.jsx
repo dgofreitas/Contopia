@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { useEffect, useRef, useMemo } from 'react';
 import { useReducedMotionConfig } from '../../lib/animation/reduced-motion.js';
 
@@ -54,7 +54,7 @@ export default function ErrorToast({ id, code, message, onDismiss }) {
   }
 
   return (
-    <motion.div
+    <m.div
       role="alert"
       aria-live="assertive"
       aria-atomic="true"
@@ -74,6 +74,6 @@ export default function ErrorToast({ id, code, message, onDismiss }) {
       >
         {t('GOT_IT')}
       </button>
-    </motion.div>
+    </m.div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '../../lib/animation-engine/index.js';
 import { useTranslation } from 'react-i18next';
 import useReaderStore from '../../stores/reader-store';
 import ChapterDrawerItem from './ChapterDrawerItem';
@@ -79,7 +80,7 @@ export default function ChapterDrawer({ chapters, progress, onChapterSelect }) {
     <AnimatePresence>
       {isChapterDrawerOpen && chapters.length > 1 && (
         <>
-          <motion.div
+          <m.div
             key="chapter-drawer-backdrop"
             initial={backdropVariants.initial}
             animate={backdropVariants.animate}
@@ -89,7 +90,7 @@ export default function ChapterDrawer({ chapters, progress, onChapterSelect }) {
             onClick={handleBackdropClick}
             aria-hidden="true"
           />
-          <motion.nav
+          <m.nav
             key="chapter-drawer"
             role="dialog"
             aria-label={t('chapterList')}
@@ -122,7 +123,7 @@ export default function ChapterDrawer({ chapters, progress, onChapterSelect }) {
                 />
               ))}
             </ul>
-          </motion.nav>
+          </m.nav>
         </>
       )}
     </AnimatePresence>

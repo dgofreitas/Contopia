@@ -11,6 +11,9 @@ vi.mock('framer-motion', () => ({
   motion: {
     button: ({ children, ...props }) => <button {...props}>{children}</button>,
   },
+  m: {
+    button: ({ children, ...props }) => <button {...props}>{children}</button>,
+  },
 }));
 
 const baseBook = { _id: 'abc123', title: 'My Little Pony', spineColor: '#4ECDC4' };

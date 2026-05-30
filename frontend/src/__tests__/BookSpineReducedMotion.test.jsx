@@ -31,6 +31,10 @@ vi.mock('framer-motion', () => ({
     button: ({ children, ...props }) => <button {...props}>{children}</button>,
     div: ({ children, ...props }) => <div {...props}>{children}</div>,
   },
+  m: {
+    button: ({ children, ...props }) => <button {...props}>{children}</button>,
+    div: ({ children, ...props }) => <div {...props}>{children}</div>,
+  },
 }));
 
 describe('BookSpine (reduced motion)', () => {
