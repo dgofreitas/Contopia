@@ -8,7 +8,7 @@
 - [ ] Merge Request
 
 ## DOCUMENTATION
-- [ ] docs/decisions/ANIMATION-STRATEGY.md — decision document with benchmarks, trade-offs, setup instructions
+- [x] docs/decisions/ANIMATION-STRATEGY.md — decision document with benchmarks, trade-offs, setup instructions
 
 ## FRONTEND (Spike POC)
 - [x] AnimationDemo.jsx — POC component demonstrating 3 key animations (pull-out, page-turn, idle) with Framer Motion
