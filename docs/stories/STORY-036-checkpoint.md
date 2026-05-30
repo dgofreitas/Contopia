@@ -4,7 +4,7 @@
 
 ## SDLC STATUS
 - [x] Technical Analysis — Architect
-- [ ] Implementation — TechLead
+- [x] Implementation — TechLead
 - [ ] Merge Request
 
 ## BACKEND
