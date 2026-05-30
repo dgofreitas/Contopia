@@ -22,7 +22,7 @@ export default function BookshelfGridLayout({ highlightBookId }) {
 
   const books = data?.data ?? [];
   const hasBooks = books.length > 0;
-  const { sortMode } = useSortPreference();
+  const { sortMode, sortGeneration } = useSortPreference();
 
   // Build a map of bookId → progress for quick lookup
   const progressMap = useMemo(() => {
@@ -40,7 +40,7 @@ export default function BookshelfGridLayout({ highlightBookId }) {
 
   const sortedBooks = useMemo(
     () => sortBooks(books, sortMode, progressMap),
-    [books, sortMode, progressMap]
+    [books, sortMode, progressMap, sortGeneration]
   );
 
   // Sync to Zustand store when data arrives
