@@ -1,6 +1,7 @@
 // Contopia — Root Application Component
 import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { LazyMotion, domAnimation } from 'framer-motion';
 import RegisterPage from './app/auth/RegisterPage';
 import VerifyPage from './app/auth/VerifyPage';
 import WelcomePage from './app/auth/WelcomePage';
@@ -59,7 +60,7 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <LazyMotion features={domAnimation} strict>
       <OfflineBanner />
       <ToastContainer />
       <SessionTimeoutModal />
@@ -80,6 +81,6 @@ export default function App() {
           <Route path="/welcome" element={<WelcomePage />} />
         </Route>
       </Routes>
-    </>
+    </LazyMotion>
   );
 }

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import PulledOutBookCard from './PulledOutBookCard';
-
-const EASE_OUT = [0.25, 0.1, 0.25, 1];
+import { EASINGS } from '../../lib/animation/config.js';
+import { useReducedMotionConfig } from '../../lib/animation/reduced-motion.js';
 
 export default function PulledOutOverlay({
   book,
@@ -16,8 +16,8 @@ export default function PulledOutOverlay({
   triggerRef,
 }) {
   const { t } = useTranslation('shelf');
-  const prefersReducedMotion = useReducedMotion();
-  const duration = prefersReducedMotion ? 0 : 0.3;
+  const { duration } = useReducedMotionConfig();
+  const animDuration = duration(0.3);
   const overlayRef = useRef(null);
   const firstBtnRef = useRef(null);
   const dismissedRef = useRef(false);
@@ -76,7 +76,7 @@ export default function PulledOutOverlay({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration }}
+            transition={{ duration: animDuration }}
             onClick={handleDismiss}
             className="fixed inset-0 bg-black/30 z-40"
             aria-hidden="true"
@@ -89,7 +89,7 @@ export default function PulledOutOverlay({
             initial={{ opacity: 0, y: 16, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.95 }}
-            transition={{ duration, ease: EASE_OUT }}
+            transition={{ duration: animDuration, ease: EASINGS.easeOut }}
             onAnimationComplete={() => {
               if (dismissedRef.current) {
                 triggerRef?.current?.focus();

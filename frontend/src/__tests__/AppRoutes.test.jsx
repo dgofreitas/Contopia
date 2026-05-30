@@ -72,6 +72,8 @@ vi.mock('framer-motion', () => ({
     h1: ({ children, ...props }) => <h1 {...props}>{children}</h1>,
   },
   AnimatePresence: ({ children }) => children,
+  LazyMotion: ({ children }) => children,
+  domAnimation: {},
 }));
 
 const queryClient = new QueryClient({

@@ -41,7 +41,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/__tests__/**/*.test.{js,jsx}', 'src/components/spike/__tests__/**/*.test.{js,jsx}'],
+    include: ['src/__tests__/**/*.test.{js,jsx}', 'src/components/spike/__tests__/**/*.test.{js,jsx}', 'src/lib/**/__tests__/**/*.test.{js,jsx}'],
     setupFiles: ['src/__tests__/setup.js'],
     coverage: {
       provider: 'v8',

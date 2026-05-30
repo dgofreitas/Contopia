@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useMemo } from 'react';
+import { useReducedMotionConfig } from '../../lib/animation/reduced-motion.js';
 
 const WARNING_CODES = new Set(['RATE_LIMITED', 'OFFLINE', 'BACK_ONLINE']);
 
@@ -12,16 +13,13 @@ function getStyles(code) {
 }
 
 function getIcon(code) {
-  if (WARNING_CODES.has(code)) return '⚠️';
-  return '🔴';
+  if (WARNING_CODES.has(code)) return '\u26A0\uFE0F';
+  return '\uD83D\uDD34';
 }
-
-const prefersReducedMotion =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export default function ErrorToast({ id, code, message, onDismiss }) {
   const { t } = useTranslation('errors');
+  const { prefersReducedMotion } = useReducedMotionConfig();
   const dismissRef = useRef(null);
 
   const displayMessage = message || t(code);
