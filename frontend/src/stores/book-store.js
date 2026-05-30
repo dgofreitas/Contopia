@@ -24,7 +24,8 @@ const useBookStore = create(
 
       // Sort preference
       sortMode: 'recently-read',
-      setSortMode: (sortMode) => set({ sortMode }),
+      sortGeneration: 0,
+      setSortMode: (sortMode) => set((state) => ({ sortMode, sortGeneration: state.sortGeneration + 1 })),
 
       // Book list actions
       setBooks: (books) => set({ books, booksError: null }),

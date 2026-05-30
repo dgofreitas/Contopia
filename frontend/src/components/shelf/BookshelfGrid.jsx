@@ -8,6 +8,7 @@ import CoverOverlay from './CoverOverlay';
 import usePulledOutBook from '../../hooks/usePulledOutBook';
 import useDebouncedResize from '../../hooks/useDebouncedResize';
 import useFavoriteToggle from '../../hooks/useFavoriteToggle';
+import useSortAnimation from '../../hooks/useSortAnimation';
 
 function chunkArray(arr, size) {
   const chunks = [];
@@ -38,6 +39,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
   const { width: viewportWidth } = useDebouncedResize();
+  const { sortGeneration, getTransition } = useSortAnimation();
 
   const rows = useMemo(() => {
     const itemsPerRow = computeItemsPerRow(viewportWidth);
@@ -95,6 +97,8 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
         visible: { opacity: 1, y: 0 },
       };
 
+  let flatIndex = 0;
+
   return (
     <section
       aria-label={t('ariaShelfLabel', { count: books.length })}
@@ -102,14 +106,19 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
     >
       <LayoutGroup>
       <motion.div
+        key={sortGeneration}
         variants={containerVariants}
         initial={prefersReducedMotion ? undefined : 'hidden'}
         animate="visible"
         className="space-y-2"
       >
-        {rows.map((row, index) => (
-          <motion.div key={index} variants={spineVariants}>
-            <ShelfRow
+        {rows.map((row, rowIndex) => {
+          const rowStartIndex = flatIndex;
+          flatIndex += row.length;
+
+          return (
+            <motion.div key={rowIndex} variants={spineVariants}>
+              <ShelfRow
                 books={row}
                 onBookClick={handleBookClick}
                 pulledOutBookId={pulledOutBookId}
@@ -117,9 +126,12 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
                 highlightBookId={highlightBookId}
                 highlightRef={highlightRef}
                 progressMap={progressMap}
+                rowIndex={rowStartIndex}
+                getTransition={getTransition}
               />
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </motion.div>
       </LayoutGroup>
 

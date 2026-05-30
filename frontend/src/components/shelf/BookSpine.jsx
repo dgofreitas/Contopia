@@ -8,7 +8,7 @@ import { getTextColor, spineColorFromId } from '../../lib/spine-colors';
 import ShelfProgressIndicator from '../reader/ShelfProgressIndicator';
 
 const BookSpine = React.forwardRef(function BookSpine(
-  { book, onClick, isPulledOut, onPullOut, isHighlighted, highlightRef, progress },
+  { book, onClick, isPulledOut, onPullOut, isHighlighted, highlightRef, progress, animationTransition },
   ref,
 ) {
   const { t } = useTranslation('shelf');
@@ -26,6 +26,14 @@ const BookSpine = React.forwardRef(function BookSpine(
     ? { transition: `transform ${animDuration}ms cubic-bezier(0.25,0.1,0.25,1), box-shadow ${animDuration}ms cubic-bezier(0.25,0.1,0.25,1)` }
     : {};
 
+  const layoutTransition = animationTransition ?? (prefersReducedMotion
+    ? { type: 'tween', duration: 0.15, ease: 'easeOut' }
+    : { type: 'spring', stiffness: 300, damping: 20 });
+
+  const willChangeStyle = animationTransition && !prefersReducedMotion
+    ? { willChange: 'transform' }
+    : {};
+
   function handleKeyDown(e) {
     if (e.key === 'Enter' && onPullOut) {
       e.preventDefault();
@@ -36,6 +44,8 @@ const BookSpine = React.forwardRef(function BookSpine(
   return (
     <motion.button
       ref={isHighlighted ? highlightRef : ref}
+      layout
+      transition={layoutTransition}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
@@ -51,6 +61,7 @@ const BookSpine = React.forwardRef(function BookSpine(
         height: 'var(--spine-height)',
         ...pulledStyle,
         ...settleTransition,
+        ...willChangeStyle,
       }}
     >
       {book.isFavorited && (
