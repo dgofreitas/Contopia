@@ -1,12 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
 import { useReducedMotion, getDuration } from '../lib/animation-engine/index.js';
 
-export default function usePulledOutBook() {
+const PULL_OUT_DURATION_MS = 250;
+
+export default function usePulledOutBook({ onPullOutComplete } = {}) {
   const [pulledOutBookId, setPulledOutBookId] = useState(null);
   const [isPlacingBack, setIsPlacingBack] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const duration = getDuration(prefersReducedMotion ? 'micro' : 'entrance') / 1000;
+  const duration = prefersReducedMotion ? getDuration('micro') / 1000 : PULL_OUT_DURATION_MS / 1000;
   const placeBackTimeoutRef = useRef(null);
+  const onCompleteRef = useRef(onPullOutComplete);
+  onCompleteRef.current = onPullOutComplete;
 
   const pullOut = useCallback((bookId) => {
     setPulledOutBookId(bookId);
@@ -30,7 +34,13 @@ export default function usePulledOutBook() {
       placeBackTimeoutRef.current = null;
     }
     setIsPlacingBack(false);
-    setPulledOutBookId((prev) => (prev === bookId ? null : bookId));
+    setPulledOutBookId((prev) => {
+      const next = prev === bookId ? null : bookId;
+      if (next && next !== prev) {
+        onCompleteRef.current?.();
+      }
+      return next;
+    });
   }, []);
 
   const isPulledOut = useCallback(

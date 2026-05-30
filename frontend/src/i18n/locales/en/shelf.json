@@ -22,6 +22,7 @@
   "pullOut.summary": "Summary",
   "pullOut.ariaActions": "Book actions",
   "pullOut.ariaDismiss": "Dismiss",
+  "pullOut.ariaPullOut": "Pull out {{title}}",
   "coverOverlay.title": "Cover View",
   "coverOverlay.readBook": "Read Book",
   "coverOverlay.close": "Close",

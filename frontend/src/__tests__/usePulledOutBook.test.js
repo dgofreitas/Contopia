@@ -1,9 +1,7 @@
-// Contopia — usePulledOutBook Hook Tests (STORY-011)
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import usePulledOutBook from '../hooks/usePulledOutBook';
 
-// Mock framer-motion's useReducedMotion hook
 const mockUseReducedMotion = vi.fn();
 vi.mock('framer-motion', () => ({
   useReducedMotion: () => mockUseReducedMotion(),
@@ -11,7 +9,6 @@ vi.mock('framer-motion', () => ({
 
 describe('usePulledOutBook', () => {
   beforeEach(() => {
-    // Reset mock before each test
     vi.clearAllMocks();
   });
 
@@ -154,12 +151,12 @@ describe('usePulledOutBook', () => {
   });
 
   describe('duration (reduced motion)', () => {
-    it('returns 0.3 when prefers-reduced-motion is false', async () => {
+    it('returns 0.25 when prefers-reduced-motion is false', async () => {
       mockUseReducedMotion.mockReturnValue(false);
 
       const { result } = renderHook(() => usePulledOutBook());
 
-      expect(result.current.duration).toBe(0.3);
+      expect(result.current.duration).toBe(0.25);
     });
 
     it('returns micro duration when prefers-reduced-motion is true', async () => {
@@ -168,6 +165,49 @@ describe('usePulledOutBook', () => {
       const { result } = renderHook(() => usePulledOutBook());
 
       expect(result.current.duration).toBe(0.15);
+    });
+  });
+
+  describe('onPullOutComplete callback', () => {
+    it('calls onPullOutComplete when toggling to a new book', () => {
+      const onComplete = vi.fn();
+      const { result } = renderHook(() => usePulledOutBook({ onPullOutComplete: onComplete }));
+
+      act(() => {
+        result.current.toggle('book-123');
+      });
+
+      expect(onComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onPullOutComplete when toggling same book off', () => {
+      const onComplete = vi.fn();
+      const { result } = renderHook(() => usePulledOutBook({ onPullOutComplete: onComplete }));
+
+      act(() => {
+        result.current.toggle('book-123');
+      });
+      expect(onComplete).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        result.current.toggle('book-123');
+      });
+      expect(onComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onPullOutComplete when switching to a different book', () => {
+      const onComplete = vi.fn();
+      const { result } = renderHook(() => usePulledOutBook({ onPullOutComplete: onComplete }));
+
+      act(() => {
+        result.current.toggle('book-1');
+      });
+      expect(onComplete).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        result.current.toggle('book-2');
+      });
+      expect(onComplete).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -198,7 +238,7 @@ describe('usePulledOutBook', () => {
       expect(result.current.isPlacingBack).toBe(true);
     });
 
-    it('clears pulledOutBookId after animation duration', () => {
+    it('clears pulledOutBookId after animation duration (250ms)', () => {
       const { result } = renderHook(() => usePulledOutBook());
 
       act(() => {
@@ -210,16 +250,15 @@ describe('usePulledOutBook', () => {
         result.current.placeBack();
       });
 
-      // Advance timers by 300ms (0.3s * 1000)
       act(() => {
-        vi.advanceTimersByTime(300);
+        vi.advanceTimersByTime(250);
       });
 
       expect(result.current.pulledOutBookId).toBeNull();
       expect(result.current.isPlacingBack).toBe(false);
     });
 
-    it('clears isPlacingBack after animation duration', () => {
+    it('clears isPlacingBack after animation duration (250ms)', () => {
       const { result } = renderHook(() => usePulledOutBook());
 
       act(() => {
@@ -229,9 +268,8 @@ describe('usePulledOutBook', () => {
 
       expect(result.current.isPlacingBack).toBe(true);
 
-      // Advance timers by 300ms
       act(() => {
-        vi.advanceTimersByTime(300);
+        vi.advanceTimersByTime(250);
       });
 
       expect(result.current.isPlacingBack).toBe(false);
@@ -278,7 +316,6 @@ describe('usePulledOutBook', () => {
 
       expect(result.current.isPlacingBack).toBe(true);
 
-      // Toggle before animation completes
       act(() => {
         result.current.toggle('book-456');
       });
@@ -286,12 +323,10 @@ describe('usePulledOutBook', () => {
       expect(result.current.isPlacingBack).toBe(false);
       expect(result.current.pulledOutBookId).toBe('book-456');
 
-      // Advance timers past original timeout
       act(() => {
-        vi.advanceTimersByTime(300);
+        vi.advanceTimersByTime(250);
       });
 
-      // State should remain at book-456 (not cleared by timeout)
       expect(result.current.pulledOutBookId).toBe('book-456');
       expect(result.current.isPlacingBack).toBe(false);
     });
@@ -331,7 +366,6 @@ describe('usePulledOutBook', () => {
     it('handles rapid toggle calls without state corruption', () => {
       const { result } = renderHook(() => usePulledOutBook());
 
-      // Simulate rapid toggling
       act(() => {
         result.current.toggle('book-1');
         result.current.toggle('book-2');
@@ -339,7 +373,6 @@ describe('usePulledOutBook', () => {
         result.current.toggle('book-3');
       });
 
-      // Final state should be stable (book-3)
       expect(result.current.pulledOutBookId).toBe('book-3');
       expect(result.current.isPulledOut('book-3')).toBe(true);
       expect(result.current.isPulledOut('book-1')).toBe(false);
@@ -349,14 +382,12 @@ describe('usePulledOutBook', () => {
     it('handles rapid pullOut calls without state corruption', () => {
       const { result } = renderHook(() => usePulledOutBook());
 
-      // Simulate rapid pullOut calls
       act(() => {
         result.current.pullOut('book-1');
         result.current.pullOut('book-2');
         result.current.pullOut('book-3');
       });
 
-      // Final state should be stable (book-3)
       expect(result.current.pulledOutBookId).toBe('book-3');
     });
 
@@ -371,7 +402,6 @@ describe('usePulledOutBook', () => {
         result.current.pullOut('book-3');
       });
 
-      // Final state should be stable (book-3)
       expect(result.current.pulledOutBookId).toBe('book-3');
     });
 
@@ -388,15 +418,12 @@ describe('usePulledOutBook', () => {
         result.current.placeBack();
       });
 
-      // Should only have one timeout active
       expect(result.current.isPlacingBack).toBe(true);
 
-      // Advance timers once
       act(() => {
-        vi.advanceTimersByTime(300);
+        vi.advanceTimersByTime(250);
       });
 
-      // State should be cleared
       expect(result.current.pulledOutBookId).toBeNull();
       expect(result.current.isPlacingBack).toBe(false);
 

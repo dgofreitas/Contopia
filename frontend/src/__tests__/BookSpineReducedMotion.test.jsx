@@ -1,13 +1,10 @@
-// Contopia — BookSpine Reduced Motion Path (STORY-011)
-// This file overrides matchMedia BEFORE importing BookSpine so the
-// module-level prefersReducedMotion constant evaluates to true.
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 
 const origMatchMedia = window.matchMedia;
 
 beforeAll(() => {
-  // Set matchMedia to return true for prefers-reduced-motion: reduce
   window.matchMedia = vi.fn().mockImplementation((query) => ({
     matches: query === '(prefers-reduced-motion: reduce)',
     media: query,
@@ -24,7 +21,6 @@ afterAll(() => {
   window.matchMedia = origMatchMedia;
 });
 
-// Mock framer-motion useReducedMotion for deterministic tests (STORY-037)
 vi.mock('framer-motion', () => ({
   useReducedMotion: () => true,
   motion: {
@@ -37,21 +33,29 @@ vi.mock('framer-motion', () => ({
   },
 }));
 
+vi.mock('../../hooks/useBookPullOut.js', () => ({
+  PULL_OUT_VARIANTS: {
+    rest: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: { duration: 0.15, ease: [0.25, 0.1, 0.25, 1] } },
+    pulled: { scale: 1.05, y: -8, boxShadow: '0 8px 16px rgba(0,0,0,0.2)', transition: { duration: 0.25, ease: [0.34, 1.56, 0.64, 1] } },
+    reversing: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: { duration: 0.15, ease: [0.25, 0.1, 0.25, 1] } },
+  },
+  PULL_OUT_VARIANTS_REDUCED: {
+    rest: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', opacity: 1, transition: { duration: 0 } },
+    pulled: { scale: 1.05, y: -8, boxShadow: '0 8px 16px rgba(0,0,0,0.2)', opacity: 1, transition: { duration: 0.15, opacity: { duration: 0.15 }, scale: { duration: 0 }, y: { duration: 0 }, boxShadow: { duration: 0 } } },
+    reversing: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', opacity: 1, transition: { duration: 0 } },
+  },
+}));
+
 describe('BookSpine (reduced motion)', () => {
   it('renders without motion wrapper when prefers-reduced-motion is set', async () => {
-    // Dynamic import captures the mocked matchMedia at module evaluation time
     const { default: BookSpine } = await import('../components/shelf/BookSpine');
 
     const book = { _id: 'book-123', title: 'My Little Pony', spineColor: '#4ECDC4' };
     const { container } = render(<BookSpine book={book} />);
 
-    // Should render the button element
     const btn = screen.getByRole('button');
     expect(btn).toBeInTheDocument();
     expect(screen.getByText('My Little Pony')).toBeInTheDocument();
-
-    // When reduced motion is active, the component should still function
-    // but animation-related props should be present but may be disabled
     expect(btn).toHaveAttribute('aria-label');
   });
 
@@ -61,7 +65,7 @@ describe('BookSpine (reduced motion)', () => {
     const book = { _id: 'book-123', title: 'Test Book', spineColor: '#4ECDC4' };
     const onPullOut = vi.fn();
 
-    render(<BookSpine book={book} isPulledOut={false} onPullOut={onPullOut} />);
+    render(<BookSpine book={book} isPulledOut={false} onClick={onPullOut} />);
 
     const btn = screen.getByRole('button');
     expect(btn).toHaveAttribute('aria-label');
@@ -74,10 +78,49 @@ describe('BookSpine (reduced motion)', () => {
     const book = { _id: 'book-123', title: 'Test Book', spineColor: '#4ECDC4' };
     const onPullOut = vi.fn();
 
-    render(<BookSpine book={book} isPulledOut={true} onPullOut={onPullOut} />);
+    render(<BookSpine book={book} isPulledOut={true} onClick={onPullOut} />);
 
     const btn = screen.getByRole('button');
     expect(btn).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  // ── STORY-040: Reduced-motion instant + fade ───────────────
+
+  describe('STORY-040: reduced motion pull-out', () => {
+    it('instant state change with no CSS transition for transform/shadow', async () => {
+      const { default: BookSpine } = await import('../components/shelf/BookSpine');
+
+      const book = { _id: 'book-reduced', title: 'Reduced Motion', spineColor: '#4ECDC4' };
+
+      render(<BookSpine book={book} isPulledOut={true} />);
+
+      const btn = screen.getByRole('button');
+      expect(btn.style.transition).not.toContain('transform');
+      expect(btn.style.transition).not.toContain('box-shadow');
+    });
+
+    it('has transformOrigin center bottom when pulled out (reduced motion)', async () => {
+      const { default: BookSpine } = await import('../components/shelf/BookSpine');
+
+      const book = { _id: 'book-reduced', title: 'Reduced Motion', spineColor: '#4ECDC4' };
+
+      render(<BookSpine book={book} isPulledOut={true} />);
+
+      const btn = screen.getByRole('button');
+      expect(btn.style.transformOrigin).toBe('center bottom');
+    });
+
+    it('uses reduced-motion variants with opacity fade', async () => {
+      const { default: BookSpine } = await import('../components/shelf/BookSpine');
+
+      const book = { _id: 'book-reduced', title: 'Reduced Motion', spineColor: '#4ECDC4' };
+
+      render(<BookSpine book={book} isPulledOut={true} />);
+
+      const btn = screen.getByRole('button');
+      expect(btn).toBeInTheDocument();
+      expect(btn).toHaveAttribute('aria-expanded', 'true');
+    });
   });
 
   // ── STORY-037: Re-sort fade behavior (reduced motion) ─────────
@@ -105,7 +148,6 @@ describe('BookSpine (reduced motion)', () => {
       render(<BookSpine book={book} animationTransition={fadeTransition} />);
 
       const btn = screen.getByRole('button');
-      // With reduced motion active, willChange should not be set even with animationTransition
       expect(btn.style.willChange).toBe('');
     });
 

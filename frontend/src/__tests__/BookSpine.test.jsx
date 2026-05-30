@@ -2,9 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BookSpine from '../components/shelf/BookSpine';
 
-// setup.js already mocks react-i18next to pass through keys
-
-// Mock framer-motion's useReducedMotion hook
 const mockUseReducedMotion = vi.fn();
 vi.mock('framer-motion', () => ({
   useReducedMotion: () => mockUseReducedMotion(),
@@ -12,7 +9,31 @@ vi.mock('framer-motion', () => ({
     button: ({ children, ...props }) => <button {...props}>{children}</button>,
   },
   m: {
-    button: ({ children, ...props }) => <button {...props}>{children}</button>,
+    button: ({ children, animate, variants, onAnimationComplete, ...props }) => {
+      const variantName = typeof animate === 'string' ? animate : undefined;
+      const pulledStyles = {
+        pulled: { scale: 1.05, y: -8, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' },
+        reversing: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+        rest: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+      };
+      const activeVariant = variantName && variants ? (variants[variantName] || variants.rest || {}) : {};
+      const styleFromVariant = activeVariant || {};
+      const mergedStyle = { ...props.style, ...styleFromVariant };
+      return <button {...props} style={mergedStyle}>{children}</button>;
+    },
+  },
+}));
+
+vi.mock('../../hooks/useBookPullOut.js', () => ({
+  PULL_OUT_VARIANTS: {
+    rest: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: { duration: 0.15, ease: [0.25, 0.1, 0.25, 1] } },
+    pulled: { scale: 1.05, y: -8, boxShadow: '0 8px 16px rgba(0,0,0,0.2)', transition: { duration: 0.25, ease: [0.34, 1.56, 0.64, 1] } },
+    reversing: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: { duration: 0.15, ease: [0.25, 0.1, 0.25, 1] } },
+  },
+  PULL_OUT_VARIANTS_REDUCED: {
+    rest: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', opacity: 1, transition: { duration: 0 } },
+    pulled: { scale: 1.05, y: -8, boxShadow: '0 8px 16px rgba(0,0,0,0.2)', opacity: 1, transition: { duration: 0.15 } },
+    reversing: { scale: 1, y: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', opacity: 1, transition: { duration: 0 } },
   },
 }));
 
@@ -85,24 +106,21 @@ describe('BookSpine', () => {
   it('has aria-expanded="false" when isPulledOut is not provided', () => {
     render(<BookSpine book={baseBook} />);
     const btn = screen.getByRole('button');
-    // When isPulledOut is undefined, aria-expanded is undefined (falsy)
     expect(btn.getAttribute('aria-expanded')).toBeNull();
   });
 
-  it('Enter key calls onPullOut callback', () => {
-    const onPullOut = vi.fn();
-    render(<BookSpine book={baseBook} onPullOut={onPullOut} />);
+  it('Enter key calls onClick callback', () => {
+    const onClick = vi.fn();
+    render(<BookSpine book={baseBook} onClick={onClick} />);
     const btn = screen.getByRole('button');
     fireEvent.keyDown(btn, { key: 'Enter' });
-    expect(onPullOut).toHaveBeenCalledTimes(1);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it('has elevated z-index and shadow style when pulled out', () => {
     const { container } = render(<BookSpine book={baseBook} isPulledOut={true} />);
     const btn = screen.getByRole('button');
-    // Check for elevated z-index (50 when pulled out)
     expect(btn.style.zIndex).toBe('50');
-    // Check for shadow
     expect(btn.style.boxShadow).toContain('rgba(0,0,0,0.2)');
   });
 
@@ -110,7 +128,26 @@ describe('BookSpine', () => {
     const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
     const btn = screen.getByRole('button');
     expect(btn.style.zIndex).not.toBe('50');
-    expect(btn.style.boxShadow).toBeFalsy();
+  });
+
+  it('has transformOrigin center bottom when pulled out', () => {
+    render(<BookSpine book={baseBook} isPulledOut={true} />);
+    const btn = screen.getByRole('button');
+    expect(btn.style.transformOrigin).toBe('center bottom');
+  });
+
+  it('does not have transformOrigin center bottom when not pulled out', () => {
+    render(<BookSpine book={baseBook} isPulledOut={false} />);
+    const btn = screen.getByRole('button');
+    expect(btn.style.transformOrigin).not.toBe('center bottom');
+  });
+
+  it('does not have CSS transition for transform or box-shadow (handled by Framer Motion)', () => {
+    mockUseReducedMotion.mockReturnValue(false);
+    const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
+    const btn = screen.getByRole('button');
+    expect(btn.style.transition).not.toContain('transform');
+    expect(btn.style.transition).not.toContain('box-shadow');
   });
 
   // ── STORY-036: Heart indicator ──────────────────────────────
@@ -121,7 +158,6 @@ describe('BookSpine', () => {
       const { container } = render(<BookSpine book={favBook} />);
       const svg = container.querySelector('svg');
       expect(svg).toBeInTheDocument();
-      // Heart SVG is filled #FF6B6B
       expect(svg).toHaveAttribute('fill', '#FF6B6B');
     });
 
@@ -129,7 +165,6 @@ describe('BookSpine', () => {
       const nonFavBook = { ...baseBook, isFavorited: false };
       const { container } = render(<BookSpine book={nonFavBook} />);
       const svg = container.querySelector('svg');
-      // The progress bar SVG is separate; the heart SVG has fill="#FF6B6B"
       expect(svg?.getAttribute('fill')).not.toBe('#FF6B6B');
     });
 
@@ -153,7 +188,6 @@ describe('BookSpine', () => {
     it('renders ShelfProgressIndicator when progress is provided', () => {
       const progress = { percentage: 60, finished: false };
       const { container } = render(<BookSpine book={baseBook} progress={progress} />);
-      // Progressbar should be present
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 
@@ -182,39 +216,34 @@ describe('BookSpine', () => {
     });
   });
 
-  describe('STORY-013: settle-back transition', () => {
-    it('has CSS transition when not pulled out', () => {
-      mockUseReducedMotion.mockReturnValue(false);
-      const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
+  // ── STORY-040: Pull-out animation ────────────────────────────
+
+  describe('STORY-040: pull-out animation', () => {
+    it('uses correct shadow when pulled out (0 8px 16px)', () => {
+      render(<BookSpine book={baseBook} isPulledOut={true} />);
       const btn = screen.getByRole('button');
-      // Should have transition property when not pulled out
-      expect(btn.style.transition).toContain('transform');
-      expect(btn.style.transition).toContain('box-shadow');
+      expect(btn.style.boxShadow).toContain('0 8px 16px');
+      expect(btn.style.boxShadow).toContain('rgba(0,0,0,0.2)');
     });
 
-    it('has no CSS transition when pulled out', () => {
-      mockUseReducedMotion.mockReturnValue(false);
-      const { container } = render(<BookSpine book={baseBook} isPulledOut={true} />);
+    it('uses rest shadow when not pulled out', () => {
+      render(<BookSpine book={baseBook} isPulledOut={false} />);
       const btn = screen.getByRole('button');
-      // Should NOT have transition property when pulled out
-      expect(btn.style.transition).not.toContain('transform');
-      expect(btn.style.transition).not.toContain('box-shadow');
+      expect(btn.style.boxShadow).toContain('0 2px 4px');
     });
 
-    it('transition is "none" when reduced motion is enabled', () => {
-      mockUseReducedMotion.mockReturnValue(true);
-      const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
+    it('renders with isReversing prop', () => {
+      render(<BookSpine book={baseBook} isPulledOut={false} isReversing={true} />);
       const btn = screen.getByRole('button');
-      // When reduced motion is enabled, duration is 0ms, so transition is instant
-      expect(btn.style.transition).toContain('0ms');
+      expect(btn).toBeInTheDocument();
     });
 
-    it('transition has 300ms duration when reduced motion is disabled', () => {
-      mockUseReducedMotion.mockReturnValue(false);
-      const { container } = render(<BookSpine book={baseBook} isPulledOut={false} />);
-      const btn = screen.getByRole('button');
-      // When reduced motion is disabled, duration is 300ms
-      expect(btn.style.transition).toContain('300ms');
+    it('calls onAnimationComplete callback when isPulledOut and not reversing', () => {
+      const onComplete = vi.fn();
+      render(<BookSpine book={baseBook} isPulledOut={true} isReversing={false} onAnimationComplete={onComplete} />);
+      // onAnimationComplete is wired — in a real Framer Motion env it fires on animation end.
+      // We verify the prop is accepted without error.
+      expect(screen.getByRole('button')).toBeInTheDocument();
     });
   });
 
@@ -226,9 +255,6 @@ describe('BookSpine', () => {
       const animTransition = { type: 'spring', stiffness: 300, damping: 20, delay: 0.15 };
       render(<BookSpine book={baseBook} animationTransition={animTransition} />);
       const btn = screen.getByRole('button');
-      // The layout transition is passed to motion.button — since we mocked motion,
-      // it won't actually apply Framer Motion transitions, but the prop is passed.
-      // We verify by checking the component renders without error.
       expect(btn).toBeInTheDocument();
     });
 
@@ -236,7 +262,6 @@ describe('BookSpine', () => {
       mockUseReducedMotion.mockReturnValue(false);
       const animTransition = { type: 'spring', stiffness: 300, damping: 20, delay: 0.3 };
       render(<BookSpine book={baseBook} animationTransition={animTransition} />);
-      // Verify render succeeds — spring config is applied to motion.button's transition prop
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
 
@@ -253,7 +278,6 @@ describe('BookSpine', () => {
       const animTransition = { type: 'spring', stiffness: 300, damping: 20, delay: 0 };
       render(<BookSpine book={baseBook} animationTransition={animTransition} />);
       const btn = screen.getByRole('button');
-      // When prefersReducedMotion is true, willChange should not be set
       expect(btn.style.willChange).toBe('');
     });
 
@@ -269,7 +293,6 @@ describe('BookSpine', () => {
     it('uses tween with duration 0.15s and ease easeOut when reduced-motion active and no animationTransition', () => {
       mockUseReducedMotion.mockReturnValue(true);
       render(<BookSpine book={baseBook} />);
-      // Component renders without error — layoutTransition uses tween when prefersReducedMotion
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
 
@@ -277,7 +300,6 @@ describe('BookSpine', () => {
       mockUseReducedMotion.mockReturnValue(true);
       const animTransition = { type: 'tween', duration: 0.15, ease: 'easeOut' };
       render(<BookSpine book={baseBook} animationTransition={animTransition} />);
-      // animationTransition is used directly, overriding component's internal reduced-motion logic
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
   });

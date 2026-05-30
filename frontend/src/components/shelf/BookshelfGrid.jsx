@@ -7,6 +7,7 @@ import ShelfRow from './ShelfRow';
 import PulledOutOverlay from './PulledOutOverlay';
 import CoverOverlay from './CoverOverlay';
 import usePulledOutBook from '../../hooks/usePulledOutBook';
+import useBookPullOut from '../../hooks/useBookPullOut';
 import useDebouncedResize from '../../hooks/useDebouncedResize';
 import useFavoriteToggle from '../../hooks/useFavoriteToggle';
 import useSortAnimation from '../../hooks/useSortAnimation';
@@ -35,7 +36,12 @@ function computeItemsPerRow(viewportWidth) {
 export default function BookshelfGrid({ books, onBookClick, highlightBookId, highlightRef, progressMap = {} }) {
   const { t } = useTranslation('shelf');
   const navigate = useNavigate();
-  const { pulledOutBookId, toggle, placeBack, isPlacingBack, getReaderUrl } = usePulledOutBook();
+  const { pulledOutBookId, toggle, placeBack, isPlacingBack, getReaderUrl } = usePulledOutBook({
+    onPullOutComplete: undefined,
+  });
+  const { isReversing } = useBookPullOut({
+    onPullOutComplete: () => {},
+  });
   const favoriteMutation = useFavoriteToggle();
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
@@ -122,6 +128,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
                 onBookClick={handleBookClick}
                 pulledOutBookId={pulledOutBookId}
                 placingBackBookId={isPlacingBack ? pulledOutBookId : null}
+                isReversing={isReversing}
                 highlightBookId={highlightBookId}
                 highlightRef={highlightRef}
                 progressMap={progressMap}
