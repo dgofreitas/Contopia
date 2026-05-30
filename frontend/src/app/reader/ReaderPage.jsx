@@ -46,7 +46,7 @@ const THEME_PROSE_CLASSES = {
   dark: 'prose-headings:text-gray-50 prose-p:text-gray-200',
 };
 
-export default function ReaderPage() {
+export default function ReaderPage({ book: bookProp }) {
   const { t } = useTranslation('reader');
   const { bookId } = useParams();
   const navigate = useNavigate();
@@ -86,7 +86,8 @@ export default function ReaderPage() {
 
   // Data hooks
   const { data: chapters = [], isLoading: chaptersLoading } = useChaptersQuery(bookId);
-  const { data: book } = useBookEditQuery(bookId);
+  const { data: fetchedBook } = useBookEditQuery(bookId);
+  const book = fetchedBook || bookProp;
   const { data: progress } = useReadingProgressQuery(bookId);
   const { saveProgress, localProgress: syncedProgress } = useProgressSync(bookId);
 

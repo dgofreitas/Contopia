@@ -6,11 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import ShelfRow from './ShelfRow';
 import PulledOutOverlay from './PulledOutOverlay';
 import CoverOverlay from './CoverOverlay';
+import CoverFlipTransition from './CoverFlipTransition';
 import usePulledOutBook from '../../hooks/usePulledOutBook';
 import useBookPullOut from '../../hooks/useBookPullOut';
 import useDebouncedResize from '../../hooks/useDebouncedResize';
 import useFavoriteToggle from '../../hooks/useFavoriteToggle';
 import useSortAnimation from '../../hooks/useSortAnimation';
+import useCoverFlipTransition from '../../hooks/useCoverFlipTransition';
 import { staggerConfig } from '../../lib/animation/stagger.js';
 
 function chunkArray(arr, size) {
@@ -45,6 +47,17 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   const favoriteMutation = useFavoriteToggle();
   const spineRefs = useRef({});
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
+  const {
+    transitionState,
+    bookData: flipBookData,
+    startFlip,
+    cancelFlip,
+    completeFlip,
+    resetToIdle,
+    is3DSupported,
+    prefersReducedMotion: flipPrefersReducedMotion,
+    animationConfig,
+  } = useCoverFlipTransition();
   const { width: viewportWidth } = useDebouncedResize();
   const { sortGeneration, getTransition, prefersReducedMotion } = useSortAnimation();
 
@@ -64,12 +77,27 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
     : null;
 
   const handleViewCover = useCallback(() => {
+    if (transitionState !== 'idle') return;
     setCoverOverlayOpen(true);
-  }, []);
+  }, [transitionState]);
 
   const handleCloseCover = useCallback(() => {
     setCoverOverlayOpen(false);
   }, []);
+
+  const handleStartFlip = useCallback((book) => {
+    startFlip(book);
+  }, [startFlip]);
+
+  const handleFlipComplete = useCallback(() => {
+    setCoverOverlayOpen(false);
+    navigate(getReaderUrl(flipBookData._id), { replace: true });
+    resetToIdle();
+  }, [navigate, getReaderUrl, flipBookData, resetToIdle]);
+
+  const handleFlipCancel = useCallback(() => {
+    resetToIdle();
+  }, [resetToIdle]);
 
   const handlePlaceBack = useCallback(() => {
     setCoverOverlayOpen(false);
@@ -148,7 +176,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
             key="overlay"
             book={pulledBook}
             onDismiss={handlePlaceBack}
-            onRead={() => navigate(getReaderUrl(pulledBook._id))}
+            onRead={() => startFlip(pulledBook)}
             onEdit={() => navigate(`/editor/${pulledBook._id}`)}
             onDesignCover={() => navigate(`/cover/${pulledBook._id}`)}
             onViewCover={handleViewCover}
@@ -158,13 +186,28 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
         )}
       </AnimatePresence>
 
-      {coverOverlayOpen && pulledBook && (
-        <CoverOverlay
-          isOpen={coverOverlayOpen}
-          book={pulledBook}
-          onClose={handleCloseCover}
-          onRead={() => navigate(getReaderUrl(pulledBook._id))}
-          onFavoriteToggle={handleFavoriteToggle}
+      <AnimatePresence>
+        {coverOverlayOpen && transitionState === 'idle' && pulledBook && (
+          <CoverOverlay
+            key="cover-overlay"
+            isOpen={coverOverlayOpen}
+            book={pulledBook}
+            onClose={handleCloseCover}
+            onRead={() => startFlip(pulledBook)}
+            onFavoriteToggle={handleFavoriteToggle}
+          />
+        )}
+      </AnimatePresence>
+
+      {transitionState !== 'idle' && transitionState !== 'complete' && (
+        <CoverFlipTransition
+          book={flipBookData || pulledBook}
+          transitionState={transitionState}
+          is3DSupported={is3DSupported}
+          prefersReducedMotion={flipPrefersReducedMotion}
+          animationConfig={animationConfig}
+          onFlipComplete={handleFlipComplete}
+          onCancel={handleFlipCancel}
         />
       )}
     </section>
