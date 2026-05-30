@@ -22,6 +22,7 @@
   "pullOut.summary": "Resumo",
   "pullOut.ariaActions": "Ações do livro",
   "pullOut.ariaDismiss": "Fechar",
+  "pullOut.ariaPullOut": "Puxar {{title}}",
   "coverOverlay.title": "Ver Capa",
   "coverOverlay.readBook": "Ler Livro",
   "coverOverlay.close": "Fechar",

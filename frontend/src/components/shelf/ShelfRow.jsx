@@ -1,7 +1,7 @@
 import { m } from 'framer-motion';
 import BookSpine from './BookSpine';
 
-export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, highlightBookId, highlightRef, progressMap = {}, rowIndex, getTransition }) {
+export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, isReversing, highlightBookId, highlightRef, progressMap = {}, rowIndex, getTransition, onAnimationComplete }) {
   const hasPlacingBack = placingBackBookId && books.some(b => b._id === placingBackBookId);
 
   return (
@@ -10,6 +10,7 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
         {books.map((book, colIndex) => {
           const globalIndex = rowIndex != null ? rowIndex + colIndex : colIndex;
           const transition = getTransition ? getTransition(globalIndex) : undefined;
+          const isThisBookReversing = isReversing && placingBackBookId === book._id;
 
           return (
             <m.div key={book._id} layoutId={book._id} className="shelf-spine-cell" transition={transition}>
@@ -17,7 +18,8 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
                 book={book}
                 onClick={() => onBookClick(book._id)}
                 isPulledOut={book._id === pulledOutBookId}
-                onPullOut={() => onBookClick(book._id)}
+                isReversing={isThisBookReversing}
+                onAnimationComplete={onAnimationComplete}
                 isHighlighted={book._id === highlightBookId}
                 highlightRef={book._id === highlightBookId ? highlightRef : undefined}
                 progress={progressMap[book._id]}

@@ -1,5 +1,3 @@
-// Contopia — BookSpine
-// Individual book spine rendered as a button with vertical text
 import React from 'react';
 import { m } from 'framer-motion';
 import { useReducedMotion } from '../../lib/animation-engine/index.js';
@@ -7,9 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { sanitizeText } from '../../lib/sanitize';
 import { getTextColor, spineColorFromId } from '../../lib/spine-colors';
 import ShelfProgressIndicator from '../reader/ShelfProgressIndicator';
+import {
+  PULL_OUT_VARIANTS,
+  PULL_OUT_VARIANTS_REDUCED,
+} from '../../hooks/useBookPullOut';
 
 const BookSpine = React.forwardRef(function BookSpine(
-  { book, onClick, isPulledOut, onPullOut, isHighlighted, highlightRef, progress, animationTransition },
+  { book, onClick, isPulledOut, isReversing, onAnimationComplete, isHighlighted, highlightRef, progress, animationTransition },
   ref,
 ) {
   const { t } = useTranslation('shelf');
@@ -17,15 +19,6 @@ const BookSpine = React.forwardRef(function BookSpine(
   const spineColor = book.spineColor || spineColorFromId(book._id);
   const textColor = getTextColor(spineColor);
   const title = sanitizeText(book.title);
-
-  const pulledStyle = isPulledOut
-    ? { zIndex: 50, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', transform: 'translateY(-4px) scale(1.05)', willChange: 'transform' }
-    : {};
-
-  const animDuration = prefersReducedMotion ? 0 : 300;
-  const settleTransition = !isPulledOut
-    ? { transition: `transform ${animDuration}ms cubic-bezier(0.25,0.1,0.25,1), box-shadow ${animDuration}ms cubic-bezier(0.25,0.1,0.25,1)` }
-    : {};
 
   const layoutTransition = animationTransition ?? (prefersReducedMotion
     ? { type: 'tween', duration: 0.15, ease: 'easeOut' }
@@ -35,10 +28,22 @@ const BookSpine = React.forwardRef(function BookSpine(
     ? { willChange: 'transform' }
     : {};
 
+  const variants = prefersReducedMotion ? PULL_OUT_VARIANTS_REDUCED : PULL_OUT_VARIANTS;
+
+  const variantName = isReversing
+    ? 'reversing'
+    : isPulledOut
+      ? 'pulled'
+      : 'rest';
+
+  const pullOutStyle = isPulledOut
+    ? { zIndex: 50, transformOrigin: 'center bottom' }
+    : {};
+
   function handleKeyDown(e) {
-    if (e.key === 'Enter' && onPullOut) {
+    if (e.key === 'Enter' && onClick) {
       e.preventDefault();
-      onPullOut();
+      onClick();
     }
   }
 
@@ -49,19 +54,25 @@ const BookSpine = React.forwardRef(function BookSpine(
       transition={layoutTransition}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.97 }}
+      variants={variants}
+      animate={variantName}
+      onAnimationComplete={() => {
+        if (isPulledOut && !isReversing) {
+          onAnimationComplete?.();
+        }
+      }}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       aria-label={t('ariaSpineLabel', { title })}
       aria-expanded={isPulledOut}
       tabIndex={isHighlighted ? 0 : undefined}
-      className={`relative flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer transition-shadow focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[48px] min-h-[48px] select-none${isHighlighted ? ' book-highlight-ring' : ''}`}
+      className={`relative flex flex-col items-center justify-end px-1 pt-2 pb-1 rounded-t-sm cursor-pointer focus:ring-2 focus:ring-amber-300 focus:outline-none min-w-[48px] min-h-[48px] select-none${isHighlighted ? ' book-highlight-ring' : ''}`}
       style={{
         backgroundColor: spineColor,
         color: textColor,
         width: '100%',
         height: 'var(--spine-height)',
-        ...pulledStyle,
-        ...settleTransition,
+        ...pullOutStyle,
         ...willChangeStyle,
       }}
     >
