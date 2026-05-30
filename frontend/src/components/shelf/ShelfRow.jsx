@@ -1,25 +1,31 @@
 import { motion } from 'framer-motion';
 import BookSpine from './BookSpine';
 
-export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, highlightBookId, highlightRef, progressMap = {} }) {
+export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, highlightBookId, highlightRef, progressMap = {}, rowIndex, getTransition }) {
   const hasPlacingBack = placingBackBookId && books.some(b => b._id === placingBackBookId);
 
   return (
     <div className="flex flex-col">
       <div className="shelf-row-grid px-2">
-        {books.map((book) => (
-          <motion.div key={book._id} layoutId={book._id} className="shelf-spine-cell">
-            <BookSpine
-               book={book}
-               onClick={() => onBookClick(book._id)}
-               isPulledOut={book._id === pulledOutBookId}
-               onPullOut={() => onBookClick(book._id)}
-               isHighlighted={book._id === highlightBookId}
-               highlightRef={book._id === highlightBookId ? highlightRef : undefined}
-               progress={progressMap[book._id]}
-             />
-          </motion.div>
-        ))}
+        {books.map((book, colIndex) => {
+          const globalIndex = rowIndex != null ? rowIndex + colIndex : colIndex;
+          const transition = getTransition ? getTransition(globalIndex) : undefined;
+
+          return (
+            <motion.div key={book._id} layoutId={book._id} className="shelf-spine-cell" transition={transition}>
+              <BookSpine
+                book={book}
+                onClick={() => onBookClick(book._id)}
+                isPulledOut={book._id === pulledOutBookId}
+                onPullOut={() => onBookClick(book._id)}
+                isHighlighted={book._id === highlightBookId}
+                highlightRef={book._id === highlightBookId ? highlightRef : undefined}
+                progress={progressMap[book._id]}
+                animationTransition={transition}
+              />
+            </motion.div>
+          );
+        })}
       </div>
       <div className={`h-3 rounded-b-sm transition-shadow duration-300 ${
         hasPlacingBack
