@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import BookSpine from './BookSpine';
 
 export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingBackBookId, highlightBookId, highlightRef, progressMap = {} }) {
@@ -7,7 +8,7 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
     <div className="flex flex-col">
       <div className="shelf-row-grid px-2">
         {books.map((book) => (
-          <div key={book._id} className="shelf-spine-cell">
+          <motion.div key={book._id} layoutId={book._id} className="shelf-spine-cell">
             <BookSpine
                book={book}
                onClick={() => onBookClick(book._id)}
@@ -17,7 +18,7 @@ export default function ShelfRow({ books, onBookClick, pulledOutBookId, placingB
                highlightRef={book._id === highlightBookId ? highlightRef : undefined}
                progress={progressMap[book._id]}
              />
-          </div>
+          </motion.div>
         ))}
       </div>
       <div className={`h-3 rounded-b-sm transition-shadow duration-300 ${

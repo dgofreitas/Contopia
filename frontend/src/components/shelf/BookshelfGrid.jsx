@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
-import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
+import { motion, useReducedMotion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import ShelfRow from './ShelfRow';
@@ -90,6 +90,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
       aria-label={t('ariaShelfLabel', { count: books.length })}
       className="w-full px-4 md:px-6 lg:px-8 lg:max-w-5xl lg:mx-auto py-6"
     >
+      <LayoutGroup>
       <motion.div
         variants={containerVariants}
         initial={prefersReducedMotion ? undefined : 'hidden'}
@@ -110,6 +111,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
           </motion.div>
         ))}
       </motion.div>
+      </LayoutGroup>
 
       <AnimatePresence>
         {pulledBook && !isPlacingBack && (

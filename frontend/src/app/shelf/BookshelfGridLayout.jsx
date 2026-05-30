@@ -7,6 +7,8 @@ import { HiExclamationCircle } from 'react-icons/hi';
 import useBooksQuery from '../../hooks/useBooksQuery';
 import useAllReadingProgressQuery from '../../hooks/useAllReadingProgressQuery';
 import useBookStore from '../../stores/book-store';
+import useSortPreference from '../../hooks/useSortPreference';
+import { sortBooks } from '../../lib/sort-books';
 import BookshelfGrid from '../../components/shelf/BookshelfGrid';
 import ShelfSkeleton from '../../components/shelf/ShelfSkeleton';
 import EmptyShelfState from '../../components/shelf/EmptyShelfState';
@@ -20,6 +22,7 @@ export default function BookshelfGridLayout({ highlightBookId }) {
 
   const books = data?.data ?? [];
   const hasBooks = books.length > 0;
+  const { sortMode } = useSortPreference();
 
   // Build a map of bookId → progress for quick lookup
   const progressMap = useMemo(() => {
@@ -29,10 +32,16 @@ export default function BookshelfGridLayout({ highlightBookId }) {
       map[entry.bookId] = {
         percentage: entry.percentage ?? 0,
         finished: entry.finished ?? false,
+        updatedAt: entry.updatedAt ?? null,
       };
     }
     return map;
   }, [progressData]);
+
+  const sortedBooks = useMemo(
+    () => sortBooks(books, sortMode, progressMap),
+    [books, sortMode, progressMap]
+  );
 
   // Sync to Zustand store when data arrives
   useEffect(() => {
@@ -92,9 +101,9 @@ export default function BookshelfGridLayout({ highlightBookId }) {
     }
 
     return (
-      <BookshelfGrid books={books} onBookClick={handleBookClick} highlightBookId={highlightBookId} highlightRef={highlightRef} progressMap={progressMap} />
+      <BookshelfGrid books={sortedBooks} onBookClick={handleBookClick} highlightBookId={highlightBookId} highlightRef={highlightRef} progressMap={progressMap} />
     );
-  }, [isLoading, isError, books, hasBooks, t, handleRetry, handleBookClick, highlightBookId, progressMap]);
+  }, [isLoading, isError, sortedBooks, hasBooks, t, handleRetry, handleBookClick, highlightBookId, progressMap]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4">

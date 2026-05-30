@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from 'flowbite-react';
 import { HiPlus } from 'react-icons/hi';
 import BookshelfGridLayout from './BookshelfGridLayout';
+import SortButton from '../../components/shelf/SortButton';
 import useBooksQuery from '../../hooks/useBooksQuery';
 
 export default function ShelfPage() {
@@ -26,22 +27,25 @@ export default function ShelfPage() {
   return (
     <main className="min-h-screen flex flex-col items-center bg-gradient-to-br from-amber-50 to-teal-50 p-4">
       <motion.div {...fadeUpProps} className="w-full max-w-6xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
           <h1 className="text-3xl font-bold text-gray-800 text-center flex-1">
             {t('title')}
           </h1>
-          {hasBooks && (
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
-              <Button
-                onClick={() => navigate('/editor/new')}
-                className="bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold py-2 px-4 rounded-xl flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                aria-label={t('newBookButton')}
-              >
-                <HiPlus className="w-5 h-5" />
-                {t('newBookButton')}
-              </Button>
-            </motion.div>
-          )}
+          <div className="flex items-center gap-3">
+            <SortButton />
+            {hasBooks && (
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+                <Button
+                  onClick={() => navigate('/editor/new')}
+                  className="bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold py-2 px-4 rounded-xl flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                  aria-label={t('newBookButton')}
+                >
+                  <HiPlus className="w-5 h-5" />
+                  {t('newBookButton')}
+                </Button>
+              </motion.div>
+            )}
+          </div>
         </div>
 
         <BookshelfGridLayout highlightBookId={highlightBookId} />
