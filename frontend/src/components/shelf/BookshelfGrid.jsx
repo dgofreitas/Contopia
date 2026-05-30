@@ -39,8 +39,8 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   const { pulledOutBookId, toggle, placeBack, isPlacingBack, getReaderUrl } = usePulledOutBook({
     onPullOutComplete: undefined,
   });
-  const { isReversing } = useBookPullOut({
-    onPullOutComplete: () => {},
+  const { isReversing, startPullOut } = useBookPullOut({
+    onPullOutComplete: undefined,
   });
   const favoriteMutation = useFavoriteToggle();
   const spineRefs = useRef({});
@@ -54,9 +54,10 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   }, [books, viewportWidth]);
 
   const handleBookClick = useCallback((bookId) => {
+    startPullOut(bookId);
     toggle(bookId);
     onBookClick?.(bookId);
-  }, [onBookClick, toggle]);
+  }, [onBookClick, toggle, startPullOut]);
 
   const pulledBook = pulledOutBookId
     ? books.find((b) => b._id === pulledOutBookId)
