@@ -7,6 +7,9 @@ vi.mock('framer-motion', () => ({
   useReducedMotion: () => mockUseReducedMotion(),
 }));
 
+// The fallback timeout is PULL_OUT_DURATION_MS + 100 = 250 + 100 = 350ms
+const PLACE_BACK_FALLBACK_MS = 350;
+
 describe('usePulledOutBook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -238,7 +241,22 @@ describe('usePulledOutBook', () => {
       expect(result.current.isPlacingBack).toBe(true);
     });
 
-    it('clears pulledOutBookId after animation duration (250ms)', () => {
+    it('sets animationPhase to placeBack when placeBack is called', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+      });
+      expect(result.current.animationPhase).toBe('idle');
+
+      act(() => {
+        result.current.placeBack();
+      });
+
+      expect(result.current.animationPhase).toBe('placeBack');
+    });
+
+    it('clears pulledOutBookId after fallback timeout (350ms)', () => {
       const { result } = renderHook(() => usePulledOutBook());
 
       act(() => {
@@ -251,14 +269,14 @@ describe('usePulledOutBook', () => {
       });
 
       act(() => {
-        vi.advanceTimersByTime(250);
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
       });
 
       expect(result.current.pulledOutBookId).toBeNull();
       expect(result.current.isPlacingBack).toBe(false);
     });
 
-    it('clears isPlacingBack after animation duration (250ms)', () => {
+    it('clears isPlacingBack after fallback timeout (350ms)', () => {
       const { result } = renderHook(() => usePulledOutBook());
 
       act(() => {
@@ -269,7 +287,7 @@ describe('usePulledOutBook', () => {
       expect(result.current.isPlacingBack).toBe(true);
 
       act(() => {
-        vi.advanceTimersByTime(250);
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
       });
 
       expect(result.current.isPlacingBack).toBe(false);
@@ -286,12 +304,39 @@ describe('usePulledOutBook', () => {
 
       expect(result.current.isPlacingBack).toBe(true);
 
+      // Even with reduced motion, the timeout fallback still fires at 350ms
+      // because the timeout duration is not affected by prefersReducedMotion
       act(() => {
-        vi.advanceTimersByTime(150);
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
       });
 
       expect(result.current.pulledOutBookId).toBeNull();
       expect(result.current.isPlacingBack).toBe(false);
+    });
+
+    // === STORY-042: NEW TESTS ===
+
+    it('resets animationPhase to idle after fallback timeout', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      expect(result.current.animationPhase).toBe('placeBack');
+
+      act(() => {
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
+      });
+
+      expect(result.current.animationPhase).toBe('idle');
+    });
+
+    it('duration is 0.25 (not 0.3)', () => {
+      mockUseReducedMotion.mockReturnValue(false);
+      const { result } = renderHook(() => usePulledOutBook());
+      expect(result.current.duration).toBe(0.25);
     });
   });
 
@@ -324,7 +369,7 @@ describe('usePulledOutBook', () => {
       expect(result.current.pulledOutBookId).toBe('book-456');
 
       act(() => {
-        vi.advanceTimersByTime(250);
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
       });
 
       expect(result.current.pulledOutBookId).toBe('book-456');
@@ -421,13 +466,357 @@ describe('usePulledOutBook', () => {
       expect(result.current.isPlacingBack).toBe(true);
 
       act(() => {
-        vi.advanceTimersByTime(250);
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
       });
 
       expect(result.current.pulledOutBookId).toBeNull();
       expect(result.current.isPlacingBack).toBe(false);
 
       vi.useRealTimers();
+    });
+  });
+
+  // ============================================================
+  // STORY-042: New test sections
+  // ============================================================
+
+  describe('cancelPlaceBack (STORY-042)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockUseReducedMotion.mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      mockUseReducedMotion.mockReset();
+    });
+
+    it('clears isPlacingBack and sets animationPhase to idle', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      expect(result.current.isPlacingBack).toBe(true);
+      expect(result.current.animationPhase).toBe('placeBack');
+
+      act(() => {
+        result.current.cancelPlaceBack();
+      });
+
+      expect(result.current.isPlacingBack).toBe(false);
+      expect(result.current.animationPhase).toBe('idle');
+    });
+
+    it('keeps pulledOutBookId set after cancel (book returns to pulled-out)', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      act(() => {
+        result.current.cancelPlaceBack();
+      });
+
+      expect(result.current.pulledOutBookId).toBe('book-123');
+    });
+
+    it('clears the fallback timeout so state does not change after cancel', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      act(() => {
+        result.current.cancelPlaceBack();
+      });
+
+      // Advance past the fallback — state should NOT have changed
+      act(() => {
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
+      });
+
+      expect(result.current.pulledOutBookId).toBe('book-123');
+      expect(result.current.isPlacingBack).toBe(false);
+      expect(result.current.animationPhase).toBe('idle');
+    });
+
+    it('is safe to call cancelPlaceBack when not placing back', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      expect(() => {
+        act(() => {
+          result.current.cancelPlaceBack();
+        });
+      }).not.toThrow();
+
+      expect(result.current.animationPhase).toBe('idle');
+    });
+  });
+
+  describe('onPlaceBackComplete callback (STORY-042)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockUseReducedMotion.mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      mockUseReducedMotion.mockReset();
+    });
+
+    it('clears pulledOutBookId, isPlacingBack, sets animationPhase to idle', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      act(() => {
+        result.current.onPlaceBackComplete();
+      });
+
+      expect(result.current.pulledOutBookId).toBeNull();
+      expect(result.current.isPlacingBack).toBe(false);
+      expect(result.current.animationPhase).toBe('idle');
+    });
+
+    it('clears the fallback timeout so it does not double-fire', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      // Call onPlaceBackComplete before timeout fires
+      act(() => {
+        result.current.onPlaceBackComplete();
+      });
+
+      // Advance past fallback — should still be null (no double-fire)
+      act(() => {
+        vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
+      });
+
+      expect(result.current.pulledOutBookId).toBeNull();
+      expect(result.current.isPlacingBack).toBe(false);
+    });
+  });
+
+  describe('re-tap during place-back (STORY-042)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockUseReducedMotion.mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      mockUseReducedMotion.mockReset();
+    });
+
+    it('toggle of same book during place-back cancels place-back and returns to pulled-out', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      expect(result.current.animationPhase).toBe('placeBack');
+      expect(result.current.isPlacingBack).toBe(true);
+
+      // Re-tap same book during place-back
+      act(() => {
+        result.current.toggle('book-123');
+      });
+
+      // Should cancel place-back, keep pulledOutBookId
+      expect(result.current.isPlacingBack).toBe(false);
+      expect(result.current.animationPhase).toBe('idle');
+      expect(result.current.pulledOutBookId).toBe('book-123');
+    });
+
+    it('toggle of different book during place-back switches to new book', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      act(() => {
+        result.current.toggle('book-456');
+      });
+
+      expect(result.current.pulledOutBookId).toBe('book-456');
+      expect(result.current.isPlacingBack).toBe(false);
+    });
+
+    it('calling cancelPlaceBack then pullOut restores pull-out state', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+      });
+      expect(result.current.animationPhase).toBe('idle');
+
+      act(() => {
+        result.current.placeBack();
+      });
+      expect(result.current.animationPhase).toBe('placeBack');
+
+      act(() => {
+        result.current.cancelPlaceBack();
+      });
+      expect(result.current.animationPhase).toBe('idle');
+      expect(result.current.pulledOutBookId).toBe('book-123');
+    });
+  });
+
+  describe('timeout fallback (STORY-042)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockUseReducedMotion.mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      mockUseReducedMotion.mockReset();
+    });
+
+    it('fallback timeout fires at 350ms if onPlaceBackComplete never called', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+
+      // At 250ms, state should still be placing back
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+      expect(result.current.pulledOutBookId).toBe('book-123');
+      expect(result.current.isPlacingBack).toBe(true);
+
+      // At 350ms, fallback fires
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      expect(result.current.pulledOutBookId).toBeNull();
+      expect(result.current.isPlacingBack).toBe(false);
+    });
+  });
+
+  describe('rapid place-back cycles (STORY-042)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockUseReducedMotion.mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      mockUseReducedMotion.mockReset();
+    });
+
+    it('rapid 5x place-back then cancel does not corrupt state', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-1');
+      });
+
+      // Rapid cycle: placeBack → cancelPlaceBack × 5
+      for (let i = 0; i < 5; i++) {
+        act(() => {
+          result.current.placeBack();
+          result.current.cancelPlaceBack();
+        });
+      }
+
+      expect(result.current.pulledOutBookId).toBe('book-1');
+      expect(result.current.isPlacingBack).toBe(false);
+      expect(result.current.animationPhase).toBe('idle');
+    });
+
+    it('rapid 5x full place-back cycles complete cleanly', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      for (let cycle = 0; cycle < 5; cycle++) {
+        const bookId = `book-${cycle}`;
+
+        act(() => {
+          result.current.pullOut(bookId);
+        });
+        expect(result.current.pulledOutBookId).toBe(bookId);
+
+        act(() => {
+          result.current.placeBack();
+        });
+        expect(result.current.animationPhase).toBe('placeBack');
+
+        act(() => {
+          vi.advanceTimersByTime(PLACE_BACK_FALLBACK_MS);
+        });
+
+        expect(result.current.pulledOutBookId).toBeNull();
+        expect(result.current.isPlacingBack).toBe(false);
+        expect(result.current.animationPhase).toBe('idle');
+      }
+    });
+  });
+
+  describe('animationPhase state tracking (STORY-042)', () => {
+    it('starts with idle phase', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+      expect(result.current.animationPhase).toBe('idle');
+    });
+
+    it('stays idle after pullOut (pullOut does not change phase)', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+      });
+
+      expect(result.current.animationPhase).toBe('idle');
+    });
+
+    it('changes to placeBack when placeBack is called', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+      });
+
+      act(() => {
+        result.current.placeBack();
+      });
+
+      expect(result.current.animationPhase).toBe('placeBack');
+    });
+
+    it('returns to idle after onPlaceBackComplete', () => {
+      const { result } = renderHook(() => usePulledOutBook());
+
+      act(() => {
+        result.current.pullOut('book-123');
+        result.current.placeBack();
+      });
+      expect(result.current.animationPhase).toBe('placeBack');
+
+      act(() => {
+        result.current.onPlaceBackComplete();
+      });
+      expect(result.current.animationPhase).toBe('idle');
     });
   });
 });
