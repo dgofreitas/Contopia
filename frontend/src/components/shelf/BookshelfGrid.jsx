@@ -38,7 +38,7 @@ function computeItemsPerRow(viewportWidth) {
 export default function BookshelfGrid({ books, onBookClick, highlightBookId, highlightRef, progressMap = {} }) {
   const { t } = useTranslation('shelf');
   const navigate = useNavigate();
-  const { pulledOutBookId, toggle, placeBack, isPlacingBack, getReaderUrl } = usePulledOutBook({
+  const { pulledOutBookId, toggle, placeBack, isPlacingBack, animationPhase, cancelPlaceBack, onPlaceBackComplete, getReaderUrl } = usePulledOutBook({
     onPullOutComplete: undefined,
   });
   const { isReversing, startPullOut } = useBookPullOut({
@@ -67,10 +67,14 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   }, [books, viewportWidth]);
 
   const handleBookClick = useCallback((bookId) => {
+    if (animationPhase === 'placeBack' && bookId === pulledOutBookId) {
+      cancelPlaceBack();
+      return;
+    }
     startPullOut(bookId);
     toggle(bookId);
     onBookClick?.(bookId);
-  }, [onBookClick, toggle, startPullOut]);
+  }, [onBookClick, toggle, startPullOut, animationPhase, pulledOutBookId, cancelPlaceBack]);
 
   const pulledBook = pulledOutBookId
     ? books.find((b) => b._id === pulledOutBookId)
@@ -103,6 +107,14 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
     setCoverOverlayOpen(false);
     placeBack();
   }, [placeBack]);
+
+  const handlePlaceBackComplete = useCallback(() => {
+    const previousBookId = pulledOutBookId;
+    onPlaceBackComplete();
+    if (previousBookId) {
+      spineRefs.current[previousBookId]?.focus();
+    }
+  }, [onPlaceBackComplete, pulledOutBookId]);
 
   const handleFavoriteToggle = useCallback(() => {
     if (!pulledBook) return;
@@ -158,6 +170,8 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
                 pulledOutBookId={pulledOutBookId}
                 placingBackBookId={isPlacingBack ? pulledOutBookId : null}
                 isReversing={isReversing}
+                animationPhase={animationPhase}
+                onPlaceBackComplete={handlePlaceBackComplete}
                 highlightBookId={highlightBookId}
                 highlightRef={highlightRef}
                 progressMap={progressMap}

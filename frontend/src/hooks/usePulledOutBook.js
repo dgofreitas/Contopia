@@ -2,15 +2,36 @@ import { useState, useCallback, useRef } from 'react';
 import { useReducedMotion, getDuration } from '../lib/animation-engine/index.js';
 
 const PULL_OUT_DURATION_MS = 250;
+const PLACE_BACK_FALLBACK_MS = PULL_OUT_DURATION_MS + 100;
 
 export default function usePulledOutBook({ onPullOutComplete } = {}) {
   const [pulledOutBookId, setPulledOutBookId] = useState(null);
   const [isPlacingBack, setIsPlacingBack] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState('idle');
   const prefersReducedMotion = useReducedMotion();
   const duration = prefersReducedMotion ? getDuration('micro') / 1000 : PULL_OUT_DURATION_MS / 1000;
   const placeBackTimeoutRef = useRef(null);
   const onCompleteRef = useRef(onPullOutComplete);
   onCompleteRef.current = onPullOutComplete;
+
+  const cancelPlaceBack = useCallback(() => {
+    if (placeBackTimeoutRef.current) {
+      clearTimeout(placeBackTimeoutRef.current);
+      placeBackTimeoutRef.current = null;
+    }
+    setIsPlacingBack(false);
+    setAnimationPhase('idle');
+  }, []);
+
+  const onPlaceBackComplete = useCallback(() => {
+    if (placeBackTimeoutRef.current) {
+      clearTimeout(placeBackTimeoutRef.current);
+      placeBackTimeoutRef.current = null;
+    }
+    setPulledOutBookId(null);
+    setIsPlacingBack(false);
+    setAnimationPhase('idle');
+  }, []);
 
   const pullOut = useCallback((bookId) => {
     setPulledOutBookId(bookId);
@@ -22,13 +43,20 @@ export default function usePulledOutBook({ onPullOutComplete } = {}) {
 
   const placeBack = useCallback(() => {
     setIsPlacingBack(true);
+    setAnimationPhase('placeBack');
     placeBackTimeoutRef.current = setTimeout(() => {
       setPulledOutBookId(null);
       setIsPlacingBack(false);
-    }, duration * 1000);
-  }, [duration]);
+      setAnimationPhase('idle');
+      placeBackTimeoutRef.current = null;
+    }, PLACE_BACK_FALLBACK_MS);
+  }, []);
 
   const toggle = useCallback((bookId) => {
+    if (animationPhase === 'placeBack' && bookId === pulledOutBookId) {
+      cancelPlaceBack();
+      return;
+    }
     if (placeBackTimeoutRef.current) {
       clearTimeout(placeBackTimeoutRef.current);
       placeBackTimeoutRef.current = null;
@@ -41,7 +69,7 @@ export default function usePulledOutBook({ onPullOutComplete } = {}) {
       }
       return next;
     });
-  }, []);
+  }, [animationPhase, pulledOutBookId, cancelPlaceBack]);
 
   const isPulledOut = useCallback(
     (bookId) => pulledOutBookId === bookId,
@@ -56,5 +84,5 @@ export default function usePulledOutBook({ onPullOutComplete } = {}) {
     [],
   );
 
-  return { pulledOutBookId, pullOut, dismiss, placeBack, isPlacingBack, toggle, isPulledOut, duration, getReaderUrl };
+  return { pulledOutBookId, pullOut, dismiss, placeBack, isPlacingBack, animationPhase, cancelPlaceBack, onPlaceBackComplete, toggle, isPulledOut, duration, getReaderUrl };
 }
