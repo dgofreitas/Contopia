@@ -11,6 +11,7 @@ import bookRouter from './app/book/book-router.js';
 import chapterRouter from './app/editor/chapter-router.js';
 import storageRouter from './app/storage/storage-router.js';
 import readerRouter from './app/reader/reader-router.js';
+import importRouter from './app/import/import-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
 import { rateLimitMiddleware } from './app/common/rate-limit-middleware.js';
 import { fail } from './app/common/response-envelope.js';
@@ -66,6 +67,7 @@ app.use('/api/v1', authMiddleware, rateLimitMiddleware);
 app.use('/api/v1/books', bookRouter);
 app.use('/api/v1/chapters', chapterRouter);
 app.use('/api/v1', storageRouter);
+app.use('/api/v1/import', importRouter);
 
 // Protected placeholder routes (auth required)
 app.use('/api/shelf', authMiddleware);
