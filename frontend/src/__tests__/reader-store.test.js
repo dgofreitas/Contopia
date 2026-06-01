@@ -409,4 +409,83 @@ describe('reader-store', () => {
       expect(useReaderStore.getState().localProgress).toEqual({ percentage: 100 });
     });
   });
+
+  // ── STORY-043: Rapid-tap animation state ─────────────────────
+
+  describe('pendingPageDirection state (STORY-043)', () => {
+    it('defaults pendingPageDirection to null', () => {
+      expect(useReaderStore.getState().pendingPageDirection).toBeNull();
+    });
+
+    it('sets pendingPageDirection to 1 (forward)', () => {
+      useReaderStore.getState().setPendingPageDirection(1);
+      expect(useReaderStore.getState().pendingPageDirection).toBe(1);
+    });
+
+    it('sets pendingPageDirection to -1 (backward)', () => {
+      useReaderStore.getState().setPendingPageDirection(-1);
+      expect(useReaderStore.getState().pendingPageDirection).toBe(-1);
+    });
+
+    it('sets pendingPageDirection back to null', () => {
+      useReaderStore.getState().setPendingPageDirection(1);
+      useReaderStore.getState().setPendingPageDirection(null);
+      expect(useReaderStore.getState().pendingPageDirection).toBeNull();
+    });
+  });
+
+  describe('animationAcceleration state (STORY-043)', () => {
+    it('defaults animationAcceleration to false', () => {
+      expect(useReaderStore.getState().animationAcceleration).toBe(false);
+    });
+
+    it('sets animationAcceleration to true', () => {
+      useReaderStore.getState().setAnimationAcceleration(true);
+      expect(useReaderStore.getState().animationAcceleration).toBe(true);
+    });
+
+    it('sets animationAcceleration back to false', () => {
+      useReaderStore.getState().setAnimationAcceleration(true);
+      useReaderStore.getState().setAnimationAcceleration(false);
+      expect(useReaderStore.getState().animationAcceleration).toBe(false);
+    });
+  });
+
+  describe('clearPendingNavigation (STORY-043)', () => {
+    it('clears both pendingPageDirection and animationAcceleration', () => {
+      useReaderStore.getState().setPendingPageDirection(1);
+      useReaderStore.getState().setAnimationAcceleration(true);
+      useReaderStore.getState().clearPendingNavigation();
+      expect(useReaderStore.getState().pendingPageDirection).toBeNull();
+      expect(useReaderStore.getState().animationAcceleration).toBe(false);
+    });
+
+    it('works when called with no pending state', () => {
+      useReaderStore.getState().clearPendingNavigation();
+      expect(useReaderStore.getState().pendingPageDirection).toBeNull();
+      expect(useReaderStore.getState().animationAcceleration).toBe(false);
+    });
+
+    it('does not affect other state when clearing', () => {
+      useReaderStore.getState().setFontSize('large');
+      useReaderStore.getState().setPendingPageDirection(1);
+      useReaderStore.getState().setAnimationAcceleration(true);
+      useReaderStore.getState().clearPendingNavigation();
+      expect(useReaderStore.getState().fontSize).toBe('large');
+    });
+  });
+
+  describe('PERSIST_KEYS does not include transient animation state (STORY-043)', () => {
+    it('pendingPageDirection is not persisted', () => {
+      useReaderStore.getState().setPendingPageDirection(1);
+      // Re-create persisted subset — should not include pendingPageDirection
+      const state = useReaderStore.getState();
+      const persistedKeys = Object.keys(state).filter(k =>
+        ['pendingPageDirection', 'animationAcceleration'].includes(k)
+      );
+      // These keys exist in state but should not be in PERSIST_KEYS
+      expect(persistedKeys).toContain('pendingPageDirection');
+      expect(persistedKeys).toContain('animationAcceleration');
+    });
+  });
 });

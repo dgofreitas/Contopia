@@ -8,6 +8,13 @@ import ReaderPage from '../app/reader/ReaderPage';
 import useReaderStore from '../stores/reader-store';
 import useFullscreen from '../hooks/useFullscreen';
 
+// Polyfill ResizeObserver for JSDOM
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 // ── Mock all dependencies ──────────────────────────────────────
 
 vi.mock('framer-motion', () => ({
@@ -64,6 +71,39 @@ vi.mock('../hooks/useFullscreen', () => ({
     enterFullscreen: vi.fn(),
     exitFullscreen: vi.fn(),
   }),
+}));
+
+vi.mock('../hooks/useProgressSync', () => ({
+  default: () => ({
+    saveProgress: vi.fn(),
+    localProgress: null,
+  }),
+}));
+
+vi.mock('../hooks/useSystemColorScheme', () => ({
+  default: () => {},
+}));
+
+vi.mock('../hooks/useReaderPreferences', () => ({
+  default: () => {},
+}));
+
+vi.mock('../hooks/useSwipeNavigation', () => ({
+  default: () => ({ isSwiping: false, deltaX: 0 }),
+}));
+
+vi.mock('../hooks/useScrollProgress', () => ({
+  useScrollProgress: () => ({ observeChapter: vi.fn() }),
+}));
+
+vi.mock('../components/reader/ChapterTransitionCard', () => ({
+  default: () => <div data-testid="chapter-transition-card" />,
+}));
+
+vi.mock('../components/reader/NextChapterButton', () => ({
+  default: ({ chapters, onClick }) => (
+    <button data-testid="nextChapterBtn" aria-label="nextChapterBtn" onClick={onClick}>Next Chapter</button>
+  ),
 }));
 
 // Mock child components to simplify testing

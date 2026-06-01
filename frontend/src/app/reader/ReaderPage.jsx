@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { m } from 'framer-motion';
-import { useReducedMotion } from '../../lib/animation-engine/index.js';
+import { useReducedMotion } from 'framer-motion';
 import { Button } from 'flowbite-react';
 import { HiBookOpen, HiViewList, HiArrowsExpand } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import useBookEditQuery from '../../hooks/useBookEditQuery';
 import useReadingProgressQuery from '../../hooks/useReadingProgressQuery';
 import useProgressSync from '../../hooks/useProgressSync';
 import useFullscreen from '../../hooks/useFullscreen';
+import useSwipeNavigation from '../../hooks/useSwipeNavigation';
 import ChapterDrawer from '../../components/reader/ChapterDrawer';
 import NextChapterButton from '../../components/reader/NextChapterButton';
 import ReaderToolbar from '../../components/reader/ReaderToolbar';
@@ -83,6 +84,10 @@ export default function ReaderPage({ book: bookProp }) {
   const previousPage = useReaderStore((s) => s.previousPage);
   const readingMode = useReaderStore((s) => s.readingMode);
   const setScrollPosition = useReaderStore((s) => s.setScrollPosition);
+  const animationAcceleration = useReaderStore((s) => s.animationAcceleration);
+  const setAnimationAcceleration = useReaderStore((s) => s.setAnimationAcceleration);
+  const setPendingPageDirection = useReaderStore((s) => s.setPendingPageDirection);
+  const clearPendingNavigation = useReaderStore((s) => s.clearPendingNavigation);
 
   // Data hooks
   const { data: chapters = [], isLoading: chaptersLoading } = useChaptersQuery(bookId);
@@ -292,20 +297,33 @@ export default function ReaderPage({ book: bookProp }) {
     }
   }, [currentChapterIndex, setCurrentPageIndex]);
 
-  // Page animation completion handler
-  const handleAnimationComplete = useCallback(() => {
-    setIsPageAnimating(false);
-  }, [setIsPageAnimating]);
+  // Page animation completion handler — processes pending navigation queue
+  // NOTE: Defined after handleNextPage/handlePreviousPage to avoid stale closure
 
   // Chapter transition dismiss
   const handleDismissTransition = useCallback(() => {
     setShowChapterTransition(false);
   }, []);
 
-  // Page navigation — next page
+  // Page navigation — next page (rapid-tap state machine)
   const handleNextPage = useCallback(() => {
-    if (isPageAnimating) return;
+    const { isPageAnimating, animationAcceleration } = useReaderStore.getState();
 
+    // Rapid-tap: already animating
+    if (isPageAnimating && !animationAcceleration) {
+      // First interrupt: accelerate current, queue this one
+      setAnimationAcceleration(true);
+      setPendingPageDirection(1);
+      return;
+    }
+
+    if (isPageAnimating && animationAcceleration) {
+      // Already accelerating: update queued target (discard intermediates)
+      setPendingPageDirection(1);
+      return;
+    }
+
+    // Normal navigation
     setPageDirection(1);
     const atChapterEnd = nextPage();
 
@@ -331,12 +349,27 @@ export default function ReaderPage({ book: bookProp }) {
         t('pageOf', { current: currentPageIndex + 2, total: totalPagesInChapter }),
       );
     }
-  }, [isPageAnimating, nextPage, currentChapterIndex, chapters, setCurrentChapterIndex, setCurrentPageIndex, t, currentPageIndex, totalPagesInChapter]);
+  }, [nextPage, currentChapterIndex, chapters, setCurrentChapterIndex, setCurrentPageIndex, t, currentPageIndex, totalPagesInChapter, setAnimationAcceleration, setPendingPageDirection, setPageDirection]);
 
-  // Page navigation — previous page
+  // Page navigation — previous page (rapid-tap state machine)
   const handlePreviousPage = useCallback(() => {
-    if (isPageAnimating) return;
+    const { isPageAnimating, animationAcceleration } = useReaderStore.getState();
 
+    // Rapid-tap: already animating
+    if (isPageAnimating && !animationAcceleration) {
+      // First interrupt: accelerate current, queue this one
+      setAnimationAcceleration(true);
+      setPendingPageDirection(-1);
+      return;
+    }
+
+    if (isPageAnimating && animationAcceleration) {
+      // Already accelerating: update queued target (discard intermediates)
+      setPendingPageDirection(-1);
+      return;
+    }
+
+    // Normal navigation
     setPageDirection(-1);
     const atChapterStart = previousPage();
 
@@ -354,7 +387,33 @@ export default function ReaderPage({ book: bookProp }) {
         t('pageOf', { current: currentPageIndex, total: totalPagesInChapter }),
       );
     }
-  }, [isPageAnimating, previousPage, currentChapterIndex, setCurrentChapterIndex, setCurrentPageIndex, t, currentPageIndex, totalPagesInChapter]);
+  }, [previousPage, currentChapterIndex, setCurrentChapterIndex, setCurrentPageIndex, t, currentPageIndex, totalPagesInChapter, setAnimationAcceleration, setPendingPageDirection, setPageDirection]);
+
+  // Now define handleAnimationComplete with references to the nav handlers
+  const handleAnimationComplete = useCallback(() => {
+    setIsPageAnimating(false);
+    setAnimationAcceleration(false);
+
+    // Process pending navigation queue (rapid-tap state machine)
+    const { pendingPageDirection } = useReaderStore.getState();
+    if (pendingPageDirection === 1) {
+      clearPendingNavigation();
+      handleNextPage();
+    } else if (pendingPageDirection === -1) {
+      clearPendingNavigation();
+      handlePreviousPage();
+    } else {
+      clearPendingNavigation();
+    }
+  }, [setIsPageAnimating, setAnimationAcceleration, clearPendingNavigation, handleNextPage, handlePreviousPage]);
+
+  // Swipe navigation for paginated mode (must be after handleNextPage/handlePreviousPage definitions)
+  useSwipeNavigation({
+    ref: contentContainerRef,
+    onSwipeLeft: handleNextPage,
+    onSwipeRight: handlePreviousPage,
+    minThreshold: 50,
+  });
 
   // Repagination handler — called when font size or theme changes
   const handleRepaginate = useCallback(() => {
@@ -709,6 +768,7 @@ export default function ReaderPage({ book: bookProp }) {
         <div
           className="flex-1 overflow-hidden px-4 py-8 max-w-2xl mx-auto w-full relative"
           ref={contentContainerRef}
+          style={{ touchAction: 'pan-y' }}
         >
           <ReaderTapZones
             onPreviousPage={handlePreviousPage}
@@ -740,7 +800,8 @@ export default function ReaderPage({ book: bookProp }) {
               direction={pageDirection}
               pageKey={pageKey}
               onAnimationComplete={handleAnimationComplete}
-              isEnabled={!prefersReducedMotion}
+              isEnabled={true}
+              accelerateDuration={animationAcceleration ? 100 : null}
             >
               <div
                 className="reader-paginated-content"
