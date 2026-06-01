@@ -13,6 +13,7 @@ import useDebouncedResize from '../../hooks/useDebouncedResize';
 import useFavoriteToggle from '../../hooks/useFavoriteToggle';
 import useSortAnimation from '../../hooks/useSortAnimation';
 import useCoverFlipTransition from '../../hooks/useCoverFlipTransition';
+import useShelfIdle from '../../hooks/useShelfIdle';
 import { staggerConfig } from '../../lib/animation/stagger.js';
 
 function chunkArray(arr, size) {
@@ -46,6 +47,8 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
   });
   const favoriteMutation = useFavoriteToggle();
   const spineRefs = useRef({});
+  const shelfRef = useRef(null);
+  const { isIdle, shelfActive } = useShelfIdle(shelfRef);
   const [coverOverlayOpen, setCoverOverlayOpen] = useState(false);
   const {
     transitionState,
@@ -147,8 +150,9 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
 
   return (
     <section
+      ref={shelfRef}
       aria-label={t('ariaShelfLabel', { count: books.length })}
-      className="w-full px-4 md:px-6 lg:px-8 lg:max-w-5xl lg:mx-auto py-6"
+      className={`w-full px-4 md:px-6 lg:px-8 lg:max-w-5xl lg:mx-auto py-6${shelfActive ? ' shelf--active' : ''}`}
     >
       <LayoutGroup>
       <m.div
@@ -177,6 +181,7 @@ export default function BookshelfGrid({ books, onBookClick, highlightBookId, hig
                 progressMap={progressMap}
                 rowIndex={rowStartIndex}
                 getTransition={getTransition}
+                isIdle={isIdle}
               />
             </m.div>
           );
