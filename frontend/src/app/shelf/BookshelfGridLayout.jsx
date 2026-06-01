@@ -1,9 +1,9 @@
 // Contopia — BookshelfGridLayout
 // Orchestrator: fetches books via TanStack Query, renders appropriate state
-import { useMemo, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'flowbite-react';
-import { HiExclamationCircle } from 'react-icons/hi';
+import { HiExclamationCircle, HiUpload } from 'react-icons/hi';
 import useBooksQuery from '../../hooks/useBooksQuery';
 import useAllReadingProgressQuery from '../../hooks/useAllReadingProgressQuery';
 import useBookStore from '../../stores/book-store';
@@ -12,10 +12,13 @@ import { sortBooks } from '../../lib/sort-books';
 import BookshelfGrid from '../../components/shelf/BookshelfGrid';
 import ShelfSkeleton from '../../components/shelf/ShelfSkeleton';
 import EmptyShelfState from '../../components/shelf/EmptyShelfState';
+import ImportBookModal from '../../components/import/ImportBookModal';
 
 export default function BookshelfGridLayout({ highlightBookId }) {
   const { t } = useTranslation('shelf');
+  const { t: tImport } = useTranslation('import');
   const { data, isLoading, isError, refetch } = useBooksQuery();
+  const [importOpen, setImportOpen] = useState(false);
   const { data: progressData } = useAllReadingProgressQuery();
   const setBooks = useBookStore((s) => s.setBooks);
   const highlightRef = useRef(null);
@@ -107,7 +110,18 @@ export default function BookshelfGridLayout({ highlightBookId }) {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4">
+      <div className="flex justify-end mb-4">
+        <Button
+          onClick={() => setImportOpen(true)}
+          className="bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold py-2 px-4 rounded-xl"
+          aria-label={tImport('button')}
+        >
+          <HiUpload className="mr-2 h-5 w-5" />
+          {tImport('button')}
+        </Button>
+      </div>
       {content}
+      <ImportBookModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }

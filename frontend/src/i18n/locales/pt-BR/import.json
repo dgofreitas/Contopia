@@ -1,0 +1,14 @@
+{
+  "title": "Importar Livro",
+  "button": "Importar um Livro",
+  "buttonTxt": "Importar Arquivo de Texto",
+  "selectFile": "Escolha um arquivo .txt do seu dispositivo",
+  "uploading": "Enviando…",
+  "processing": "Processando seu livro…",
+  "progress": "{{percent}}% enviado",
+  "success": "Seu livro está na prateleira!",
+  "unsupportedType": "Ops! Esse tipo de arquivo não é suportado ainda. Tente um arquivo .txt!",
+  "fileTooBig": "Esse arquivo é grande demais. O tamanho máximo é 25MB.",
+  "uploadFailed": "Falha no envio. Verifique sua conexão e tente novamente!",
+  "noFile": "Nenhum arquivo foi selecionado. Escolha um arquivo para importar."
+}

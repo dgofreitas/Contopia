@@ -1,0 +1,14 @@
+{
+  "title": "Import Book",
+  "button": "Import a Book",
+  "buttonTxt": "Import Text File",
+  "selectFile": "Choose a .txt file from your device",
+  "uploading": "Uploading…",
+  "processing": "Processing your book…",
+  "progress": "{{percent}}% uploaded",
+  "success": "Your book is on the shelf!",
+  "unsupportedType": "Oops! This file type isn't supported yet. Try a .txt file!",
+  "fileTooBig": "This file is too big. Maximum size is 25MB.",
+  "uploadFailed": "Upload failed. Check your connection and try again!",
+  "noFile": "No file was selected. Please choose a file to import."
+}

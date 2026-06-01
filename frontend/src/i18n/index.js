@@ -14,6 +14,8 @@ import enEditor from './locales/en/editor.json';
 import enReader from './locales/en/reader.json';
 import enCover from './locales/en/cover.json';
 import enErrors from './locales/en/errors.json';
+import enImport from './locales/en/import.json';
+import ptBRImport from './locales/pt-BR/import.json';
 
 i18n
   .use(LanguageDetector)
@@ -21,7 +23,7 @@ i18n
   .init({
     fallbackLng: 'pt-BR',
     debug: import.meta.env.DEV,
-    ns: ['auth', 'shelf', 'editor', 'reader', 'errors', 'cover'],
+    ns: ['auth', 'shelf', 'editor', 'reader', 'errors', 'cover', 'import'],
     defaultNS: 'auth',
     interpolation: {
       escapeValue: false, // React already escapes output
@@ -34,6 +36,7 @@ i18n
         reader: ptBRReader,
         cover: ptBRCover,
         errors: ptBRErrors,
+        import: ptBRImport,
       },
       en: {
         auth: enAuth,
@@ -42,6 +45,7 @@ i18n
         reader: enReader,
         cover: enCover,
         errors: enErrors,
+        import: enImport,
       },
     },
   });
