@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { m } from 'framer-motion';
 import { useReducedMotion } from 'framer-motion';
 import { Button } from 'flowbite-react';
-import { HiBookOpen, HiViewList, HiArrowsExpand } from 'react-icons/hi';
+import { HiBookOpen, HiViewList, HiArrowsExpand, HiWifi } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
 import useReaderStore from '../../stores/reader-store';
 import useSystemColorScheme from '../../hooks/useSystemColorScheme';
@@ -14,6 +14,7 @@ import useReadingProgressQuery from '../../hooks/useReadingProgressQuery';
 import useProgressSync from '../../hooks/useProgressSync';
 import useFullscreen from '../../hooks/useFullscreen';
 import useSwipeNavigation from '../../hooks/useSwipeNavigation';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 import ChapterDrawer from '../../components/reader/ChapterDrawer';
 import NextChapterButton from '../../components/reader/NextChapterButton';
 import ReaderToolbar from '../../components/reader/ReaderToolbar';
@@ -54,6 +55,7 @@ export default function ReaderPage({ book: bookProp }) {
   const [searchParams] = useSearchParams();
   const prefersReducedMotion = useReducedMotion();
   const { isFullscreen, enterFullscreen, exitFullscreen } = useFullscreen();
+  const { isOnline } = useNetworkStatus();
 
   // System color scheme detection (first-visit default)
   useSystemColorScheme();
@@ -654,6 +656,24 @@ export default function ReaderPage({ book: bookProp }) {
 
   // Compute the CSS transform for paginated content
   const contentTransform = `translateX(calc(-${currentPageIndex * 100}%))`;
+
+  if (!isOnline) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-teal-50 gap-4 p-8">
+        <HiWifi className="w-16 h-16 text-gray-300" aria-hidden="true" />
+        <h2 className="text-2xl font-bold text-gray-700">{t('offlineReadTitle')}</h2>
+        <p className="text-gray-500 text-center max-w-md">{t('offlineReadMessage')}</p>
+        <Button
+          onClick={() => navigate('/shelf')}
+          color="light"
+          size="lg"
+          className="mt-4"
+        >
+          {t('backToShelf')}
+        </Button>
+      </main>
+    );
+  }
 
   if (chaptersLoading) {
     return (
