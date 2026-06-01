@@ -152,6 +152,20 @@ const bookSchema = new Schema(
       type: Date,
       default: null,
     },
+    source: {
+      type: String,
+      enum: ['created', 'imported'],
+      default: 'created',
+    },
+    importFormat: {
+      type: String,
+      enum: [null, 'txt', 'pdf', 'epub'],
+      default: null,
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
@@ -201,6 +215,7 @@ bookSchema.index(
   { authorId: 1, status: 1, publishedAt: -1, deletedAt: 1 },
   { partialFilterExpression: { deletedAt: null } }
 );
+bookSchema.index({ authorId: 1, source: 1, deletedAt: 1 });
 bookSchema.index({ title: 'text' }, { language_override: 'searchLanguage', collation: { locale: 'simple' } });
 
 // ── Schema Options: include getters (spineColor fallback) + virtuals ────────
