@@ -70,5 +70,19 @@
   "publishError": "Something went wrong. Please try again.",
   "publishSuccessAnnouncement": "Your book is now on your shelf!",
   "editingBook": "Editing {{title}}",
-  "publishedEditBadge": "On your shelf — changes are live"
+  "publishedEditBadge": "On your shelf — changes are live",
+  "offlineMode": "Offline",
+  "syncingProgress": "Syncing {{synced}} of {{total}} chapters…",
+  "syncComplete": "Synced!",
+  "syncConflict": "Synced (local version kept)",
+  "captivePortalDetected": "Limited connection detected",
+  "coverUploadDisabledOffline": "Not available offline",
+  "allChangesSaved": "All changes saved",
+  "savingLocally": "Offline — saving locally",
+  "syncingChanges": "Syncing changes…",
+  "changesSynced": "Changes synced",
+  "unableToSync": "Unable to sync",
+  "syncedLocalKept": "Synced (local version kept)",
+  "chapterPending": "{{count}} chapter pending",
+  "chaptersPending": "{{count}} chapters pending"
 }
