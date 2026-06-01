@@ -50,5 +50,6 @@
   "favorite.remove": "Remover dos favoritos",
   "favorite.heartLabel": "Favoritar",
   "favorite.toastAdded": "Adicionado aos favoritos!",
-  "favorite.toastRemoved": "Removido dos favoritos"
+  "favorite.toastRemoved": "Removido dos favoritos",
+  "importBookButton": "Importar Livro"
 }

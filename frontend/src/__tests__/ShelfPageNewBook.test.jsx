@@ -47,6 +47,10 @@ vi.mock('../app/shelf/BookshelfGridLayout', () => ({
   default: () => <div data-testid="bookshelf-grid">Grid</div>,
 }));
 
+vi.mock('../components/import/ImportBookModal', () => ({
+  default: () => null,
+}));
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });

@@ -12,7 +12,7 @@ let mockImportState = {
 };
 
 vi.mock('../hooks/useImportBook', () => ({
-  default: vi.fn(() => ({
+  default: vi.fn((format) => ({
     mutate: mockMutate,
     mutateAsync: mockMutate,
     isPending: mockImportState.isPending,
@@ -82,11 +82,18 @@ describe('ImportBookModal', () => {
     queryClient.clear();
   });
 
-  it('renders file picker with .txt accept filter', () => {
+  it('renders file picker with .txt accept filter by default', () => {
     renderModal();
     const input = document.querySelector('input[type="file"]');
     expect(input).toBeTruthy();
     expect(input).toHaveAttribute('accept', '.txt,text/plain');
+  });
+
+  it('renders file picker with .pdf accept filter when format=pdf', () => {
+    renderModal({ format: 'pdf' });
+    const input = document.querySelector('input[type="file"]');
+    expect(input).toBeTruthy();
+    expect(input).toHaveAttribute('accept', '.pdf,application/pdf');
   });
 
   it('shows progress and uploading state during upload', () => {
@@ -111,6 +118,28 @@ describe('ImportBookModal', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('import.unsupportedType');
   });
 
+  it('shows unsupportedType error when selecting non-PDF file in PDF mode', () => {
+    renderModal({ format: 'pdf' });
+    const fileInput = document.querySelector('input[type="file"]');
+    const txtFile = new File(['content'], 'test.txt', { type: 'text/plain' });
+    Object.defineProperty(txtFile, 'type', { value: 'text/plain' });
+
+    fireEvent.change(fileInput, { target: { files: [txtFile] } });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('import.unsupportedType');
+  });
+
+  it('accepts a valid PDF file in PDF mode', () => {
+    renderModal({ format: 'pdf' });
+    const fileInput = document.querySelector('input[type="file"]');
+    const pdfFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+    Object.defineProperty(pdfFile, 'type', { value: 'application/pdf' });
+
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('shows fileTooBig error when file exceeds 25MB', () => {
     renderModal();
     const fileInput = document.querySelector('input[type="file"]');
@@ -122,12 +151,39 @@ describe('ImportBookModal', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('import.fileTooBig');
   });
 
+  it('shows fileTooBig error for PDF exceeding 25MB', () => {
+    renderModal({ format: 'pdf' });
+    const fileInput = document.querySelector('input[type="file"]');
+    const bigPdf = new File(['x'], 'big.pdf', { type: 'application/pdf' });
+    Object.defineProperty(bigPdf, 'size', { value: 26 * 1024 * 1024 });
+
+    fireEvent.change(fileInput, { target: { files: [bigPdf] } });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('import.fileTooBig');
+  });
+
   it('shows uploadFailed error from hook', () => {
     mockImportState.error = new Error('UPLOAD_FAILED');
 
     renderModal();
 
     expect(screen.getByRole('alert')).toHaveTextContent('import.uploadFailed');
+  });
+
+  it('shows scannedPdf error from hook', () => {
+    mockImportState.error = new Error('SCANNED_PDF');
+
+    renderModal({ format: 'pdf' });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('import.scannedPdf');
+  });
+
+  it('shows corruptPdf error from hook', () => {
+    mockImportState.error = new Error('CORRUPT_PDF');
+
+    renderModal({ format: 'pdf' });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('import.corruptPdf');
   });
 
   it('has accessible ARIA labels and close button works', () => {
@@ -151,7 +207,17 @@ describe('ImportBookModal', () => {
     expect(importButton).toBeDisabled();
   });
 
-  it('calls mutate with selected file on import button click', () => {
+  it('shows buttonTxt by default (txt format)', () => {
+    renderModal();
+    expect(screen.getByText('buttonTxt')).toBeInTheDocument();
+  });
+
+  it('shows buttonPdf when format is pdf', () => {
+    renderModal({ format: 'pdf' });
+    expect(screen.getByText('buttonPdf')).toBeInTheDocument();
+  });
+
+  it('calls mutate with selected file on import button click (txt)', () => {
     renderModal();
     const fileInput = document.querySelector('input[type="file"]');
     const testFile = new File(['hello world'], 'story.txt', { type: 'text/plain' });
@@ -167,6 +233,29 @@ describe('ImportBookModal', () => {
 
     expect(mockMutate).toHaveBeenCalledWith(
       { file: testFile },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+      }),
+    );
+  });
+
+  it('calls mutate with selected PDF file on import button click', () => {
+    renderModal({ format: 'pdf' });
+    const fileInput = document.querySelector('input[type="file"]');
+    const pdfFile = new File(['pdf content'], 'book.pdf', { type: 'application/pdf' });
+    Object.defineProperty(pdfFile, 'type', { value: 'application/pdf' });
+
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    const importButton = screen.getByText('buttonPdf');
+    expect(importButton).not.toBeDisabled();
+
+    fireEvent.click(importButton);
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      { file: pdfFile },
       expect.objectContaining({
         onSuccess: expect.any(Function),
       }),
@@ -220,5 +309,11 @@ describe('ImportBookModal', () => {
     renderModal();
 
     expect(screen.getByRole('alert')).toHaveTextContent('import.fileTooBig');
+  });
+
+  it('passes format to useImportBook hook', async () => {
+    renderModal({ format: 'pdf' });
+    const { default: useImportBook } = await import('../hooks/useImportBook');
+    expect(useImportBook).toHaveBeenCalledWith('pdf');
   });
 });
