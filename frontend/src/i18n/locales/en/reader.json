@@ -54,5 +54,7 @@
   "paginatedModeDescription": "Turn pages one at a time",
   "fontSizeChanged": "Font size changed to {{size}}",
   "themeChanged": "Theme changed to {{theme}}",
-  "readingModeChanged": "Reading mode changed to {{mode}}"
+  "readingModeChanged": "Reading mode changed to {{mode}}",
+  "offlineReadTitle": "You're Offline",
+  "offlineReadMessage": "You need an internet connection to read books. Come back online and try again!"
 }

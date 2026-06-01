@@ -54,5 +54,7 @@
   "paginatedModeDescription": "Vire as páginas uma de cada vez",
   "fontSizeChanged": "Tamanho da fonte alterado para {{size}}",
   "themeChanged": "Tema alterado para {{theme}}",
-  "readingModeChanged": "Modo de leitura alterado para {{mode}}"
+  "readingModeChanged": "Modo de leitura alterado para {{mode}}",
+  "offlineReadTitle": "Você está offline",
+  "offlineReadMessage": "Você precisa de conexão com a internet para ler livros. Volte online e tente novamente!"
 }

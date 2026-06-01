@@ -4,7 +4,7 @@ export const useErrorStore = create((set, get) => ({
   toasts: [],
   isOffline: false,
 
-  addToast: (code, message) => {
+  addToast: (code, message, action) => {
     const now = Date.now();
     const toasts = get().toasts;
 
@@ -12,7 +12,7 @@ export const useErrorStore = create((set, get) => ({
     if (recent.some((t) => t.code === code)) return;
 
     const id = crypto.randomUUID();
-    const newToast = { id, code, message, timestamp: now };
+    const newToast = { id, code, message, action, timestamp: now };
 
     set({ toasts: [...toasts.slice(-2), newToast] });
 
