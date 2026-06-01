@@ -3,7 +3,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import pino from 'pino';
 import { ok, fail } from '../common/response-envelope.js';
-import { importTxtBookManager, importPdfBookManager } from './import-manager.js';
+import { importTxtBookManager, importPdfBookManager, importEpubBookManager } from './import-manager.js';
 
 const logger = pino({ name: 'import-router', level: process.env.LOG_LEVEL || 'info' });
 
@@ -46,6 +46,26 @@ router.post('/pdf', importUpload.single('file'), async (req, res) => {
     });
 
     return res.status(201).json(ok({ book, chapter }, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /epub — Import EPUB file ───────────────────────────────────────────
+router.post('/epub', importUpload.single('file'), async (req, res) => {
+  const requestId = req.id;
+
+  if (!req.file) {
+    return res.status(400).json(fail('NO_FILE', 'No file provided', { requestId }, requestId));
+  }
+
+  try {
+    const { book, chapters } = await importEpubBookManager({
+      authorId: req.childId,
+      file: req.file,
+    });
+
+    return res.status(201).json(ok({ book, chapters }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
