@@ -10,8 +10,8 @@
 ## BACKEND
 - [x] validation: Extend syncOperationSchema + syncBodySchema with chapter.create type → BackendDeveloper
 - [x] manager: Extend syncChaptersManager to handle chapter.create operations → BackendDeveloper
-- [ ] router: Add GET /api/v1/health endpoint → BackendDeveloper
-- [ ] tests: Backend tests for chapter.create sync + health endpoint → BackendDeveloper
+- [x] router: Add GET /api/v1/health endpoint → BackendDeveloper
+- [x] tests: Backend tests for chapter.create sync + health endpoint → BackendDeveloper
 
 ## FRONTEND
 - [x] components: Create OfflineIndicator.jsx + SyncStatusBar.jsx + extend AutoSaveIndicator.jsx → FrontendDeveloperReact
