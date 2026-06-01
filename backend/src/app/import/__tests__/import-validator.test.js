@@ -82,11 +82,66 @@ describe('Import Validator', () => {
     expect(result).toBe('Line1\nLine2\r\n\tIndented');
   });
 
-  // ── Additional: unsupported format → INVALID_FORMAT ──────────────────
+  // ── PDF format tests ──────────────────────────────────────────────────
+
+  // ── 9. Valid PDF file with application/pdf MIME and magic bytes → passes
+  it('should accept a valid PDF file with correct MIME and magic bytes', () => {
+    const buffer = Buffer.from('%PDF-1.4 fake pdf content');
+    const file = { mimetype: 'application/pdf', size: buffer.length, buffer, originalname: 'test.pdf' };
+    const result = validateImportFile(file, 'pdf');
+    expect(result.valid).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
+
+  // ── 10. PDF with wrong MIME → INVALID_FILE_TYPE
+  it('should reject PDF with wrong MIME type', () => {
+    const buffer = Buffer.from('%PDF-1.4 fake pdf');
+    const file = { mimetype: 'image/png', size: buffer.length, buffer, originalname: 'test.pdf' };
+    const result = validateImportFile(file, 'pdf');
+    expect(result.valid).toBe(false);
+    expect(result.error.code).toBe('INVALID_FILE_TYPE');
+  });
+
+  // ── 11. PDF with spoofed MIME (non-PDF content with application/pdf) → INVALID_FILE_TYPE
+  it('should reject non-PDF content with spoofed application/pdf MIME (magic bytes fail)', () => {
+    const buffer = Buffer.from('not a real pdf file content');
+    const file = { mimetype: 'application/pdf', size: buffer.length, buffer, originalname: 'fake.pdf' };
+    const result = validateImportFile(file, 'pdf');
+    expect(result.valid).toBe(false);
+    expect(result.error.code).toBe('INVALID_FILE_TYPE');
+  });
+
+  // ── 12. PDF file too large → PAYLOAD_TOO_LARGE
+  it('should reject PDF exceeding 25MB', () => {
+    const buffer = Buffer.from('%PDF-1.4');
+    const file = { mimetype: 'application/pdf', size: 26 * 1024 * 1024, buffer, originalname: 'big.pdf' };
+    const result = validateImportFile(file, 'pdf');
+    expect(result.valid).toBe(false);
+    expect(result.error.code).toBe('PAYLOAD_TOO_LARGE');
+  });
+
+  // ── 13. PDF at exactly 25MB → passes
+  it('should accept PDF at exactly 25MB', () => {
+    const buffer = Buffer.from('%PDF-1.4');
+    const file = { mimetype: 'application/pdf', size: 25 * 1024 * 1024, buffer, originalname: 'exact.pdf' };
+    const result = validateImportFile(file, 'pdf');
+    expect(result.valid).toBe(true);
+  });
+
+  // ── 14. Dangerous MIME type for PDF format → DANGEROUS_FILE before MIME check
+  it('should reject dangerous MIME type even when validating PDF format', () => {
+    const buffer = Buffer.from('malicious');
+    const file = { mimetype: 'application/x-executable', size: buffer.length, buffer, originalname: 'malware.exe' };
+    const result = validateImportFile(file, 'pdf');
+    expect(result.valid).toBe(false);
+    expect(result.error.code).toBe('DANGEROUS_FILE');
+  });
+
+  // ── 15. Unsupported format → INVALID_FORMAT
   it('should reject unsupported format', () => {
     const buffer = Buffer.from('data');
-    const file = { mimetype: 'text/plain', size: buffer.length, buffer, originalname: 'test.txt' };
-    const result = validateImportFile(file, 'pdf');
+    const file = { mimetype: 'application/epub+zip', size: buffer.length, buffer, originalname: 'test.epub' };
+    const result = validateImportFile(file, 'epub');
     expect(result.valid).toBe(false);
     expect(result.error.code).toBe('INVALID_FORMAT');
   });
