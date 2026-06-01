@@ -3,7 +3,8 @@ const MAX_IMPORT_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
 
 const FORMAT_MIME_MAP = {
   txt: { mimes: ['text/plain'], magic: null },
-  // pdf and epub entries added by STORY-046/047
+  pdf: { mimes: ['application/pdf'], magic: Buffer.from('%PDF-') },
+  // epub entry added by STORY-047
 };
 
 const DANGEROUS_MIMES = [

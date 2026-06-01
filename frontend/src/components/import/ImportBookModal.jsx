@@ -12,16 +12,28 @@ const ERROR_CODE_MAP = {
   PAYLOAD_TOO_LARGE: 'import.fileTooBig',
   UPLOAD_FAILED: 'import.uploadFailed',
   NO_FILE: 'import.noFile',
+  SCANNED_PDF: 'import.scannedPdf',
+  CORRUPT_PDF: 'import.corruptPdf',
 };
 
-export default function ImportBookModal({ isOpen, onClose }) {
+const FORMAT_ACCEPT = {
+  txt: '.txt,text/plain',
+  pdf: '.pdf,application/pdf',
+};
+
+const FORMAT_MIME = {
+  txt: 'text/plain',
+  pdf: 'application/pdf',
+};
+
+export default function ImportBookModal({ isOpen, onClose, format = 'txt' }) {
   const { t } = useTranslation('import');
   const reducedMotion = useReducedMotion();
   const fileInputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [clientError, setClientError] = useState(null);
 
-  const { mutate, isPending, progress, error, reset } = useImportBook('txt');
+  const { mutate, isPending, progress, error, reset } = useImportBook(format);
 
   useEffect(() => {
     if (!isOpen) {
@@ -37,7 +49,8 @@ export default function ImportBookModal({ isOpen, onClose }) {
 
     setClientError(null);
 
-    if (file.type !== 'text/plain') {
+    const allowedMime = FORMAT_MIME[format] || 'text/plain';
+    if (file.type !== allowedMime) {
       setClientError('import.unsupportedType');
       setSelectedFile(null);
       return;
@@ -98,7 +111,7 @@ export default function ImportBookModal({ isOpen, onClose }) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,text/plain"
+                accept={FORMAT_ACCEPT[format] || '.txt,text/plain'}
                 onChange={handleFileChange}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 mb-4"
                 aria-label={t('selectFile')}
@@ -122,7 +135,7 @@ export default function ImportBookModal({ isOpen, onClose }) {
                   disabled={!selectedFile}
                   className="flex-1 bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold"
                 >
-                  {t('buttonTxt')}
+                  {t(format === 'pdf' ? 'buttonPdf' : 'buttonTxt')}
                 </Button>
               </div>
             </>
