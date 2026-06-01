@@ -28,6 +28,10 @@ const useReaderStore = create(
       isPageAnimating: false,
       currentPageOffsetInBook: 0,
 
+      // Rapid-tap animation state (transient — NOT persisted)
+      pendingPageDirection: null, // null | 1 | -1
+      animationAcceleration: false,
+
       // Reading mode state
       readingMode: 'paginated', // 'paginated' | 'scroll'
       scrollPosition: 0,
@@ -97,6 +101,11 @@ const useReaderStore = create(
       setTotalPagesInBook: (total) => set({ totalPagesInBook: total }),
       setIsPageAnimating: (val) => set({ isPageAnimating: val }),
       setCurrentPageOffsetInBook: (offset) => set({ currentPageOffsetInBook: offset }),
+
+      // Rapid-tap animation actions (transient — NOT persisted)
+      setPendingPageDirection: (dir) => set({ pendingPageDirection: dir }),
+      setAnimationAcceleration: (val) => set({ animationAcceleration: val }),
+      clearPendingNavigation: () => set({ pendingPageDirection: null, animationAcceleration: false }),
 
       // Reading mode actions
       setReadingMode: (mode) => set({ readingMode: mode }),
