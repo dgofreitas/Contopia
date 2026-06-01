@@ -11,6 +11,7 @@ export default function AutoSaveIndicator({
   isDirty,
   conflictInfo,
   offlineMessage,
+  muteAnnouncements = false,
 }) {
   const { t } = useTranslation('editor');
   const [fadingOut, setFadingOut] = useState(false);
@@ -27,16 +28,19 @@ export default function AutoSaveIndicator({
   }, []);
 
   useEffect(() => {
+    if (muteAnnouncements) return;
+
     switch (saveStatus) {
       case 'saving':
         setFadingOut(false);
         announceScreenReader(t('syncingMessage'));
         break;
-      case 'saved':
+      case 'saved': {
         setFadingOut(false);
         announceScreenReader(t('savedExclamation'));
         const fadeTimer = setTimeout(() => setFadingOut(true), SAVED_FADE_MS);
         return () => clearTimeout(fadeTimer);
+      }
       case 'offline':
         setFadingOut(false);
         announceScreenReader(t('offlineMessage'));
@@ -53,7 +57,7 @@ export default function AutoSaveIndicator({
         if (!lastSavedAt) setFadingOut(false);
         break;
     }
-  }, [saveStatus, announceScreenReader, t, lastSavedAt]);
+  }, [saveStatus, announceScreenReader, t, lastSavedAt, muteAnnouncements]);
 
   if (saveStatus === 'idle' && !lastSavedAt) {
     return <span role="status" aria-live="polite" className="sr-only">{srAnnouncement}</span>;
@@ -129,9 +133,11 @@ export default function AutoSaveIndicator({
       <div className="autosave-indicator-wrapper min-h-[1.5rem]" aria-hidden="true">
         {renderIndicator()}
       </div>
-      <span role="status" aria-live="polite" className="sr-only">
-        {srAnnouncement}
-      </span>
+      {!muteAnnouncements && (
+        <span role="status" aria-live="polite" className="sr-only">
+          {srAnnouncement}
+        </span>
+      )}
     </>
   );
 }
