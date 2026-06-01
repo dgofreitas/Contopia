@@ -227,6 +227,36 @@ export const bookCreateSchemaV2 = z.object({
 // ── Reader Preferences Schemas (STORY-032) ──────────────────────────────────────
 
 /**
+ * Sync operation schema — single operation in a sync batch.
+ * Discriminated union supporting 'chapter.update' and 'chapter.create'.
+ */
+export const syncOperationSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('chapter.update'),
+    chapterId: z.string().regex(objectIdRegex, 'Invalid chapter ID format'),
+    content: z.string(),
+    clientTimestamp: z.string().datetime({ offset: true }),
+    baseVersion: z.number().int().min(1),
+  }),
+  z.object({
+    type: z.literal('chapter.create'),
+    bookId: z.string().min(1),
+    title: z.string().min(1).max(100).optional(),
+    content: z.string().optional(),
+    clientTimestamp: z.string().datetime({ offset: true }).optional(),
+    tempChapterId: z.string().min(1).optional(),
+  }),
+]);
+
+/**
+ * POST /api/v1/chapters/sync — batch sync request schema.
+ * Max 50 operations per batch to prevent abuse.
+ */
+export const syncBodySchema = z.object({
+  operations: z.array(syncOperationSchema).min(1).max(50),
+});
+
+/**
  * Reader preferences update schema — partial update.
  * Only whitelist enum values; missing fields are kept as-is.
  */
