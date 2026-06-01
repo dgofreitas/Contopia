@@ -1,10 +1,11 @@
-// Contopia — Import Manager (orchestrates TXT + PDF import pipelines)
+// Contopia — Import Manager (orchestrates TXT + PDF + EPUB import pipelines)
 import mongoose from 'mongoose';
 import pino from 'pino';
 import sharp from 'sharp';
 import { validateImportFile, sanitizeTxtContent } from './import-validator.js';
 import { parseTxtBuffer } from './txt-parser.js';
 import { extractPdfContent, renderPdfThumbnail } from './pdf-parser.js';
+import { parseEpub } from './epub-parser.js';
 import { createBook, createChapter, pushChapterIdToBook, createActivityLog, updateBookById, findBookById } from '../book/book-dao.js';
 import * as storageService from '../storage/storage-service.js';
 import * as storageDao from '../storage/storage-dao.js';
@@ -220,4 +221,127 @@ function extractPdfTitle(filename) {
   const name = filename.replace(/\.pdf$/i, '').trim();
   const sanitized = name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim();
   return sanitized || 'Untitled';
+}
+
+/**
+ * Extract a clean title from an EPUB filename (fallback when metadata is missing).
+ * @param {string} filename
+ * @returns {string}
+ */
+function extractEpubTitle(filename) {
+  if (!filename) return 'Untitled';
+  const name = filename.replace(/\.epub$/i, '').trim();
+  const sanitized = name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim();
+  return sanitized || 'Untitled';
+}
+
+/**
+ * Import an EPUB file as a new Book.
+ * Pipeline: validate → parseEpub → createBook → createChapters → pushChapterIds
+ *           → upload cover (if exists) → auditLog
+ * @param {{ authorId: string, file: object }} params
+ * @returns {Promise<{ book: object, chapters: object[] }>}
+ */
+export async function importEpubBookManager({ authorId, file }) {
+  // 1. Validate file
+  const validation = validateImportFile(file, 'epub');
+  if (!validation.valid) {
+    const err = new Error(validation.error.message);
+    err.code = validation.error.code;
+    err.status = validation.error.code === 'PAYLOAD_TOO_LARGE' ? 413 : 400;
+    throw err;
+  }
+
+  // 2. Parse EPUB — DRM detection, metadata, chapters, cover
+  const epubResult = await parseEpub(file.buffer);
+
+  // 3. Determine title: EPUB metadata → filename (strip .epub)
+  const title = epubResult.title || extractEpubTitle(file.originalname);
+
+  // 4. Create Book entity
+  const book = await createBook({
+    authorId,
+    title,
+    source: 'imported',
+    importFormat: 'epub',
+    isEditable: false,
+  });
+
+  // 5. Create ONE Chapter per EPUB spine item (gapped order: 0, 100, 200, ...)
+  const chapters = [];
+  for (const epubChapter of epubResult.chapters) {
+    const plainText = epubChapter.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const wordCount = plainText ? plainText.split(/\s+/).length : 0;
+
+    const chapter = await createChapter({
+      bookId: book._id,
+      title: epubChapter.title,
+      content: epubChapter.content,
+      wordCount,
+      order: epubChapter.order,
+    });
+
+    chapters.push(chapter);
+  }
+
+  // 6. Link all chapters to book
+  for (const chapter of chapters) {
+    await pushChapterIdToBook(book._id, chapter._id);
+  }
+
+  // 7. Upload cover image (if exists)
+  if (epubResult.coverImage) {
+    try {
+      // Resize cover to exact dimensions via sharp (200x280, fit inside)
+      const coverBuffer = await sharp(epubResult.coverImage.buffer)
+        .resize(COVER_WIDTH, COVER_HEIGHT, { fit: 'inside', withoutEnlargement: true })
+        .png()
+        .toBuffer();
+
+      // Upload to S3
+      const tempAssetId = new mongoose.Types.ObjectId();
+      const storagePath = `users/${authorId}/books/${book._id}/covers/${tempAssetId}.png`;
+
+      await storageService.putObject(storagePath, coverBuffer, 'image/png');
+
+      // Create Asset record
+      const assetRecord = await storageDao.createAssetRecord({
+        bookId: book._id,
+        authorId,
+        url: storagePath,
+        type: 'cover',
+        mimeType: 'image/png',
+        sizeBytes: coverBuffer.length,
+        width: COVER_WIDTH,
+        height: COVER_HEIGHT,
+      });
+
+      // Link cover asset to book
+      await updateBookById(book._id, { coverAssetId: assetRecord._id });
+
+      logger.info({ bookId: book._id, assetId: assetRecord._id }, 'EPUB cover image uploaded');
+    } catch (err) {
+      // Cover upload is best-effort — log and continue without cover
+      logger.warn({ err, bookId: book._id }, 'Failed to upload EPUB cover image — continuing without cover');
+    }
+  }
+  // If no cover → coverAssetId stays null, default_color auto-assigned by schema pre-save hook
+
+  // 8. Audit log (fire-and-forget)
+  createActivityLog({
+    actorId: authorId,
+    actorType: 'child',
+    action: 'book.import_epub',
+    targetId: book._id,
+    targetType: 'book',
+    metadata: { importFormat: 'epub', originalFilename: file.originalname, chapterCount: chapters.length },
+  }).catch((err) => {
+    logger.error({ err }, 'Audit log failed for action book.import_epub');
+  });
+
+  logger.info({ bookId: book._id, authorId, importFormat: 'epub', chapterCount: chapters.length }, 'EPUB book imported');
+
+  // Return fresh book data (may include coverAssetId from update)
+  const freshBook = await findBookById(book._id);
+  return { book: freshBook || book, chapters };
 }

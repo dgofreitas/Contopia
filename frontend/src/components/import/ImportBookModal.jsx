@@ -14,16 +14,33 @@ const ERROR_CODE_MAP = {
   NO_FILE: 'import.noFile',
   SCANNED_PDF: 'import.scannedPdf',
   CORRUPT_PDF: 'import.corruptPdf',
+  DRM_PROTECTED: 'import.epubDrmProtected',
+  CORRUPT_EPUB: 'import.epubCorrupted',
+  EMPTY_EPUB: 'import.epubEmpty',
+};
+
+const FORMAT_BUTTON_KEY = {
+  txt: 'buttonTxt',
+  pdf: 'buttonPdf',
+  epub: 'buttonEpub',
+};
+
+const FORMAT_SELECT_KEY = {
+  txt: 'selectFile',
+  pdf: 'selectFile',
+  epub: 'selectFileEpub',
 };
 
 const FORMAT_ACCEPT = {
   txt: '.txt,text/plain',
   pdf: '.pdf,application/pdf',
+  epub: '.epub,application/epub+zip',
 };
 
 const FORMAT_MIME = {
   txt: 'text/plain',
   pdf: 'application/pdf',
+  epub: 'application/epub+zip',
 };
 
 export default function ImportBookModal({ isOpen, onClose, format = 'txt' }) {
@@ -107,14 +124,14 @@ export default function ImportBookModal({ isOpen, onClose, format = 'txt' }) {
 
           {!isPending && !isSuccess && (
             <>
-              <p className="mb-4 text-sm text-gray-600">{t('selectFile')}</p>
+              <p className="mb-4 text-sm text-gray-600">{t(FORMAT_SELECT_KEY[format] || 'selectFile')}</p>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept={FORMAT_ACCEPT[format] || '.txt,text/plain'}
                 onChange={handleFileChange}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 mb-4"
-                aria-label={t('selectFile')}
+                aria-label={t(FORMAT_SELECT_KEY[format] || 'selectFile')}
               />
               {displayError && (
                 <p className="mb-4 text-sm text-red-600" role="alert" aria-live="polite">
@@ -135,7 +152,7 @@ export default function ImportBookModal({ isOpen, onClose, format = 'txt' }) {
                   disabled={!selectedFile}
                   className="flex-1 bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold"
                 >
-                  {t(format === 'pdf' ? 'buttonPdf' : 'buttonTxt')}
+                  {t(FORMAT_BUTTON_KEY[format] || 'buttonTxt')}
                 </Button>
               </div>
             </>

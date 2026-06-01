@@ -3,7 +3,9 @@
   "button": "Import a Book",
   "buttonTxt": "Import Text File",
   "buttonPdf": "Import PDF",
+  "buttonEpub": "Import EPUB",
   "selectFile": "Choose a .txt file from your device",
+  "selectFileEpub": "Choose an .epub file from your device",
   "uploading": "Uploading…",
   "processing": "Processing your book…",
   "progress": "{{percent}}% uploaded",
@@ -13,5 +15,8 @@
   "uploadFailed": "Upload failed. Check your connection and try again!",
   "noFile": "No file was selected. Please choose a file to import.",
   "scannedPdf": "This PDF has no text to read. It might be a scanned image. Try a text-based PDF!",
-  "corruptPdf": "This PDF seems broken. Try a different file!"
+  "corruptPdf": "This PDF seems broken. Try a different file!",
+  "epubDrmProtected": "Oops! This file couldn't be opened. It might be protected or damaged.",
+  "epubCorrupted": "Oops! This file couldn't be opened. It might be protected or damaged.",
+  "epubEmpty": "This EPUB has no readable content. Try a different file!"
 }
