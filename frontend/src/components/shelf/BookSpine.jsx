@@ -9,9 +9,18 @@ import {
   PULL_OUT_VARIANTS,
   PULL_OUT_VARIANTS_REDUCED,
 } from '../../hooks/useBookPullOut';
+import '../../styles/idle-animations.css';
+
+function hashId(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
 
 const BookSpine = React.forwardRef(function BookSpine(
-  { book, onClick, isPulledOut, isReversing, animationPhase, onPlaceBackComplete, onAnimationComplete, isHighlighted, highlightRef, progress, animationTransition },
+  { book, onClick, isPulledOut, isReversing, animationPhase, onPlaceBackComplete, onAnimationComplete, isHighlighted, highlightRef, progress, animationTransition, isIdle },
   ref,
 ) {
   const { t } = useTranslation('shelf');
@@ -84,7 +93,8 @@ const BookSpine = React.forwardRef(function BookSpine(
     >
       {book.isFavorited && (
         <svg
-          className="absolute top-1 right-1 w-4 h-4"
+          className={`absolute top-1 right-1 w-4 h-4${book.isFavorited && isIdle ? ' spine-heart--idle' : ''}`}
+          style={book.isFavorited && isIdle ? { animationDelay: `${(hashId(book._id) % 2000) / 1000}s` } : undefined}
           viewBox="0 0 24 24"
           fill="#FF6B6B"
           aria-hidden="true"
