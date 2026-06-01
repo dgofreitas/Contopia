@@ -208,7 +208,7 @@ function parseOpf(zip, opfPath) {
  * @param {string} opfPath — path to OPF within ZIP
  * @returns {[{ order: number, title: string, content: string }]}
  */
-function extractChapters(zip, opfResult, opfPath) {
+function extractChapters(zip, opfResult, _opfPath) {
   const chapters = [];
 
   for (let i = 0; i < opfResult.spineIds.length; i++) {
@@ -317,7 +317,7 @@ function extractChapterTitle(xhtmlStr, index) {
  * @param {string} opfPath — path to OPF within ZIP
  * @returns {{ buffer: Buffer, mimeType: string }|null}
  */
-function extractCover(zip, opfResult, opfPath) {
+function extractCover(zip, opfResult, _opfPath) {
   if (!opfResult.coverMetaId) return null;
 
   const coverManifest = opfResult.manifest[opfResult.coverMetaId];
