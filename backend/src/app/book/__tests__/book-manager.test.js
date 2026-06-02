@@ -15,6 +15,7 @@ vi.mock('../book-dao.js', async () => {
     findBookWithChapters: vi.fn(),
     findBooksByAuthorWithWordCount: vi.fn(),
     findBooksByAuthor: vi.fn(),
+    findPublishedBooksWithChapterCounts: vi.fn(),
     countBooksByAuthor: vi.fn(),
     findBookById: vi.fn(),
     updateBookById: vi.fn(),
@@ -22,8 +23,19 @@ vi.mock('../book-dao.js', async () => {
   };
 });
 
+// ── Mock storage modules for coverUrl resolution (STORY-051) ────────────────
+vi.mock('../../storage/storage-dao.js', () => ({
+  findAssetRecordById: vi.fn(),
+}));
+
+vi.mock('../../storage/storage-service.js', () => ({
+  getSignedUrl: vi.fn(),
+}));
+
 import * as bookManager from '../book-manager.js';
 import * as bookDao from '../book-dao.js';
+import * as storageDao from '../../storage/storage-dao.js';
+import * as storageService from '../../storage/storage-service.js';
 
 const AUTHOR_ID = new mongoose.Types.ObjectId().toString();
 const OTHER_AUTHOR_ID = new mongoose.Types.ObjectId().toString();
@@ -142,9 +154,9 @@ describe('Book Manager — STORY-021', () => {
       expect(bookDao.countBooksByAuthor).toHaveBeenCalledWith(AUTHOR_ID, { status: 'draft' });
     });
 
-    it('should not call findBooksByAuthorWithWordCount for non-draft status', async () => {
-      // Arrange
-      bookDao.findBooksByAuthor.mockResolvedValue([]);
+    it('should not call findBooksByAuthorWithWordCount for published status', async () => {
+      // Arrange: STORY-051 — published status now uses findPublishedBooksWithChapterCounts
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue([]);
       bookDao.countBooksByAuthor.mockResolvedValue(0);
 
       // Act
@@ -152,7 +164,10 @@ describe('Book Manager — STORY-021', () => {
 
       // Assert
       expect(bookDao.findBooksByAuthorWithWordCount).not.toHaveBeenCalled();
-      expect(bookDao.findBooksByAuthor).toHaveBeenCalled();
+      expect(bookDao.findPublishedBooksWithChapterCounts).toHaveBeenCalledWith(AUTHOR_ID, {
+        limit: 20,
+        skip: 0,
+      });
     });
   });
 
@@ -507,6 +522,159 @@ describe('Book Manager — STORY-021', () => {
       expect(result.page).toBe(2);
       expect(result.pageSize).toBe(10);
       expect(result.totalPages).toBe(3);
+    });
+  });
+
+  // ── STORY-051: Published books batch endpoint for offline sync ──────────────
+  describe('getBooksByAuthorManager — published status (STORY-051)', () => {
+    it('should use findPublishedBooksWithChapterCounts for published status', async () => {
+      // Arrange
+      const publishedBooks = [
+        { _id: new mongoose.Types.ObjectId(), title: 'Pub Book 1', chapterCount: 3, coverAssetId: null },
+        { _id: new mongoose.Types.ObjectId(), title: 'Pub Book 2', chapterCount: 5, coverAssetId: null },
+      ];
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue(publishedBooks);
+      bookDao.countBooksByAuthor.mockResolvedValue(2);
+
+      // Act
+      const result = await bookManager.getBooksByAuthorManager(AUTHOR_ID, { status: 'published' });
+
+      // Assert
+      expect(bookDao.findPublishedBooksWithChapterCounts).toHaveBeenCalledWith(AUTHOR_ID, {
+        limit: 20,
+        skip: 0,
+      });
+      expect(result.books).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it('should include chapterCount from aggregation in each book', async () => {
+      // Arrange
+      const publishedBooks = [
+        { _id: new mongoose.Types.ObjectId(), title: 'Pub Book 1', chapterCount: 3, coverAssetId: null },
+      ];
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue(publishedBooks);
+      bookDao.countBooksByAuthor.mockResolvedValue(1);
+
+      // Act
+      const result = await bookManager.getBooksByAuthorManager(AUTHOR_ID, { status: 'published' });
+
+      // Assert
+      expect(result.books[0].chapterCount).toBe(3);
+    });
+
+    it('should resolve coverUrl and coverThumbnailUrl when coverAssetId exists', async () => {
+      // Arrange
+      const assetId = new mongoose.Types.ObjectId();
+      const publishedBooks = [
+        { _id: new mongoose.Types.ObjectId(), title: 'Covered Book', chapterCount: 4, coverAssetId: assetId },
+      ];
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue(publishedBooks);
+      bookDao.countBooksByAuthor.mockResolvedValue(1);
+
+      // Mock asset lookup
+      storageDao.findAssetRecordById.mockResolvedValue({ _id: assetId, url: 'covers/original.png', dominantColor: '#FF6B6B' });
+      storageService.getSignedUrl.mockImplementation((url) => Promise.resolve(`https://cdn.example.com/${url}`));
+
+      // Mock thumbnail lookup
+      bookDao.findAssetsByBook = vi.fn().mockResolvedValue([
+        { _id: new mongoose.Types.ObjectId(), url: 'covers/thumb.png', type: 'cover_thumbnail' },
+      ]);
+
+      // Act
+      const result = await bookManager.getBooksByAuthorManager(AUTHOR_ID, { status: 'published' });
+
+      // Assert
+      expect(result.books[0].coverUrl).toBe('https://cdn.example.com/covers/original.png');
+      expect(result.books[0].coverThumbnailUrl).toBe('https://cdn.example.com/covers/thumb.png');
+      expect(result.books[0].chapterCount).toBe(4);
+    });
+
+    it('should set chapterCount to 0 when aggregation returns null', async () => {
+      // Arrange: aggregation may return null for books with zero chapters
+      const publishedBooks = [
+        { _id: new mongoose.Types.ObjectId(), title: 'No Chapters', chapterCount: null, coverAssetId: null },
+      ];
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue(publishedBooks);
+      bookDao.countBooksByAuthor.mockResolvedValue(1);
+
+      // Act
+      const result = await bookManager.getBooksByAuthorManager(AUTHOR_ID, { status: 'published' });
+
+      // Assert
+      expect(result.books[0].chapterCount).toBe(0);
+    });
+
+    it('should gracefully handle coverUrl resolution failure', async () => {
+      // Arrange
+      const assetId = new mongoose.Types.ObjectId();
+      const publishedBooks = [
+        { _id: new mongoose.Types.ObjectId(), title: 'Error Book', chapterCount: 2, coverAssetId: assetId },
+      ];
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue(publishedBooks);
+      bookDao.countBooksByAuthor.mockResolvedValue(1);
+
+      // Mock asset lookup failure
+      storageDao.findAssetRecordById.mockRejectedValue(new Error('S3 unavailable'));
+
+      // Act
+      const result = await bookManager.getBooksByAuthorManager(AUTHOR_ID, { status: 'published' });
+
+      // Assert: no crash, chapterCount still present, coverUrl absent
+      expect(result.books[0].chapterCount).toBe(2);
+      expect(result.books[0].coverUrl).toBeUndefined();
+    });
+
+    it('should not include coverUrl when coverAssetId is null', async () => {
+      // Arrange
+      const publishedBooks = [
+        { _id: new mongoose.Types.ObjectId(), title: 'No Cover', chapterCount: 1, coverAssetId: null },
+      ];
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue(publishedBooks);
+      bookDao.countBooksByAuthor.mockResolvedValue(1);
+
+      // Act
+      const result = await bookManager.getBooksByAuthorManager(AUTHOR_ID, { status: 'published' });
+
+      // Assert
+      expect(result.books[0].coverUrl).toBeUndefined();
+      expect(result.books[0].chapterCount).toBe(1);
+    });
+
+    it('should support page/pageSize pagination for published books', async () => {
+      // Arrange
+      bookDao.findPublishedBooksWithChapterCounts.mockResolvedValue([]);
+      bookDao.countBooksByAuthor.mockResolvedValue(25);
+
+      // Act
+      const result = await bookManager.getBooksByAuthorManager(AUTHOR_ID, {
+        status: 'published',
+        page: 2,
+        pageSize: 10,
+      });
+
+      // Assert
+      expect(bookDao.findPublishedBooksWithChapterCounts).toHaveBeenCalledWith(AUTHOR_ID, {
+        limit: 10,
+        skip: 10,
+      });
+      expect(result.page).toBe(2);
+      expect(result.pageSize).toBe(10);
+      expect(result.totalPages).toBe(3);
+    });
+
+    it('should not call findPublishedBooksWithChapterCounts for draft status', async () => {
+      // Arrange
+      bookDao.findBooksByAuthorWithWordCount.mockResolvedValue([]);
+      bookDao.countBooksByAuthor.mockResolvedValue(0);
+
+      // Act
+      await bookManager.getBooksByAuthorManager(AUTHOR_ID, { status: 'draft' });
+
+      // Assert
+      expect(bookDao.findPublishedBooksWithChapterCounts).not.toHaveBeenCalled();
     });
   });
 });

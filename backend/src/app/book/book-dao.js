@@ -157,6 +157,47 @@ export async function countBooksByAuthor(authorId, { status } = {}) {
   return Book.countDocuments(filter).exec();
 }
 
+/**
+ * Fetch published books by author with chapterCount for each book.
+ * Uses aggregation: $match → $lookup chapters → $addFields for chapterCount.
+ * STORY-051: Offline sync needs lightweight metadata (id, title, coverAssetId, updatedAt, chapterCount).
+ * @param {string} authorId
+ * @param {{ limit?: number, skip?: number }} options
+ * @returns {Promise<Array>} Book documents with chapterCount field
+ */
+export async function findPublishedBooksWithChapterCounts(authorId, { limit = 50, skip = 0 } = {}) {
+  const pipeline = [
+    { $match: { authorId: new mongoose.Types.ObjectId(authorId), status: 'published', deletedAt: null } },
+    {
+      $lookup: {
+        from: 'chapters',
+        localField: '_id',
+        foreignField: 'bookId',
+        as: 'chapters',
+      },
+    },
+    {
+      $addFields: {
+        chapterCount: {
+          $size: {
+            $filter: {
+              input: '$chapters',
+              as: 'ch',
+              cond: { $eq: ['$$ch.deletedAt', null] },
+            },
+          },
+        },
+      },
+    },
+    { $project: { chapters: 0 } },
+    { $sort: { publishedAt: -1, _id: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+  ];
+
+  return Book.aggregate(pipeline).exec();
+}
+
 // ── Chapter DAO ───────────────────────────────────────────────────────────────
 
 export async function createChapter(data) {
@@ -174,6 +215,19 @@ export async function findChaptersByBook(bookId, { limit = 100, skip = 0 } = {})
 
 export async function updateChapterById(id, update) {
   return Chapter.findOneAndUpdate({ _id: id, deletedAt: null }, update, { new: true }).lean().exec();
+}
+
+/**
+ * Atomic update that increments _version and sets updatedAt.
+ * Used by sync conflict resolution to ensure version monotonicity.
+ * Returns the updated document or null if not found/soft-deleted.
+ */
+export async function updateChapterByIdWithVersion(id, update) {
+  return Chapter.findOneAndUpdate(
+    { _id: id, deletedAt: null },
+    { ...update, $inc: { _version: 1 } },
+    { new: true },
+  ).lean().exec();
 }
 
 export async function softDeleteChapter(id) {

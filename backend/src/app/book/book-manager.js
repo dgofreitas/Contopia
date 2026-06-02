@@ -5,6 +5,7 @@ import {
   findBookById,
   findBooksByAuthor,
   findBooksByAuthorWithWordCount,
+  findPublishedBooksWithChapterCounts,
   findBookWithChapters,
   updateBookById,
   softDeleteBook,
@@ -290,6 +291,7 @@ export async function getBookForEditManager(bookId, authorId) {
 /**
  * Get all books by an author, optionally filtered by status.
  * Returns pagination metadata.
+ * STORY-051: For status='published', includes chapterCount and coverUrl for offline sync.
  */
 export async function getBooksByAuthorManager(authorId, { status, page = 1, pageSize = 20, limit, skip } = {}) {
   // Support both new (page/pageSize) and legacy (limit/skip) callers
@@ -305,6 +307,52 @@ export async function getBooksByAuthorManager(authorId, { status, page = 1, page
 
     return {
       books,
+      total,
+      page,
+      pageSize: effectiveLimit,
+      totalPages: Math.ceil(total / effectiveLimit),
+    };
+  }
+
+  // STORY-051: For published books, include chapterCount via aggregation + coverUrl
+  if (status === 'published') {
+    const [books, total] = await Promise.all([
+      findPublishedBooksWithChapterCounts(authorId, { limit: effectiveLimit, skip: effectiveSkip }),
+      countBooksByAuthor(authorId, { status }),
+    ]);
+
+    // Enrich each book with coverUrl/coverThumbnailUrl when coverAssetId exists
+    const enrichedBooks = await Promise.all(books.map(async (book) => {
+      if (!book.coverAssetId) {
+        return { ...book, chapterCount: book.chapterCount ?? 0 };
+      }
+
+      try {
+        const coverAsset = await findAssetRecordById(book.coverAssetId.toString());
+        const coverUrl = coverAsset ? await getSignedUrlService(coverAsset.url) : null;
+
+        let coverThumbnailUrl = null;
+        if (coverAsset) {
+          const bookAssets = await findAssetsByBook(book._id.toString(), { type: 'cover_thumbnail' });
+          if (bookAssets.length > 0) {
+            coverThumbnailUrl = await getSignedUrlService(bookAssets[0].url);
+          }
+        }
+
+        return {
+          ...book,
+          chapterCount: book.chapterCount ?? 0,
+          ...(coverUrl && { coverUrl }),
+          ...(coverThumbnailUrl && { coverThumbnailUrl }),
+        };
+      } catch (err) {
+        logger.warn({ err, bookId: book._id }, 'Failed to resolve cover URLs for published book — continuing without them');
+        return { ...book, chapterCount: book.chapterCount ?? 0 };
+      }
+    }));
+
+    return {
+      books: enrichedBooks,
       total,
       page,
       pageSize: effectiveLimit,

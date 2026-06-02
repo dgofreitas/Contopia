@@ -395,4 +395,93 @@ describe('Book DAO', () => {
       expect(draftCount).toBe(1);
     });
   });
+
+  // ── STORY-051: Published books with chapter counts ────────────────────────
+  describe('findPublishedBooksWithChapterCounts', () => {
+    it('should return published books with chapterCount', async () => {
+      // Arrange: create a published book with 3 chapters
+      const book = await bookDao.createBook({ authorId, title: 'Published Book', status: 'published' });
+      const { Chapter } = await import('../book-model.js');
+      await Chapter.create({ bookId: book._id, order: 1, title: 'Ch 1', content: 'A' });
+      await Chapter.create({ bookId: book._id, order: 2, title: 'Ch 2', content: 'B' });
+      await Chapter.create({ bookId: book._id, order: 3, title: 'Ch 3', content: 'C' });
+
+      // Act
+      const results = await bookDao.findPublishedBooksWithChapterCounts(authorId);
+
+      // Assert
+      expect(results).toHaveLength(1);
+      expect(results[0].title).toBe('Published Book');
+      expect(results[0].chapterCount).toBe(3);
+      expect(results[0].status).toBe('published');
+    });
+
+    it('should return 0 chapterCount for published book with no chapters', async () => {
+      // Arrange: published book with no chapters
+      await bookDao.createBook({ authorId, title: 'Empty Pub', status: 'published' });
+
+      // Act
+      const results = await bookDao.findPublishedBooksWithChapterCounts(authorId);
+
+      // Assert
+      expect(results).toHaveLength(1);
+      expect(results[0].chapterCount).toBe(0);
+    });
+
+    it('should exclude draft books from results', async () => {
+      // Arrange: one published, one draft
+      await bookDao.createBook({ authorId, title: 'Pub', status: 'published' });
+      await bookDao.createBook({ authorId, title: 'Draft', status: 'draft' });
+
+      // Act
+      const results = await bookDao.findPublishedBooksWithChapterCounts(authorId);
+
+      // Assert
+      expect(results).toHaveLength(1);
+      expect(results[0].title).toBe('Pub');
+    });
+
+    it('should exclude soft-deleted books', async () => {
+      // Arrange: publish then soft-delete a book
+      const book = await bookDao.createBook({ authorId, title: 'Deleted Pub', status: 'published' });
+      await bookDao.softDeleteBook(book._id);
+
+      // Act
+      const results = await bookDao.findPublishedBooksWithChapterCounts(authorId);
+
+      // Assert
+      expect(results).toHaveLength(0);
+    });
+
+    it('should not count soft-deleted chapters', async () => {
+      // Arrange: published book with 2 active + 1 deleted chapter
+      const book = await bookDao.createBook({ authorId, title: 'Partial Pub', status: 'published' });
+      const { Chapter } = await import('../book-model.js');
+      await Chapter.create({ bookId: book._id, order: 1, title: 'Active Ch' });
+      const deletedCh = await Chapter.create({ bookId: book._id, order: 2, title: 'Deleted Ch' });
+      await Chapter.findByIdAndUpdate(deletedCh._id, { $set: { deletedAt: new Date() } });
+
+      // Act
+      const results = await bookDao.findPublishedBooksWithChapterCounts(authorId);
+
+      // Assert
+      expect(results).toHaveLength(1);
+      expect(results[0].chapterCount).toBe(1);
+    });
+
+    it('should support pagination with limit and skip', async () => {
+      // Arrange: 3 published books
+      for (let i = 1; i <= 3; i++) {
+        await bookDao.createBook({ authorId, title: `Pub ${i}`, status: 'published' });
+      }
+
+      // Act: get first 2
+      const page1 = await bookDao.findPublishedBooksWithChapterCounts(authorId, { limit: 2, skip: 0 });
+      const page2 = await bookDao.findPublishedBooksWithChapterCounts(authorId, { limit: 2, skip: 2 });
+
+      // Assert
+      expect(page1).toHaveLength(2);
+      expect(page2).toHaveLength(1);
+    });
+  });
 });

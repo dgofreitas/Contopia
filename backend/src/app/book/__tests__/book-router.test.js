@@ -501,6 +501,40 @@ describe('Book Router', () => {
     expect(res.body.data[1].title).toBe('Older Published');
   });
 
+  // ── STORY-051: GET /?status=published — includes chapterCount for offline sync ──
+  it('GET /api/v1/books?status=published — includes chapterCount for each book', async () => {
+    // Arrange: create a published book with chapters
+    const book = await Book.create({ authorId: CHILD_ID, title: 'Synced Book', status: 'published' });
+    await Chapter.create({ bookId: book._id, order: 1, title: 'Ch 1', content: 'Hello' });
+    await Chapter.create({ bookId: book._id, order: 2, title: 'Ch 2', content: 'World' });
+
+    // Act
+    const res = await request(testApp)
+      .get('/api/v1/books?status=published')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].chapterCount).toBe(2);
+  });
+
+  // ── STORY-051: chapterCount is 0 for published book with no chapters ──
+  it('GET /api/v1/books?status=published — chapterCount is 0 for book with no chapters', async () => {
+    // Arrange: published book with no chapters
+    await Book.create({ authorId: CHILD_ID, title: 'Empty Pub', status: 'published' });
+
+    // Act
+    const res = await request(testApp)
+      .get('/api/v1/books?status=published')
+      .set('Authorization', `Bearer ${validToken}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].chapterCount).toBe(0);
+  });
+
   // ── STORY-016: POST / — Title > 120 chars → 400 VALIDATION_ERROR ────────
   it('POST /api/v1/books — 400 VALIDATION_ERROR for title longer than 120 chars', async () => {
     // Arrange: title with 121 characters
