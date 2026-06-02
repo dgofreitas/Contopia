@@ -15,10 +15,10 @@
 
 ## FRONTEND
 - [x] components: Create OfflineIndicator.jsx + SyncStatusBar.jsx + extend AutoSaveIndicator.jsx → FrontendDeveloperReact
-- [ ] hooks: Extend useAutoSave, productionize useAutoSync, extend useNetworkStatus heartbeat, extend useDraftRecovery → FrontendDeveloperReact
-- [ ] services: Extend sync-service.js, offline-db-service.js, autosave-service.js → FrontendDeveloperReact
-- [ ] pages: Wire ChapterEditor.jsx + EditorPage.jsx with offline mode → FrontendDeveloperReact
-- [ ] stores: Extend book-store.js with createChapterOffline action → FrontendDeveloperReact
+- [x] hooks: Extend useAutoSave, productionize useAutoSync, extend useNetworkStatus heartbeat, extend useDraftRecovery → FrontendDeveloperReact
+- [x] services: Extend sync-service.js, offline-db-service.js, autosave-service.js → FrontendDeveloperReact
+- [x] pages: Wire ChapterEditor.jsx + EditorPage.jsx with offline mode → FrontendDeveloperReact
+- [x] stores: Extend book-store.js with createChapterOffline action → FrontendDeveloperReact
 - [x] i18n: Add offline/sync keys to en + pt-BR editor.json → FrontendDeveloperReact
 - [x] styles: Add cloud icon CSS transitions to editor.css → FrontendDeveloperReact
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { syncOnReconnect } from '../services/sync-service.js';
-import { getSyncQueueCount } from '../services/offline-db-service.js';
+import { getSyncQueueCount, requestPersistentStorage } from '../services/offline-db-service.js';
 import storageMonitor from '../services/storage-monitor.js';
 
 const MAX_RETRIES = 5;

@@ -9,8 +9,6 @@
  * and NFR-PERF-06 (local save < 100ms).
  */
 
-import storageMonitor from './storage-monitor.js';
-
 const DB_NAME = 'contopia-autosave';
 const DB_VERSION = 2;
 
@@ -34,21 +32,6 @@ async function ensurePersistentStorage() {
     }
   }
 }
-  } catch {
-    // non-critical
-  }
-}
-
-async function ensurePersistentStorage() {
-  if (!persistentStorageRequested) {
-    persistentStorageRequested = true;
-    try {
-      await navigator.storage.persist();
-    } catch {
-      // non-critical
-    }
-  }
-}
 
 /**
  * Open (or upgrade) the IndexedDB to the current version.
@@ -66,7 +49,7 @@ export function openDB() {
 
       // Preserve existing drafts store from v1 (autosave-service.js)
       // It's created automatically when opening v1 for the first time.
-      // On upgrade from v1→v2, drafts store already exists.
+      // On upgrade from v1->v2, drafts store already exists.
 
       // v2: books store — book metadata + content for offline reading
       if (!db.objectStoreNames.contains(STORES.BOOKS)) {
@@ -377,7 +360,6 @@ export async function updateSyncOp(id, updates) {
     }
 
     const updated = { ...existing, ...updates, id };
-
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
       const store = tx.objectStore(STORES.SYNC_QUEUE);
@@ -451,7 +433,7 @@ export async function deleteSyncOpByTypeChapter(type, chapterId) {
 
 /**
  * Request persistent storage to prevent browser from clearing IndexedDB
- * under storage pressure. Also called on first offline write.
+ * under storage pressure.
  *
  * Browser behavior:
  * - Chrome: Grants automatically if site has engagement (no prompt)
