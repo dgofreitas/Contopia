@@ -70,5 +70,19 @@
   "publishError": "Algo deu errado. Tente novamente.",
   "publishSuccessAnnouncement": "Seu livro agora está na sua estante!",
   "editingBook": "Editando {{title}}",
-  "publishedEditBadge": "Na sua estante — mudanças ao vivo"
+  "publishedEditBadge": "Na sua estante — mudanças ao vivo",
+  "offlineMode": "Offline",
+  "syncingProgress": "Sincronizando {{synced}} de {{total}} capítulos…",
+  "syncComplete": "Sincronizado!",
+  "syncConflict": "Sincronizado (versão local mantida)",
+  "captivePortalDetected": "Conexão limitada detectada",
+  "coverUploadDisabledOffline": "Não disponível offline",
+  "allChangesSaved": "Todas as alterações salvas",
+  "savingLocally": "Offline — salvando localmente",
+  "syncingChanges": "Sincronizando alterações…",
+  "changesSynced": "Alterações sincronizadas",
+  "unableToSync": "Não foi possível sincronizar",
+  "syncedLocalKept": "Sincronizado (versão local mantida)",
+  "chapterPending": "{{count}} capítulo pendente",
+  "chaptersPending": "{{count}} capítulos pendentes"
 }

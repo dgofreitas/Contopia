@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import autosaveService from '../services/autosave-service';
+import useNetworkStatus from './useNetworkStatus';
 
 export default function useDraftRecovery(bookId, chapterId, serverVersion) {
   const [hasDraft, setHasDraft] = useState(false);
   const [draftContent, setDraftContent] = useState(null);
   const [conflictWarning, setConflictWarning] = useState(null);
   const [shouldRestore, setShouldRestore] = useState(false);
+  const { wasOffline, isRealOnline } = useNetworkStatus();
+  const syncTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (!bookId || !chapterId) return;
@@ -69,6 +72,68 @@ export default function useDraftRecovery(bookId, chapterId, serverVersion) {
       cancelled = true;
     };
   }, [bookId, chapterId, serverVersion]);
+
+  useEffect(() => {
+    if (!isRealOnline || !wasOffline) return;
+    if (syncTriggeredRef.current) return;
+    if (!bookId || !chapterId) return;
+
+    let cancelled = false;
+
+    async function syncAndClean() {
+      syncTriggeredRef.current = true;
+
+      try {
+        const { syncOnReconnect } = await import('../services/sync-service.js');
+        const result = await syncOnReconnect();
+
+        if (result.synced > 0 && bookId && chapterId) {
+          try {
+            await autosaveService.deleteDraft(bookId, chapterId);
+            localStorage.removeItem(`autosave_emergency_${chapterId}`);
+          } catch (cleanErr) {
+            console.warn('[draftRecovery] Failed to clear synced draft:', cleanErr);
+          }
+        }
+
+        if (result.conflicts > 0) {
+          setConflictWarning('Synced (local version kept)');
+        } else if (result.synced > 0) {
+          setConflictWarning(null);
+          setHasDraft(false);
+          setDraftContent(null);
+          setShouldRestore(false);
+        }
+      } catch (syncErr) {
+        console.warn('[draftRecovery] Sync on reconnect failed:', syncErr);
+      }
+
+      if (!cancelled) {
+        try {
+          const idbDraft = await autosaveService.getDraft(bookId, chapterId);
+          if (idbDraft && !cancelled) {
+            setHasDraft(true);
+            setDraftContent(idbDraft.content);
+          } else if (!cancelled) {
+            setHasDraft(false);
+            setDraftContent(null);
+            setShouldRestore(false);
+            setConflictWarning(null);
+          }
+        } catch {
+          // Silently ignore — draft check is best-effort
+        }
+      }
+
+      syncTriggeredRef.current = false;
+    }
+
+    syncAndClean();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isRealOnline, wasOffline, bookId, chapterId]);
 
   const restoreDraft = useCallback(async () => {
     if (!bookId || !chapterId) return null;

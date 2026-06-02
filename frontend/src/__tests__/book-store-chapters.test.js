@@ -1,5 +1,6 @@
 // Contopia — Book Store Chapter Actions Tests (STORY-017)
 import { describe, it, expect, beforeEach } from 'vitest';
+import 'fake-indexeddb/auto';
 import useBookStore from '../stores/book-store';
 
 describe('bookStore — Chapter Actions', () => {
@@ -196,4 +197,97 @@ describe('bookStore — Chapter Actions', () => {
   });
 
   // === Draft actions removed (STORY-019: replaced by IndexedDB autosave) ===
+
+  // ═════════════════════════════════════════════════════════════
+  // STORY-050: Offline Chapter Creation
+  // ═════════════════════════════════════════════════════════════
+
+  describe('createChapterOffline', () => {
+    const bookId = 'book-1';
+
+    beforeEach(() => {
+      useBookStore.getState().clearAll();
+    });
+
+    it('creates a chapter with a temp UUID and isLocalOnly flag', async () => {
+      const chapter = await useBookStore.getState().createChapterOffline({
+        bookId,
+        title: 'My Offline Chapter',
+        content: '<p>Written offline</p>',
+      });
+
+      expect(chapter._id).toBeDefined();
+      expect(chapter._id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+      );
+      expect(chapter.isLocalOnly).toBe(true);
+      expect(chapter.title).toBe('My Offline Chapter');
+      expect(chapter.content).toBe('<p>Written offline</p>');
+      expect(chapter.bookId).toBe(bookId);
+    });
+
+    it('adds the offline chapter to the store chapters list', async () => {
+      const chapter = await useBookStore.getState().createChapterOffline({
+        bookId,
+        title: 'New Chapter',
+        content: '',
+      });
+
+      const chapters = useBookStore.getState().chapters;
+      expect(chapters).toHaveLength(1);
+      expect(chapters[0]._id).toBe(chapter._id);
+    });
+
+    it('assigns auto-title when no title is provided', async () => {
+      // First add a chapter to set length context
+      useBookStore.getState().addChapter({ _id: 'c1', title: 'Chapter 1', order: 0 });
+
+      const chapter = await useBookStore.getState().createChapterOffline({
+        bookId,
+        content: '<p>Content</p>',
+      });
+
+      expect(chapter.title).toBe('Chapter 2');
+    });
+
+    it('sets correct order field', async () => {
+      useBookStore.getState().setChapters([
+        { _id: 'c1', title: 'Ch1', order: 0 },
+        { _id: 'c2', title: 'Ch2', order: 1 },
+      ]);
+
+      const chapter = await useBookStore.getState().createChapterOffline({
+        bookId,
+        title: 'Ch3',
+        content: '',
+      });
+
+      expect(chapter.order).toBe(2);
+    });
+
+    it('creates chapter with isLocalOnly true', async () => {
+      const chapter = await useBookStore.getState().createChapterOffline({
+        bookId,
+        title: 'Offline Chapter',
+        content: '<p>Content</p>',
+      });
+
+      expect(chapter.isLocalOnly).toBe(true);
+    });
+
+    it('has updatedAt and createdAt timestamps', async () => {
+      const before = Date.now();
+      const chapter = await useBookStore.getState().createChapterOffline({
+        bookId,
+        title: 'Timed Chapter',
+        content: '<p>Content</p>',
+      });
+      const after = Date.now();
+
+      const createdAt = new Date(chapter.createdAt).getTime();
+      expect(createdAt).toBeGreaterThanOrEqual(before);
+      expect(createdAt).toBeLessThanOrEqual(after);
+    });
+  });
+
 });

@@ -59,6 +59,14 @@ app.use('/api/auth', authRouter);
 // Readiness probe — public, no auth required (mounted BEFORE auth middleware)
 app.get('/api/v1/ready', readyHandler);
 
+// API Health Check — public, for frontend heartbeat / captive portal detection
+app.get('/api/v1/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Reader routes — public chapter access (param validation only, no auth guard)
 app.use('/api/v1/reader', readerRouter);
 
@@ -89,7 +97,7 @@ app.use(
   })
 );
 
-// ── Health Check ──────────────────────────────────────────────────────────────
+// ── Health Check (public, no auth) ──────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',

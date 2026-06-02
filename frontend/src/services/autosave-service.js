@@ -1,6 +1,8 @@
 const DB_NAME = 'contopia-autosave';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // v1 = drafts (existing), v2 = adds books, chapters, syncQueue (STORY-048)
 const STORE_NAME = 'drafts';
+
+let persistentStorageRequested = false;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -8,10 +10,30 @@ function openDB() {
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
+
+      // v1: drafts store (existing)
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'key' });
         store.createIndex('byTimestamp', 'timestamp', { unique: false });
         store.createIndex('byBookId', 'bookId', { unique: false });
+      }
+
+      // v2 upgrade: add books, chapters, syncQueue stores (STORY-048)
+      // These are also created in offline-db-service.js openDB — both paths
+      // use !contains guards so they are idempotent.
+      if (!db.objectStoreNames.contains('books')) {
+        const booksStore = db.createObjectStore('books', { keyPath: 'bookId' });
+        booksStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('chapters')) {
+        const chaptersStore = db.createObjectStore('chapters', { keyPath: 'chapterId' });
+        chaptersStore.createIndex('bookId', 'bookId', { unique: false });
+        chaptersStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('syncQueue')) {
+        const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
+        syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+        syncStore.createIndex('type', 'type', { unique: false });
       }
     };
 
@@ -24,8 +46,24 @@ function openDB() {
   });
 }
 
+async function requestPersistentStorageIfNeeded() {
+  if (!persistentStorageRequested) {
+    persistentStorageRequested = true;
+    try {
+      if (navigator.storage && typeof navigator.storage.persist === 'function') {
+        await navigator.storage.persist();
+      }
+    } catch {
+      // non-critical
+    }
+  }
+}
 
 async function saveDraft(bookId, chapterId, { content, wordCount, timestamp, serverVersion, isLocalOnly }) {
+  if (isLocalOnly) {
+    requestPersistentStorageIfNeeded();
+  }
+
   try {
     const db = await openDB();
     const key = `books/${bookId}/chapters/${chapterId}`;
@@ -40,7 +78,7 @@ async function saveDraft(bookId, chapterId, { content, wordCount, timestamp, ser
       isLocalOnly: isLocalOnly !== undefined ? isLocalOnly : true,
     };
 
-    return new Promise((resolve, reject) => {
+    const result = await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       store.put(draft);
@@ -53,6 +91,23 @@ async function saveDraft(bookId, chapterId, { content, wordCount, timestamp, ser
         reject(tx.error);
       };
     });
+
+    if (isLocalOnly) {
+      try {
+        const { queueSyncOp } = await import('./sync-service.js');
+        await queueSyncOp({
+          type: 'chapter.update',
+          chapterId,
+          content,
+          baseVersion: serverVersion,
+          clientTimestamp: new Date().toISOString(),
+        });
+      } catch (syncErr) {
+        console.warn('[autosave] Failed to enqueue sync op on offline save:', syncErr);
+      }
+    }
+
+    return result;
   } catch (error) {
     if (error.name === 'QuotaExceededError') {
       console.warn('[autosave] IndexedDB quota exceeded, falling back to localStorage');

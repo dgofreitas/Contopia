@@ -9,6 +9,7 @@ import {
   countChaptersByBook,
   findMaxOrderByBook,
   updateChapterById,
+  updateChapterByIdWithVersion,
   updateManyChapterOrders,
   pushChapterIdToBook,
   pullChapterIdFromBook,
@@ -61,8 +62,10 @@ export async function updateChapterManager(childId, chapterId, updates) {
     cleanUpdates.wordCount = plainText ? plainText.split(/\s+/).length : 0;
   }
 
-  // 4. Persist update
-  const updated = await updateChapterById(chapterId, cleanUpdates);
+  // 4. Persist update (increment _version on content changes for sync conflict detection)
+  const updated = updates.content !== undefined
+    ? await updateChapterByIdWithVersion(chapterId, cleanUpdates)
+    : await updateChapterById(chapterId, cleanUpdates);
 
   // 5. Audit log (fire-and-forget)
   createActivityLog({
@@ -299,4 +302,225 @@ export async function reorderChaptersManager(authorId, bookId, chapters) {
 
   logger.info({ bookId, authorId, count: chapters.length }, 'Chapters reordered');
   return reorderedChapters;
+}
+
+/**
+ * Batch sync chapters for offline conflict resolution.
+ * For each operation:
+ *   a. Load chapter by chapterId
+ *   b. Verify ownership via book (childId matches authorId)
+ *   c. If baseVersion matches server _version: apply update, increment _version
+ *   d. If mismatch: compare clientTimestamp vs server updatedAt
+ *      - If clientTimestamp > serverTimestamp: last-write-wins — apply update
+ *      - Else: conflict — return server state for client resolution
+ *   e. If chapter not found: return error for that operation
+ *
+ * @param {string} childId - Authenticated user's child ID
+ * @param {Array} operations - Array of sync operations
+ * @returns {Array} results - Array of { chapterId, status, ... } objects
+ */
+export async function syncChaptersManager(childId, operations) {
+  const results = [];
+
+  for (const op of operations) {
+    try {
+      if (op.type === 'chapter.create') {
+        // ── chapter.create: offline chapter creation via sync ──────────────
+        const book = await findBookById(op.bookId);
+        if (!book) {
+          results.push({
+            status: 'not_found',
+            tempChapterId: op.tempChapterId || null,
+            message: 'Book not found',
+          });
+          continue;
+        }
+
+        if (book.authorId.toString() !== childId.toString()) {
+          results.push({
+            status: 'forbidden',
+            tempChapterId: op.tempChapterId || null,
+            message: 'That doesn\'t belong to you',
+          });
+          continue;
+        }
+
+        // Enforce max chapters per book
+        const chapterCount = await countChaptersByBook(op.bookId);
+        if (chapterCount >= MAX_CHAPTERS_PER_BOOK) {
+          results.push({
+            status: 'forbidden',
+            tempChapterId: op.tempChapterId || null,
+            message: 'You\'ve reached the maximum number of chapters for this book',
+          });
+          continue;
+        }
+
+        // Compute next order (gapped: 0, 100, 200, ...)
+        const maxOrder = await findMaxOrderByBook(op.bookId);
+        const nextOrder = chapterCount === 0 ? 0 : maxOrder + 100;
+
+        // Compute default title based on book language
+        const chapterNumber = chapterCount + 1;
+        const isPortuguese = book.language && book.language.startsWith('pt');
+        const defaultTitle = isPortuguese
+          ? `Capítulo ${chapterNumber}`
+          : `Chapter ${chapterNumber}`;
+
+        // Sanitize content
+        const sanitized = op.content ? sanitizeChapterContent(op.content) : '';
+
+        const chapter = await createChapter({
+          bookId: op.bookId,
+          order: nextOrder,
+          title: op.title || defaultTitle,
+          content: sanitized,
+        });
+
+        // Push chapter._id to book.chapterIds
+        await pushChapterIdToBook(op.bookId, chapter._id);
+
+        // Audit log (fire-and-forget)
+        createActivityLog({
+          actorId: childId,
+          actorType: 'child',
+          action: 'chapter.create',
+          targetId: chapter._id,
+          targetType: 'chapter',
+        }).catch((err) => {
+          logger.error({ err }, 'Audit log failed for action chapter.create (sync)');
+        });
+
+        results.push({
+          status: 'ok',
+          chapterId: chapter._id.toString(),
+          tempChapterId: op.tempChapterId || null,
+          serverVersion: 1,
+          serverTimestamp: chapter.createdAt,
+        });
+        continue;
+      }
+
+      // ── chapter.update: existing sync logic ─────────────────────────────
+      // a. Load chapter
+      const chapter = await findChapterById(op.chapterId);
+      if (!chapter) {
+        results.push({
+          chapterId: op.chapterId,
+          status: 'not_found',
+          message: 'Chapter not found',
+        });
+        continue;
+      }
+
+      // b. Verify ownership via parent book
+      const book = await findBookById(chapter.bookId);
+      if (!book) {
+        results.push({
+          chapterId: op.chapterId,
+          status: 'not_found',
+          message: 'Book not found',
+        });
+        continue;
+      }
+
+      if (book.authorId.toString() !== childId.toString()) {
+        results.push({
+          chapterId: op.chapterId,
+          status: 'forbidden',
+          message: 'That doesn\'t belong to you',
+        });
+        continue;
+      }
+
+      // c. Version comparison
+      if (op.baseVersion === chapter._version) {
+        // Clean update — no conflict
+        const sanitized = sanitizeChapterContent(op.content);
+        const plainText = sanitized.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        const wordCount = plainText ? plainText.split(/\s+/).length : 0;
+
+        const updated = await updateChapterByIdWithVersion(op.chapterId, {
+          content: sanitized,
+          wordCount,
+        });
+
+        createActivityLog({
+          actorId: childId,
+          actorType: 'child',
+          action: 'chapter.sync',
+          targetId: op.chapterId,
+          targetType: 'chapter',
+        }).catch((err) => {
+          logger.error({ err }, 'Audit log failed for action chapter.sync');
+        });
+
+        results.push({
+          chapterId: op.chapterId,
+          status: 'ok',
+          serverContent: updated.content,
+          serverVersion: updated._version,
+          serverTimestamp: updated.updatedAt,
+        });
+      } else {
+        // d. Version mismatch — compare timestamps
+        const clientTime = new Date(op.clientTimestamp).getTime();
+        const serverTime = new Date(chapter.updatedAt).getTime();
+
+        if (clientTime > serverTime) {
+          // Last-write-wins: client is newer
+          const sanitized = sanitizeChapterContent(op.content);
+          const plainText = sanitized.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+          const wordCount = plainText ? plainText.split(/\s+/).length : 0;
+
+          const updated = await updateChapterByIdWithVersion(op.chapterId, {
+            content: sanitized,
+            wordCount,
+          });
+
+          createActivityLog({
+            actorId: childId,
+            actorType: 'child',
+            action: 'chapter.sync',
+            targetId: op.chapterId,
+            targetType: 'chapter',
+          }).catch((err) => {
+            logger.error({ err }, 'Audit log failed for action chapter.sync (last-write-wins)');
+          });
+
+          results.push({
+            chapterId: op.chapterId,
+            status: 'ok',
+            serverContent: updated.content,
+            serverVersion: updated._version,
+            serverTimestamp: updated.updatedAt,
+          });
+        } else {
+          // Conflict — server is newer or equal timestamp
+          results.push({
+            chapterId: op.chapterId,
+            status: 'conflict',
+            serverContent: chapter.content,
+            serverVersion: chapter._version,
+            serverTimestamp: chapter.updatedAt,
+          });
+        }
+      }
+    } catch (err) {
+      const identifier = op.type === 'chapter.create'
+        ? { tempChapterId: op.tempChapterId, bookId: op.bookId }
+        : { chapterId: op.chapterId };
+      logger.error({ err, ...identifier, type: op.type }, 'Sync operation failed');
+      results.push({
+        ...(op.type === 'chapter.create'
+          ? { tempChapterId: op.tempChapterId || null }
+          : { chapterId: op.chapterId }),
+        status: 'error',
+        message: err.message || 'Internal sync error',
+      });
+    }
+  }
+
+  logger.info({ childId, opCount: operations.length }, 'Sync batch processed');
+  return results;
 }

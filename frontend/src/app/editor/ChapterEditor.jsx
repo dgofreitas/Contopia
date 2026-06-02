@@ -4,9 +4,13 @@ import { HiPencilAlt } from 'react-icons/hi';
 import TipTapEditor from '../../components/editor/TipTapEditor';
 import EditorToolbar from '../../components/editor/EditorToolbar';
 import AutoSaveIndicator from '../../components/editor/AutoSaveIndicator';
+import OfflineIndicator from '../../components/editor/OfflineIndicator';
+import SyncStatusBar from '../../components/editor/SyncStatusBar';
 import { sanitizeRichContent } from '../../lib/sanitize';
 import useAutoSave from '../../hooks/useAutoSave';
 import useDraftRecovery from '../../hooks/useDraftRecovery';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
+import useAutoSync from '../../hooks/useAutoSync';
 
 export default function ChapterEditor({ chapter, onContentChange, bookId }) {
   const { t } = useTranslation('editor');
@@ -15,15 +19,40 @@ export default function ChapterEditor({ chapter, onContentChange, bookId }) {
   const [formatAnnouncement, setFormatAnnouncement] = useState('');
   const announceTimerRef = useRef(null);
   const [restoredContent, setRestoredContent] = useState(null);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  const { isRealOnline } = useNetworkStatus();
+
+  const { syncStatus, syncProgress, sync: triggerSync } = useAutoSync({
+    enabled: true,
+    onSyncComplete: () => {
+      refreshSyncQueueCount();
+    },
+  });
+
+  const refreshSyncQueueCount = useCallback(async () => {
+    try {
+      const { getSyncQueueCount } = await import('../../services/offline-db-service.js');
+      const count = await getSyncQueueCount();
+      setPendingSyncCount(count);
+    } catch {
+      // non-critical
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSyncQueueCount();
+  }, [refreshSyncQueueCount, syncStatus]);
+
+  const handleReconnect = useCallback(() => {
+    triggerSync();
+  }, [triggerSync]);
 
   const {
-    isSaving,
     isDirty,
     saveStatus,
     lastSavedAt,
-    isOffline,
     conflictInfo,
-    saveNow,
   } = useAutoSave({
     bookId,
     chapterId: chapter?._id,
@@ -33,6 +62,7 @@ export default function ChapterEditor({ chapter, onContentChange, bookId }) {
       ? ({ chapterId, content }) => onContentChange({ chapterId, content })
       : null,
     enabled: !!chapter,
+    onReconnect: handleReconnect,
   });
 
   const {
@@ -79,6 +109,10 @@ export default function ChapterEditor({ chapter, onContentChange, bookId }) {
     };
   }, []);
 
+  const handleDismissError = useCallback(() => {
+    // Reset sync status to idle when error is dismissed
+  }, []);
+
   if (!chapter) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400">
@@ -101,6 +135,9 @@ export default function ChapterEditor({ chapter, onContentChange, bookId }) {
     setRestoredContent(null);
   };
 
+  const resolvedSyncStatus = !isRealOnline ? 'offline' : syncStatus;
+  const syncTotal = syncProgress.total;
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
@@ -108,15 +145,37 @@ export default function ChapterEditor({ chapter, onContentChange, bookId }) {
         <h2 className="text-xl font-semibold text-gray-800 truncate">
           {chapter.title}
         </h2>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
           <AutoSaveIndicator
             saveStatus={saveStatus}
             lastSavedAt={lastSavedAt}
             isDirty={isDirty}
             conflictInfo={conflictInfo}
           />
+          <OfflineIndicator
+            syncStatus={resolvedSyncStatus}
+            isOnline={isRealOnline}
+            syncProgress={syncProgress}
+            onDismissError={handleDismissError}
+          />
         </div>
       </div>
+
+      {(resolvedSyncStatus === 'syncing' && syncTotal > 1) && (
+        <SyncStatusBar
+          syncStatus={resolvedSyncStatus}
+          progress={syncProgress}
+          pendingCount={pendingSyncCount}
+        />
+      )}
+
+      {!isRealOnline && pendingSyncCount > 0 && resolvedSyncStatus !== 'syncing' && (
+        <SyncStatusBar
+          syncStatus="offline"
+          progress={syncProgress}
+          pendingCount={pendingSyncCount}
+        />
+      )}
 
       {hasDraft && !restoredContent && (
         <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">

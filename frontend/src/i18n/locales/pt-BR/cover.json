@@ -177,5 +177,6 @@
       "UPLOAD_FAILED": "Falha no envio. Por favor, tente novamente.",
       "PROCESSING_ERROR": "Algo deu errado ao processar sua imagem. Por favor, tente novamente."
     }
-  }
+  },
+  "coverUploadDisabledOffline": "Não disponível offline"
 }

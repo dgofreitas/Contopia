@@ -2,11 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useCoverStore } from '../../stores/cover-store';
 import { useUploadCoverImage } from '../../hooks/useUploadCoverImage';
 import { validateImageFile } from '../../lib/image-upload-utils';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 import UploadButton from './UploadButton';
 import UploadProgress from './UploadProgress';
 import ImagePreview from './ImagePreview';
 
 export default function ImageUploadSection({ bookId }) {
+  const { isRealOnline } = useNetworkStatus();
   const { t } = useTranslation('cover');
   const coverImage = useCoverStore((s) => s.coverImage);
   const uploadProgress = useCoverStore((s) => s.uploadProgress);
@@ -46,8 +48,11 @@ export default function ImageUploadSection({ bookId }) {
       <div className="flex flex-col gap-3">
         <UploadButton
           onFileSelect={handleFileSelect}
-          disabled={isUploadInProgress}
+          disabled={isUploadInProgress || !isRealOnline}
         />
+        {!isRealOnline && (
+          <p className="text-amber-600 text-xs mt-1">{t('coverUploadDisabledOffline', 'Not available offline')}</p>
+        )}
 
         {isUploading && (
           <UploadProgress

@@ -8,7 +8,9 @@ import useCreateChapter from '../../hooks/useCreateChapter';
 import useUpdateChapter from '../../hooks/useUpdateChapter';
 import useDeleteChapter from '../../hooks/useDeleteChapter';
 import usePublishBook from '../../hooks/usePublishBook';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 import autosaveService from '../../services/autosave-service';
+import useBookStore from '../../stores/book-store';
 import ChapterSidebar from './ChapterSidebar';
 import ChapterEditor from './ChapterEditor';
 import PublishConfirmDialog from '../../components/editor/PublishConfirmDialog';
@@ -24,6 +26,9 @@ export default function EditorPage() {
   const navigate = useNavigate();
 
   const { data: bookEditData, isLoading } = useBookEditQuery(bookId);
+  const { isRealOnline } = useNetworkStatus();
+  const createChapterOffline = useBookStore((s) => s.createChapterOffline);
+  const setIsOffline = useBookStore((s) => s.setIsOffline);
 
   const bookData = bookEditData?.book;
   const chapters = useMemo(() => {
@@ -33,6 +38,10 @@ export default function EditorPage() {
 
   const bookStatus = bookData?.status || 'draft';
   const bookTitle = bookData?.title || '';
+
+  useEffect(() => {
+    setIsOffline(!isRealOnline);
+  }, [isRealOnline, setIsOffline]);
 
   useEffect(() => {
     if (!isLoading && chapters.length > 0) {
@@ -66,12 +75,21 @@ export default function EditorPage() {
   }, []);
 
   const handleAddChapter = useCallback(() => {
+    if (!isRealOnline) {
+      const tempChapter = createChapterOffline({
+        bookId,
+        title: '',
+        content: '',
+      });
+      setActiveChapterId(tempChapter._id);
+      return;
+    }
     createChapter.mutate(undefined, {
       onSuccess: (newChapter) => {
         setActiveChapterId(newChapter._id);
       },
     });
-  }, [createChapter]);
+  }, [createChapter, isRealOnline, createChapterOffline, bookId]);
 
   const handleRenameChapter = useCallback(
     ({ chapterId, title }) => {
@@ -156,10 +174,14 @@ export default function EditorPage() {
         <div className="flex justify-end px-4 pt-3">
           <Button
             onClick={handlePublishClick}
-            className="bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold py-2 px-4 rounded-xl flex items-center gap-2 min-h-[44px]"
+            disabled={!isRealOnline}
+            className={`bg-amber-500 hover:bg-amber-600 focus:ring-amber-300 text-white font-semibold py-2 px-4 rounded-xl flex items-center gap-2 min-h-[44px] ${!isRealOnline ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <HiUpload className="w-5 h-5" />
             {t('publishButton')}
+            {!isRealOnline && (
+              <span className="text-xs ml-1 opacity-75">({t('offlineMode')})</span>
+            )}
           </Button>
         </div>
       )}

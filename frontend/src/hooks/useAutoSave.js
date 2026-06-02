@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import autosaveService from '../services/autosave-service';
 import useNetworkStatus from './useNetworkStatus';
+import syncService from '../services/sync-service';
 
 const LOCAL_DEBOUNCE_MS = 5000;
 const SERVER_DEBOUNCE_MS = 30000;
@@ -39,8 +40,9 @@ export default function useAutoSave({
   serverVersion,
   onServerSave,
   enabled = true,
+  onReconnect,
 }) {
-  const { isOnline, wasOffline } = useNetworkStatus();
+  const { wasOffline, isRealOnline } = useNetworkStatus();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isLocalSaving, setIsLocalSaving] = useState(false);
@@ -88,20 +90,34 @@ export default function useAutoSave({
         wordCount: html.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length,
         timestamp: Date.now(),
         serverVersion: serverVersionRef.current ? new Date(serverVersionRef.current).getTime() : null,
-        isLocalOnly: !serverVersionRef.current,
+        isLocalOnly: !isRealOnline,
       });
+
+      if (!isRealOnline) {
+        try {
+          await syncService.queueSyncOp({
+            type: 'chapter.update',
+            chapterId,
+            content: html,
+            baseVersion: serverVersionRef.current,
+            clientTimestamp: new Date().toISOString(),
+          });
+        } catch (syncErr) {
+          console.warn('[autosave] Failed to queue sync op:', syncErr);
+        }
+      }
     } catch (err) {
       console.warn('[autosave] Local save failed:', err);
     } finally {
       setIsLocalSaving(false);
       isLocalSavingRef.current = false;
     }
-  }, [bookId, chapterId]);
+  }, [bookId, chapterId, isRealOnline]);
 
   const doServerSave = useCallback(async (html) => {
     if (!bookId || !chapterId || !html || !onServerSave) return;
 
-    if (!isOnline) {
+    if (!isRealOnline) {
       setIsOffline(true);
       setSaveStatus('offline');
       await doLocalSave(html);
@@ -139,7 +155,7 @@ export default function useAutoSave({
     } finally {
       setIsSaving(false);
     }
-  }, [bookId, chapterId, onServerSave, isOnline, doLocalSave]);
+  }, [bookId, chapterId, onServerSave, isRealOnline, doLocalSave]);
 
   const retryServerSave = useCallback(async () => {
     if (retryAttemptRef.current >= RETRY_MAX_ATTEMPTS) {
@@ -196,11 +212,14 @@ export default function useAutoSave({
   }, [chapterId, onServerSave, bookId]);
 
   useEffect(() => {
-    if (isOnline && wasOffline && dirtyContentRef.current && !isUnmountedRef.current) {
+    if (isRealOnline && wasOffline && dirtyContentRef.current && !isUnmountedRef.current) {
       retryAttemptRef.current = 0;
-      retryServerSave();
+      if (onReconnect) {
+        onReconnect();
+      }
+      doServerSave(dirtyContentRef.current);
     }
-  }, [isOnline, wasOffline, retryServerSave]);
+  }, [isRealOnline, wasOffline, onReconnect, doServerSave]);
 
   useEffect(() => {
     serverVersionRef.current = serverVersion;
@@ -238,19 +257,22 @@ export default function useAutoSave({
     }
 
     if (serverDebounceRef.current) clearTimeout(serverDebounceRef.current);
-    serverDebounceRef.current = setTimeout(() => {
-      if (isUnmountedRef.current) return;
-      doServerSave(contentRef.current);
-    }, SERVER_DEBOUNCE_MS);
 
-    if (!lastServerSaveRef.current || (Date.now() - lastServerSaveRef.current) >= SERVER_MAX_INTERVAL_MS) {
+    if (isRealOnline) {
+      serverDebounceRef.current = setTimeout(() => {
+        if (isUnmountedRef.current) return;
+        doServerSave(contentRef.current);
+      }, SERVER_DEBOUNCE_MS);
+    }
+
+    if (isRealOnline && (!lastServerSaveRef.current || (Date.now() - lastServerSaveRef.current) >= SERVER_MAX_INTERVAL_MS)) {
       if (maxIntervalRef.current) clearTimeout(maxIntervalRef.current);
       maxIntervalRef.current = setTimeout(() => {
         if (isUnmountedRef.current) return;
         doServerSave(contentRef.current);
       }, SERVER_MAX_INTERVAL_MS);
     }
-  }, [content, chapterId, enabled, doLocalSave, doServerSave]);
+  }, [content, chapterId, enabled, doLocalSave, doServerSave, isRealOnline]);
 
   useEffect(() => {
     if (!chapterId) return;
@@ -324,5 +346,6 @@ export default function useAutoSave({
     saveStatus,
     conflictInfo,
     saveNow,
+    isRealOnline,
   };
 }
