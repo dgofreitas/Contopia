@@ -36,7 +36,7 @@ async function sleep(ms) {
  * @returns {Promise<Object>} The enqueued operation with auto-generated id
  */
 export async function queueSyncOp({ type, chapterId, bookId, title, content, baseVersion, clientTimestamp, tempChapterId }) {
-  if (chapterId && (type === 'chapter.update' || type === 'chapter.update')) {
+  if (chapterId && (type === 'chapter.update' || type === 'chapter.create')) {
     try {
       const existingQueue = await getSyncQueue();
       const duplicate = existingQueue.find(
@@ -159,13 +159,8 @@ export async function syncOnReconnect({ onProgress } = {}) {
 
         for (const op of ops) {
           try {
-            await enqueueSyncOp({
-              type: op.type,
-              chapterId: op.chapterId,
-              content: op.content,
-              baseVersion: op.baseVersion,
-              clientTimestamp: op.clientTimestamp,
-            });
+            const { id, ...rest } = op;
+            await enqueueSyncOp(rest);
           } catch (requeueErr) {
             console.warn('[sync] Failed to re-enqueue op:', requeueErr);
           }

@@ -2,26 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useCoverStore } from '../../stores/cover-store';
 import { useUploadCoverImage } from '../../hooks/useUploadCoverImage';
 import { validateImageFile } from '../../lib/image-upload-utils';
-import { useEffect, useState } from 'react';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 import UploadButton from './UploadButton';
 import UploadProgress from './UploadProgress';
 import ImagePreview from './ImagePreview';
 
 export default function ImageUploadSection({ bookId }) {
-  const [isOnline, setIsOnline] = useState(() =>
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const { isRealOnline } = useNetworkStatus();
   const { t } = useTranslation('cover');
   const coverImage = useCoverStore((s) => s.coverImage);
   const uploadProgress = useCoverStore((s) => s.uploadProgress);
@@ -61,9 +48,9 @@ export default function ImageUploadSection({ bookId }) {
       <div className="flex flex-col gap-3">
         <UploadButton
           onFileSelect={handleFileSelect}
-          disabled={isUploadInProgress || !isOnline}
+          disabled={isUploadInProgress || !isRealOnline}
         />
-        {!isOnline && (
+        {!isRealOnline && (
           <p className="text-amber-600 text-xs mt-1">{t('coverUploadDisabledOffline', 'Not available offline')}</p>
         )}
 

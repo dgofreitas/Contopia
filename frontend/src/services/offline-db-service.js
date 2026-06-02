@@ -20,6 +20,9 @@ const STORES = {
 
 let persistentStorageRequested = false;
 
+let cachedDB = null;
+let cachedDBPromise = null;
+
 async function ensurePersistentStorage() {
   if (!persistentStorageRequested) {
     persistentStorageRequested = true;
@@ -33,38 +36,30 @@ async function ensurePersistentStorage() {
   }
 }
 
-/**
- * Open (or upgrade) the IndexedDB to the current version.
- * Creates books, chapters, and syncQueue stores on v2 upgrade.
- * Preserves existing drafts store from v1.
- *
- * @returns {Promise<IDBDatabase>}
- */
 export function openDB() {
-  return new Promise((resolve, reject) => {
+  if (cachedDB && !cachedDB.closed) {
+    return Promise.resolve(cachedDB);
+  }
+  if (cachedDBPromise) {
+    return cachedDBPromise;
+  }
+  cachedDBPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
 
-      // Preserve existing drafts store from v1 (autosave-service.js)
-      // It's created automatically when opening v1 for the first time.
-      // On upgrade from v1->v2, drafts store already exists.
-
-      // v2: books store — book metadata + content for offline reading
       if (!db.objectStoreNames.contains(STORES.BOOKS)) {
         const booksStore = db.createObjectStore(STORES.BOOKS, { keyPath: 'bookId' });
         booksStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
 
-      // v2: chapters store — chapter content + version for sync conflict detection
       if (!db.objectStoreNames.contains(STORES.CHAPTERS)) {
         const chaptersStore = db.createObjectStore(STORES.CHAPTERS, { keyPath: 'chapterId' });
         chaptersStore.createIndex('bookId', 'bookId', { unique: false });
         chaptersStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
 
-      // v2: syncQueue store — pending write ops queued while offline
       if (!db.objectStoreNames.contains(STORES.SYNC_QUEUE)) {
         const syncStore = db.createObjectStore(STORES.SYNC_QUEUE, { keyPath: 'id', autoIncrement: true });
         syncStore.createIndex('timestamp', 'timestamp', { unique: false });
@@ -72,17 +67,39 @@ export function openDB() {
       }
     };
 
-    request.onsuccess = (event) => resolve(event.target.result);
-    request.onerror = (event) => reject(event.target.error);
+    request.onsuccess = (event) => {
+      cachedDB = event.target.result;
+      cachedDB.onclose = () => { cachedDB = null; cachedDBPromise = null; };
+      cachedDBPromise = null;
+      resolve(cachedDB);
+    };
+    request.onerror = (event) => {
+      cachedDBPromise = null;
+      reject(event.target.error);
+    };
+  });
+  return cachedDBPromise;
+}
+
+export function closeDB() {
+  if (cachedDB && !cachedDB.closed) {
+    cachedDB.close();
+  }
+  cachedDB = null;
+  cachedDBPromise = null;
+}
+
+export function closeAllDBs() {
+  closeDB();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    closeDB();
   });
 }
 
-/** Close a DB handle safely. */
-function closeDB(db) {
-  if (db && !db.closed) {
-    db.close();
-  }
-}
+
 
 // ─── Books CRUD ─────────────────────────────────────────────────────────────
 
@@ -94,17 +111,13 @@ function closeDB(db) {
  */
 export async function putBook(book) {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.BOOKS, 'readwrite');
-      const store = tx.objectStore(STORES.BOOKS);
-      store.put(book);
-      tx.oncomplete = () => resolve(book);
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.BOOKS, 'readwrite');
+    const store = tx.objectStore(STORES.BOOKS);
+    store.put(book);
+    tx.oncomplete = () => resolve(book);
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /**
@@ -115,17 +128,13 @@ export async function putBook(book) {
  */
 export async function getBook(bookId) {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.BOOKS, 'readonly');
-      const store = tx.objectStore(STORES.BOOKS);
-      const request = store.get(bookId);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.BOOKS, 'readonly');
+    const store = tx.objectStore(STORES.BOOKS);
+    const request = store.get(bookId);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 // ─── Chapters CRUD ──────────────────────────────────────────────────────────
@@ -138,17 +147,13 @@ export async function getBook(bookId) {
  */
 export async function putChapter(chapter) {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.CHAPTERS, 'readwrite');
-      const store = tx.objectStore(STORES.CHAPTERS);
-      store.put(chapter);
-      tx.oncomplete = () => resolve(chapter);
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.CHAPTERS, 'readwrite');
+    const store = tx.objectStore(STORES.CHAPTERS);
+    store.put(chapter);
+    tx.oncomplete = () => resolve(chapter);
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /**
@@ -159,17 +164,13 @@ export async function putChapter(chapter) {
  */
 export async function getChapter(chapterId) {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.CHAPTERS, 'readonly');
-      const store = tx.objectStore(STORES.CHAPTERS);
-      const request = store.get(chapterId);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.CHAPTERS, 'readonly');
+    const store = tx.objectStore(STORES.CHAPTERS);
+    const request = store.get(chapterId);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 /**
@@ -182,24 +183,20 @@ export async function getChapter(chapterId) {
  */
 export async function putChaptersByBook(bookId, chapters) {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.CHAPTERS, 'readwrite');
-      const store = tx.objectStore(STORES.CHAPTERS);
-      const results = [];
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.CHAPTERS, 'readwrite');
+    const store = tx.objectStore(STORES.CHAPTERS);
+    const results = [];
 
-      for (const chapter of chapters) {
-        const enriched = { ...chapter, bookId };
-        store.put(enriched);
-        results.push(enriched);
-      }
+    for (const chapter of chapters) {
+      const enriched = { ...chapter, bookId };
+      store.put(enriched);
+      results.push(enriched);
+    }
 
-      tx.oncomplete = () => resolve(results);
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+    tx.oncomplete = () => resolve(results);
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /**
@@ -210,18 +207,14 @@ export async function putChaptersByBook(bookId, chapters) {
  */
 export async function getChaptersByBook(bookId) {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.CHAPTERS, 'readonly');
-      const store = tx.objectStore(STORES.CHAPTERS);
-      const index = store.index('bookId');
-      const request = index.getAll(bookId);
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.CHAPTERS, 'readonly');
+    const store = tx.objectStore(STORES.CHAPTERS);
+    const index = store.index('bookId');
+    const request = index.getAll(bookId);
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 // ─── Sync Queue ──────────────────────────────────────────────────────────────
@@ -235,24 +228,19 @@ export async function getChaptersByBook(bookId) {
  */
 export async function enqueueSyncOp(op) {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      const enriched = {
-        ...op,
-        timestamp: op.timestamp || Date.now(),
-      };
-      const request = store.add(enriched);
-      request.onsuccess = () => {
-        // result holds the generated key (id)
-        resolve({ ...enriched, id: request.result });
-      };
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    const enriched = {
+      ...op,
+      timestamp: op.timestamp || Date.now(),
+    };
+    const request = store.add(enriched);
+    request.onsuccess = () => {
+      resolve({ ...enriched, id: request.result });
+    };
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /**
@@ -264,36 +252,27 @@ export async function enqueueSyncOp(op) {
  */
 export async function dequeueSyncOps(limit = 50) {
   const db = await openDB();
-  try {
-    // Read all ops
-    const ops = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      const index = store.index('timestamp');
-      const request = index.getAll(null);
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
+  const ops = [];
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    const index = store.index('timestamp');
+    const request = index.openCursor(null, 'next');
 
-    const sorted = ops.sort((a, b) => a.timestamp - b.timestamp).slice(0, limit);
-
-    if (sorted.length === 0) {
-      return [];
-    }
-
-    // Delete dequeued ops in a separate transaction
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      for (const op of sorted) {
-        store.delete(op.id);
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor && ops.length < limit) {
+        ops.push(cursor.value);
+        cursor.delete();
+        cursor.continue();
       }
-      tx.oncomplete = () => resolve(sorted);
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+    };
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => resolve(ops);
+    tx.onerror = () => reject(tx.error);
+  });
+  closeDB(db);
+  return ops;
 }
 
 /**
@@ -303,17 +282,13 @@ export async function dequeueSyncOps(limit = 50) {
  */
 export async function clearSyncQueue() {
   const db = await openDB();
-  try {
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      store.clear();
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    store.clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /**
@@ -323,17 +298,13 @@ export async function clearSyncQueue() {
  */
 export async function getSyncQueue() {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 /**
@@ -345,31 +316,27 @@ export async function getSyncQueue() {
  */
 export async function updateSyncOp(id, updates) {
   const db = await openDB();
-  try {
-    const existing = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      const request = store.get(id);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
+  const existing = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
 
-    if (!existing) {
-      console.warn(`[offlineDB] updateSyncOp: no op found with id ${id}`);
-      return;
-    }
-
-    const updated = { ...existing, ...updates, id };
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      store.put(updated);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    closeDB(db);
+  if (!existing) {
+    console.warn(`[offlineDB] updateSyncOp: no op found with id ${id}`);
+    return;
   }
+
+  const updated = { ...existing, ...updates, id };
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    store.put(updated);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /**
@@ -379,17 +346,13 @@ export async function updateSyncOp(id, updates) {
  */
 export async function getSyncQueueCount() {
   const db = await openDB();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      const request = store.count();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  } finally {
-    closeDB(db);
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    const request = store.count();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 /**
@@ -402,31 +365,27 @@ export async function getSyncQueueCount() {
  */
 export async function deleteSyncOpByTypeChapter(type, chapterId) {
   const db = await openDB();
-  try {
-    const ops = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
+  const ops = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readonly');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
 
-    const match = ops.find((op) => op.type === type && op.chapterId === chapterId);
+  const match = ops.find((op) => op.type === type && op.chapterId === chapterId);
 
-    if (!match) return false;
+  if (!match) return false;
 
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
-      const store = tx.objectStore(STORES.SYNC_QUEUE);
-      store.delete(match.id);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SYNC_QUEUE, 'readwrite');
+    const store = tx.objectStore(STORES.SYNC_QUEUE);
+    store.delete(match.id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 
-    return true;
-  } finally {
-    closeDB(db);
-  }
+  return true;
 }
 
 // ─── Storage Persistence ────────────────────────────────────────────────────
@@ -483,31 +442,29 @@ export async function getStorageEstimate() {
  */
 export async function getDBStats() {
   const db = await openDB();
-  try {
-    const countStore = (storeName) =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readonly');
-        const store = tx.objectStore(storeName);
-        const request = store.count();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
+  const countStore = (storeName) =>
+    new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const request = store.count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
 
-    const [books, chapters, syncQueue] = await Promise.all([
-      countStore(STORES.BOOKS),
-      countStore(STORES.CHAPTERS),
-      countStore(STORES.SYNC_QUEUE),
-    ]);
+  const [books, chapters, syncQueue] = await Promise.all([
+    countStore(STORES.BOOKS),
+    countStore(STORES.CHAPTERS),
+    countStore(STORES.SYNC_QUEUE),
+  ]);
 
-    const storage = await getStorageEstimate();
-    return { books, chapters, syncQueue, storage };
-  } finally {
-    closeDB(db);
-  }
+  const storage = await getStorageEstimate();
+  return { books, chapters, syncQueue, storage };
 }
 
 const offlineDBService = {
   openDB,
+  closeDB,
+  closeAllDBs,
   putBook,
   getBook,
   putChapter,

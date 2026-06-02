@@ -6,8 +6,6 @@ import storageMonitor from '../services/storage-monitor.js';
 const MAX_RETRIES = 5;
 const BACKOFF_DELAYS = [1000, 2000, 4000, 8000, 16000];
 
-let persistentStorageRequested = false;
-
 export default function useAutoSync({ enabled = true, onSyncComplete } = {}) {
   const [syncStatus, setSyncStatus] = useState('idle');
   const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 });
@@ -17,16 +15,12 @@ export default function useAutoSync({ enabled = true, onSyncComplete } = {}) {
   const retryCountRef = useRef(0);
   const isUnmountedRef = useRef(false);
   const syncingRef = useRef(false);
+  const persistRequestedRef = useRef(false);
 
   const requestPersistIfNeeded = useCallback(async () => {
-    if (!persistentStorageRequested) {
-      persistentStorageRequested = true;
-      try {
-        await requestPersistentStorage();
-      } catch {
-        // non-critical
-      }
-    }
+    if (persistRequestedRef.current) return;
+    persistRequestedRef.current = true;
+    await requestPersistentStorage();
   }, []);
 
   const checkStoragePressure = useCallback(async () => {
