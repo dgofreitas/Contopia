@@ -5,7 +5,7 @@
 ## SDLC STATUS
 - [x] Technical Analysis — Architect
 - [x] Implementation — TechLead
-- [ ] Merge Request
+- [x] Merge Request — https://github.com/dgofreitas/Contopia/pull/50
 
 ## BACKEND
 - [x] validation: Extend syncOperationSchema + syncBodySchema with chapter.create type → BackendDeveloper
