@@ -657,12 +657,16 @@ export default function ReaderPage({ book: bookProp }) {
   // Compute the CSS transform for paginated content
   const contentTransform = `translateX(calc(-${currentPageIndex * 100}%))`;
 
-  if (!isOnline) {
+  // Offline handling: if offline AND no cached book data, show offline message.
+  // If offline but book is cached, continue rendering from IndexedDB cache.
+  const isBookCached = !!(fetchedBook && chapters.length > 0);
+
+  if (!isOnline && !isBookCached) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-teal-50 gap-4 p-8">
         <HiWifi className="w-16 h-16 text-gray-300" aria-hidden="true" />
         <h2 className="text-2xl font-bold text-gray-700">{t('offlineReadTitle')}</h2>
-        <p className="text-gray-500 text-center max-w-md">{t('offlineReadMessage')}</p>
+        <p className="text-gray-500 text-center max-w-md">{t('offlineReadNoCacheMessage')}</p>
         <Button
           onClick={() => navigate('/shelf')}
           color="light"
