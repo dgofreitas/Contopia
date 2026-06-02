@@ -20,6 +20,9 @@ import SessionTimeoutModal from './components/auth/SessionTimeoutModal';
 import OfflineBanner from './components/common/OfflineBanner';
 import StorageWarningBanner from './components/common/StorageWarningBanner';
 import ToastContainer from './components/common/ToastContainer';
+import ParentLoginPage from './app/parent/ParentLoginPage';
+import ParentSetupPasswordPage from './app/parent/ParentSetupPasswordPage';
+import ParentDashboardPage from './app/parent/ParentDashboardPage';
 import { useErrorStore } from './stores/error-store';
 import useAuthStore from './stores/auth-store';
 import usePublishedBookSync from './hooks/usePublishedBookSync';
@@ -77,6 +80,10 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify/:token" element={<VerifyPage />} />
         <Route path="/login" element={<LoginPage />} />
+        {/* Parent routes — STORY-052 (separate from child routes) */}
+        <Route path="/parent/login" element={<ParentLoginPage />} />
+        <Route path="/parent/setup-password" element={<ParentSetupPasswordPage />} />
+        <Route path="/parent/dashboard/*" element={<ParentDashboardPage />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/shelf" element={<ShelfPage />} />
           <Route path="/drafts" element={<DraftsListPage />} />

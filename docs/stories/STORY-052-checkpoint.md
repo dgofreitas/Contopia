@@ -20,14 +20,14 @@
 - [x] app.js: Mount /api/parent routes
 
 ## FRONTEND
-- [ ] parent-auth-store.js: New Zustand store for parent auth (separate from child)
-- [ ] useParentAuth.js: New — idle timer hook for 30-min parent session timeout
-- [ ] ParentLoginPage.jsx: New — email + password login
-- [ ] ParentSetupPasswordPage.jsx: New — initial password setup from token
-- [ ] ParentDashboardPage.jsx: New — shell with nav tabs (Activity, Export, Delete, Privacy)
-- [ ] ParentProtectedRoute.jsx: New — route guard for parent-only routes
-- [ ] ParentNavbar.jsx: New — neutral blue/white navbar distinct from child UI
-- [ ] App.jsx: Add /parent/* routes (login, setup-password, dashboard/*)
+- [x] parent-auth-store.js: New Zustand store for parent auth (separate from child)
+- [x] useParentAuth.js: New — idle timer hook for 30-min parent session timeout
+- [x] ParentLoginPage.jsx: New — email + password login
+- [x] ParentSetupPasswordPage.jsx: New — initial password setup from token
+- [x] ParentDashboardPage.jsx: New — shell with nav tabs (Activity, Export, Delete, Privacy)
+- [x] ParentProtectedRoute.jsx: New — route guard for parent-only routes
+- [x] ParentNavbar.jsx: New — neutral blue/white navbar distinct from child UI
+- [x] App.jsx: Add /parent/* routes (login, setup-password, dashboard/*)
 
 ## QUALITY AND DELIVERY
 - [ ] TESTS
