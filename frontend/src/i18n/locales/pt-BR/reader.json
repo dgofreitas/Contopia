@@ -56,5 +56,9 @@
   "themeChanged": "Tema alterado para {{theme}}",
   "readingModeChanged": "Modo de leitura alterado para {{mode}}",
   "offlineReadTitle": "Você está offline",
-  "offlineReadMessage": "Você precisa de conexão com a internet para ler livros. Volte online e tente novamente!"
+  "offlineReadMessage": "Você precisa de conexão com a internet para ler livros. Volte online e tente novamente!",
+  "offlineReadNoCacheMessage": "Este livro ainda não está disponível offline. Volte online e tente novamente!",
+  "storageWarningTitle": "Armazenamento Quase Cheio",
+  "storageWarningMessage": "Seu dispositivo está quase cheio. Alguns livros podem não estar disponíveis offline.",
+  "dismissStorageWarning": "Dispensar"
 }

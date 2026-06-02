@@ -8,9 +8,9 @@ import { useTranslation } from 'react-i18next';
 import useReaderStore from '../../stores/reader-store';
 import useSystemColorScheme from '../../hooks/useSystemColorScheme';
 import useReaderPreferences from '../../hooks/useReaderPreferences';
-import useChaptersQuery from '../../hooks/useChaptersQuery';
-import useBookEditQuery from '../../hooks/useBookEditQuery';
-import useReadingProgressQuery from '../../hooks/useReadingProgressQuery';
+import useOfflineChaptersQuery from '../../hooks/useOfflineChaptersQuery';
+import useOfflineBookQuery from '../../hooks/useOfflineBookQuery';
+import useOfflineReadingProgressQuery from '../../hooks/useOfflineReadingProgressQuery';
 import useProgressSync from '../../hooks/useProgressSync';
 import useFullscreen from '../../hooks/useFullscreen';
 import useSwipeNavigation from '../../hooks/useSwipeNavigation';
@@ -91,11 +91,11 @@ export default function ReaderPage({ book: bookProp }) {
   const setPendingPageDirection = useReaderStore((s) => s.setPendingPageDirection);
   const clearPendingNavigation = useReaderStore((s) => s.clearPendingNavigation);
 
-  // Data hooks
-  const { data: chapters = [], isLoading: chaptersLoading } = useChaptersQuery(bookId);
-  const { data: fetchedBook } = useBookEditQuery(bookId);
+  // Data hooks — use offline-aware queries that fall back to IndexedDB when offline
+  const { data: chapters = [], isLoading: chaptersLoading } = useOfflineChaptersQuery(bookId);
+  const { data: fetchedBook } = useOfflineBookQuery(bookId);
   const book = fetchedBook || bookProp;
-  const { data: progress } = useReadingProgressQuery(bookId);
+  const { data: progress } = useOfflineReadingProgressQuery(bookId);
   const { saveProgress, localProgress: syncedProgress } = useProgressSync(bookId);
 
   // Local state

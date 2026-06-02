@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { syncOnReconnect } from '../services/sync-service.js';
 import { getSyncQueueCount, requestPersistentStorage } from '../services/offline-db-service.js';
 import storageMonitor from '../services/storage-monitor.js';
+import { syncPublishedBooks } from '../services/offline-book-cache.js';
+import useAuthStore from '../stores/auth-store.js';
 
 const MAX_RETRIES = 5;
 const BACKOFF_DELAYS = [1000, 2000, 4000, 8000, 16000];
@@ -12,6 +14,7 @@ export default function useAutoSync({ enabled = true, onSyncComplete } = {}) {
   const onSyncCompleteRef = useRef(onSyncComplete);
   onSyncCompleteRef.current = onSyncComplete;
 
+  const childId = useAuthStore((s) => s.user?.childId);
   const retryCountRef = useRef(0);
   const isUnmountedRef = useRef(false);
   const syncingRef = useRef(false);
@@ -93,7 +96,17 @@ export default function useAutoSync({ enabled = true, onSyncComplete } = {}) {
     if (!enabled) return;
 
     const handleOnline = async () => {
+      // 1. Sync pending chapter writes via existing queue (STORY-048/050)
       await sync();
+
+      // 2. Sync newly published books to IndexedDB (STORY-051)
+      if (childId) {
+        try {
+          await syncPublishedBooks(childId);
+        } catch (err) {
+          console.warn('[autoSync] Failed to sync published books on reconnect:', err);
+        }
+      }
     };
 
     window.addEventListener('online', handleOnline);
@@ -101,7 +114,7 @@ export default function useAutoSync({ enabled = true, onSyncComplete } = {}) {
       isUnmountedRef.current = true;
       window.removeEventListener('online', handleOnline);
     };
-  }, [enabled, sync]);
+  }, [enabled, sync, childId]);
 
   useEffect(() => {
     if (!enabled) return;
