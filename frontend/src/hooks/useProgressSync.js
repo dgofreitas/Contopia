@@ -3,6 +3,8 @@ import useUpdateReadingProgress from './useUpdateReadingProgress';
 import useReadingProgressQuery from './useReadingProgressQuery';
 import useNetworkStatus from './useNetworkStatus';
 import useReaderStore from '../stores/reader-store';
+import { putBook, getBook } from '../services/offline-db-service';
+import { queueSyncOp } from '../services/sync-service';
 
 const DEBOUNCE_MS = 10000;
 const LOCAL_PREFIX = 'progress:';
@@ -176,9 +178,43 @@ export default function useProgressSync(bookId) {
           }, DEBOUNCE_MS);
         }
       } else {
-        // Offline: queue for later sync
+        // Offline: save to localStorage (current) + IndexedDB (new) + enqueue sync
         pendingRef.current = data;
         setSyncStatusState('error'); // indicates pending sync
+
+        // Save progress to IndexedDB books store for durability (STORY-051)
+        (async () => {
+          try {
+            const existingBook = await getBook(bookId);
+            if (existingBook) {
+              await putBook({
+                ...existingBook,
+                readingProgress: {
+                  ...data,
+                  timestamp: Date.now(),
+                },
+              });
+            }
+          } catch (err) {
+            console.warn('[useProgressSync] Failed to save progress to IndexedDB:', err);
+          }
+
+          // Enqueue readingProgress.update in syncQueue for server sync on reconnect
+          try {
+            await queueSyncOp({
+              type: 'readingProgress.update',
+              bookId,
+              payload: {
+                lastChapterId: data.lastChapterId,
+                lastPosition: data.lastPosition,
+                percentage: data.percentage,
+                finished: data.finished,
+              },
+            });
+          } catch (err) {
+            console.warn('[useProgressSync] Failed to enqueue progress sync:', err);
+          }
+        })();
       }
     },
     [bookId, isOnline, saveToServer],

@@ -18,9 +18,11 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import Navbar from './components/common/Navbar';
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal';
 import OfflineBanner from './components/common/OfflineBanner';
+import StorageWarningBanner from './components/common/StorageWarningBanner';
 import ToastContainer from './components/common/ToastContainer';
 import { useErrorStore } from './stores/error-store';
 import useAuthStore from './stores/auth-store';
+import usePublishedBookSync from './hooks/usePublishedBookSync';
 
 const CoverFallback = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -47,6 +49,11 @@ function ProtectedLayout() {
 }
 
 export default function App() {
+  const token = useAuthStore((s) => s.token);
+
+  // Auto-sync published books to IndexedDB (STORY-051)
+  usePublishedBookSync({ enabled: !!token });
+
   useEffect(() => {
     const handleOnline = () => useErrorStore.getState().setOffline(false);
     const handleOffline = () => useErrorStore.getState().setOffline(true);
@@ -62,6 +69,7 @@ export default function App() {
   return (
     <LazyMotion features={domAnimation} strict>
       <OfflineBanner />
+      <StorageWarningBanner />
       <ToastContainer />
       <SessionTimeoutModal />
       <Routes>
