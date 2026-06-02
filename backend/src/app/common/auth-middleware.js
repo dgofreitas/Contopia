@@ -50,6 +50,11 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
       return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in first', { requestId: req.id }, req.id));
     }
 
+    // Session isolation: child authMiddleware rejects parent tokens
+    if (decoded.role === 'parent') {
+      return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in first', { requestId: req.id }, req.id));
+    }
+
     const childId = decoded.sub;
     const sessionId = decoded.sid;
 
@@ -127,6 +132,84 @@ export const sessionTimeoutMiddleware = asyncHandler(async function sessionTimeo
     }
   } catch (syncErr) {
     logger.error({ err: syncErr }, 'sessionTimeoutMiddleware sync error');
+    return res.status(500).json(fail('INTERNAL_ERROR', 'Something went wrong — please try again later', { requestId: req.id }, req.id));
+  }
+});
+
+const PARENT_SESSION_TTL_SECONDS = 30 * 60; // 30 minutes
+
+/**
+ * Parent auth middleware: validate Bearer token with role: 'parent', check blacklist,
+ * verify session in Redis, extend TTL.
+ * Attaches req.parentId, req.sessionId, req.token.
+ * Rejects child tokens (session isolation).
+ */
+export const parentAuthMiddleware = asyncHandler(async function parentAuthMiddleware(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in as a parent', { requestId: req.id }, req.id));
+    }
+
+    const token = authHeader.slice(7);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (jwtErr) {
+      if (jwtErr.name === 'TokenExpiredError') {
+        return res.status(401).json(fail('TOKEN_EXPIRED', 'Your session expired — please sign in again', { requestId: req.id }, req.id));
+      }
+      return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in as a parent', { requestId: req.id }, req.id));
+    }
+
+    if (decoded.type !== 'access' || decoded.role !== 'parent') {
+      return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in as a parent', { requestId: req.id }, req.id));
+    }
+
+    const parentId = decoded.sub;
+
+    try {
+      const tokenHash = hashToken(token);
+      const blacklisted = await redis.exists(`bl:${tokenHash}`);
+      if (blacklisted === 1) {
+        return res.status(401).json(fail('TOKEN_REVOKED', 'Your session was signed out — please sign in again', { requestId: req.id }, req.id));
+      }
+
+      // Find parent session in Redis
+      const pattern = `parentSession:${parentId}:*`;
+      let sessionId = null;
+      let sessionFound = false;
+      for await (const key of redis.scanIterator({ match: pattern })) {
+        const sessionData = await redis.get(key);
+        if (sessionData) {
+          const session = JSON.parse(sessionData);
+          sessionId = session.sessionId;
+          sessionFound = true;
+
+          // Extend TTL and update lastActivity
+          session.lastActivity = new Date().toISOString();
+          await redis.set(key, JSON.stringify(session), 'EX', PARENT_SESSION_TTL_SECONDS);
+        }
+        break; // only process first match
+      }
+
+      if (!sessionFound) {
+        return res.status(401).json(fail('SESSION_EXPIRED', 'Parent session has expired', { requestId: req.id }, req.id));
+      }
+
+      req.parentId = parentId;
+      req.sessionId = sessionId;
+      req.token = token;
+
+      return next();
+    } catch (redisErr) {
+      logger.warn({ err: redisErr, parentId }, 'Redis unavailable — returning 503');
+      return res.status(503).json(fail('SERVICE_UNAVAILABLE', 'Authentication service temporarily unavailable', { requestId: req.id }, req.id));
+    }
+  } catch (syncErr) {
+    logger.error({ err: syncErr }, 'parentAuthMiddleware sync error');
     return res.status(500).json(fail('INTERNAL_ERROR', 'Something went wrong — please try again later', { requestId: req.id }, req.id));
   }
 });

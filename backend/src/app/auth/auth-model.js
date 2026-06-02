@@ -27,6 +27,18 @@ const parentSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    password: {
+      type: String,
+      select: false, // never included by default — only loaded for login
+    },
+    passwordSetupToken: {
+      type: String,
+      select: false,
+    },
+    passwordSetupExpires: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -34,6 +46,14 @@ const parentSchema = new Schema(
 );
 
 parentSchema.index({ verificationToken: 1 }, { sparse: true });
+parentSchema.index({ passwordSetupToken: 1 }, { sparse: true });
+
+parentSchema.pre('save', async function(next) {
+  if (this.isModified('password') && this.password) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  next();
+});
 
 // ── Child Schema ────────────────────────────────────────────────────────────
 const childSchema = new Schema(
@@ -97,7 +117,11 @@ const sessionAuditSchema = new Schema(
     childId: {
       type: Schema.Types.ObjectId,
       ref: 'Child',
-      required: true,
+      index: true,
+    },
+    parentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Parent',
       index: true,
     },
     sessionId: {
@@ -107,7 +131,7 @@ const sessionAuditSchema = new Schema(
     },
     event: {
       type: String,
-      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED'],
+      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED', 'PARENT_SESSION_CREATED', 'PARENT_LOGIN_FAILED', 'PARENT_LOGOUT'],
       required: true,
     },
     ip: {

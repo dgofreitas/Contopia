@@ -12,6 +12,8 @@ import chapterRouter from './app/editor/chapter-router.js';
 import storageRouter from './app/storage/storage-router.js';
 import readerRouter from './app/reader/reader-router.js';
 import importRouter from './app/import/import-router.js';
+import parentRouter from './app/parent/parent-router.js';
+import { parentAuthRouter } from './app/auth/auth-router.js';
 import { authMiddleware, sessionTimeoutMiddleware } from './app/common/auth-middleware.js';
 import { rateLimitMiddleware } from './app/common/rate-limit-middleware.js';
 import { fail } from './app/common/response-envelope.js';
@@ -55,6 +57,12 @@ app.use(pinoHttp({ logger, reqIdExpr: 'id' }));
 
 // Auth routes (handle their own auth/rate-limiting)
 app.use('/api/auth', authRouter);
+
+// Parent auth routes (login, setup-password, refresh, logout, me) at /api/parent
+app.use('/api/parent', parentAuthRouter);
+
+// Parent dashboard routes (parentAuthMiddleware applied at route level)
+app.use('/api/parent', parentRouter);
 
 // Readiness probe — public, no auth required (mounted BEFORE auth middleware)
 app.get('/api/v1/ready', readyHandler);

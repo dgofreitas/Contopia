@@ -3,8 +3,8 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import redis from '../../config/redis.js';
-import { registerSchema, resendSchema, childLoginSchema, loginSchema, logoutSchema, refreshSchema } from '../common/validation-schemas.js';
-import { authMiddleware } from '../common/auth-middleware.js';
+import { registerSchema, resendSchema, childLoginSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentSetupPasswordSchema, parentRefreshSchema } from '../common/validation-schemas.js';
+import { authMiddleware, parentAuthMiddleware } from '../common/auth-middleware.js';
 import * as authManager from './auth-manager.js';
 import { sendVerificationEmail } from '../common/email-service.js';
 import { ok, fail } from '../common/response-envelope.js';
@@ -92,6 +92,12 @@ const refreshLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
   message: 'Too many refresh attempts.',
+});
+
+const parentLoginLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: 'Too many parent login attempts.',
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -359,6 +365,158 @@ router.delete('/account', authMiddleware, async (req, res) => {
   }
 });
 
+// ── Parent Auth Routes (exported as separate router) ──────────────────────────
+
+const parentAuthRouter = Router();
+
+// ── POST /login ──────────────────────────────────────────────────────────────
+parentAuthRouter.post('/login', parentLoginLimiter, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = parentLoginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
+    }
+
+    const { email, password } = parsed.data;
+    const ip = req.ip;
+    const deviceHint = sanitizeUserAgent(req);
+
+    // Check parent login attempts
+    const attempts = await authManager.incrementLoginAttemptsParent(ip);
+    if (attempts > 5) {
+      return res.status(429).json(fail('RATE_LIMITED', 'Too many login attempts.', { requestId }));
+    }
+
+    const result = await authManager.parentLogin({ email, password, ip, deviceHint });
+
+    // Reset login attempts on success
+    if (ip) await authManager.resetLoginAttempts(ip);
+
+    // Set refresh token as httpOnly cookie
+    res.cookie('parentRefreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/parent',
+    });
+
+    return res.status(200).json(ok({
+      accessToken: result.accessToken,
+      parentId: result.parentId,
+      email: result.email,
+      childFirstName: result.childFirstName,
+      childId: result.childId,
+    }, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /setup-password ─────────────────────────────────────────────────────
+parentAuthRouter.post('/setup-password', async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = parentSetupPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
+    }
+
+    const { token, password } = parsed.data;
+    const result = await authManager.parentSetupPassword({ token, password });
+
+    return res.status(200).json(ok({
+      parentId: result.parentId,
+      email: result.email,
+      passwordSet: result.passwordSet,
+    }, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /logout ──────────────────────────────────────────────────────────────
+parentAuthRouter.post('/logout', parentAuthMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const { parentId, sessionId, token } = req;
+    const ip = req.ip;
+    const deviceHint = sanitizeUserAgent(req);
+    const refreshToken = req.cookies?.parentRefreshToken || null;
+
+    const result = await authManager.parentLogout({
+      parentId,
+      sessionId: sessionId || 'none',
+      accessToken: token,
+      refreshToken,
+      ip,
+      deviceHint,
+    });
+
+    // Clear refresh token cookie
+    res.clearCookie('parentRefreshToken', { path: '/api/parent' });
+
+    return res.status(200).json(ok({ loggedOut: result.loggedOut }, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /refresh ─────────────────────────────────────────────────────────────
+parentAuthRouter.post('/refresh', async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const refreshToken = req.cookies?.parentRefreshToken;
+    if (!refreshToken) {
+      return res.status(401).json(fail('UNAUTHORIZED', 'No refresh token provided', { requestId }));
+    }
+
+    const parsed = parentRefreshSchema.safeParse({ refreshToken });
+    if (!parsed.success) {
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
+    }
+
+    const ip = req.ip;
+    const deviceHint = sanitizeUserAgent(req);
+
+    const result = await authManager.parentRefreshSession({ refreshToken, ip, deviceHint });
+
+    // Set new refresh token as httpOnly cookie
+    res.cookie('parentRefreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/parent',
+    });
+
+    return res.status(200).json(ok({
+      accessToken: result.accessToken,
+      parentId: result.parentId,
+    }, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── GET /me ──────────────────────────────────────────────────────────────────
+parentAuthRouter.get('/me', parentAuthMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const result = await authManager.getCurrentParent(req.parentId);
+
+    return res.status(200).json(ok(result, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
 // ── Error Handler ───────────────────────────────────────────────────────────
 function handleError(err, req, res) {
   const requestId = req.id;
@@ -376,3 +534,4 @@ function handleError(err, req, res) {
 }
 
 export default router;
+export { parentAuthRouter };

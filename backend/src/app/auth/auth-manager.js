@@ -6,6 +6,7 @@ import pino from 'pino';
 import redis from '../../config/redis.js';
 import {
   findParentByEmail,
+  findParentById,
   findParentByVerificationTokenHash,
   createParent,
   updateParentVerification,
@@ -13,15 +14,17 @@ import {
   clearParentVerificationToken,
   findChildById,
   findActiveChildByParentAndName,
+  findActiveChildByParent,
   findPendingChildByParentAndName,
   createChild,
   activateChild,
   findPendingChildByParent,
   findChildByIdWithPassword,
-  _updateChildPassword,
+  findParentByIdWithPassword,
+  updateParentPassword,
+  findParentByPasswordSetupToken,
   createAuditLog,
   softDeleteChildById,
-  _hardDeleteChildById,
 } from './auth-dao.js';
 import { purgeAssetsByAuthorManager } from '../storage/storage-manager.js';
 
@@ -832,4 +835,466 @@ export async function deleteAccountManager({ childId }) {
   logger.info({ childId }, 'Account deleted and assets purged');
 
   return { deleted: true, childId };
+}
+
+// ── Parent Auth ──────────────────────────────────────────────────────────────
+
+const PARENT_ACCESS_TOKEN_EXPIRY = '30m';
+const PARENT_REFRESH_TOKEN_EXPIRY = '7d';
+const PARENT_SESSION_TTL_SECONDS = 30 * 60; // 30 minutes
+const PARENT_REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const PASSWORD_SETUP_EXPIRY_HOURS = 24;
+const INCREMENT_LOGIN_ATTEMPTS_PARENT = 'loginAttemptsParent';
+
+/**
+ * Generate a parent access token.
+ * Claims: sub (parentId), role: 'parent', type: 'access'.
+ * No sid claim — parent session is tracked via Redis key directly.
+ */
+export function generateParentAccessToken(parentId) {
+  return jwt.sign(
+    {
+      sub: parentId.toString(),
+      role: 'parent',
+      type: 'access',
+    },
+    JWT_SECRET,
+    { expiresIn: PARENT_ACCESS_TOKEN_EXPIRY }
+  );
+}
+
+/**
+ * Generate a parent refresh token.
+ * Claims: sub (parentId), role: 'parent', type: 'refresh'.
+ */
+export function generateParentRefreshToken(parentId) {
+  return jwt.sign(
+    {
+      sub: parentId.toString(),
+      role: 'parent',
+      type: 'parent_refresh',
+    },
+    JWT_SECRET,
+    { expiresIn: PARENT_REFRESH_TOKEN_EXPIRY }
+  );
+}
+
+/**
+ * Generate a password setup JWT token for a parent.
+ * Claims: sub (parentId), type: 'password_setup'.
+ */
+export function generatePasswordSetupToken(parentId) {
+  return jwt.sign(
+    {
+      sub: parentId.toString(),
+      type: 'password_setup',
+    },
+    JWT_SECRET,
+    { expiresIn: `${PASSWORD_SETUP_EXPIRY_HOURS}h` }
+  );
+}
+
+/**
+ * Create a parent session in Redis.
+ * Key: parentSession:{parentId}:{sessionId}, TTL: 1800s.
+ * Returns { sessionId }.
+ */
+export async function createParentSession({ parentId, refreshToken, ip, deviceHint }) {
+  const sessionId = `psess_${crypto.randomBytes(8).toString('hex')}`;
+  const parentIdStr = parentId.toString();
+
+  const sessionData = {
+    sessionId,
+    parentId: parentIdStr,
+    createdAt: new Date().toISOString(),
+    lastActivity: new Date().toISOString(),
+    ip: ip || null,
+    deviceHint: deviceHint || null,
+  };
+
+  try {
+    await redis.set(
+      `parentSession:${parentIdStr}:${sessionId}`,
+      JSON.stringify(sessionData),
+      'EX',
+      PARENT_SESSION_TTL_SECONDS
+    );
+  } catch (redisErr) {
+    logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent session not stored');
+  }
+
+  // Store parent refresh token hash in Redis with 7-day TTL
+  let refreshAvailable = true;
+  try {
+    const refreshTokenHash = hashToken(refreshToken);
+    await redis.set(`parentRefresh:${parentIdStr}`, refreshTokenHash, 'EX', PARENT_REFRESH_TTL_SECONDS);
+  } catch (redisErr) {
+    logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent refresh token not stored');
+    refreshAvailable = false;
+  }
+
+  // Audit log (fire-and-forget)
+  createAuditLog({ parentId: parentIdStr, sessionId, event: 'PARENT_SESSION_CREATED', ip, deviceHint }).catch(() => {});
+
+  return { sessionId, refreshAvailable };
+}
+
+/**
+ * Validate a parent session exists in Redis and extend its TTL.
+ * Returns session data if valid, null if expired.
+ */
+export async function validateParentSession({ parentId, sessionId }) {
+  try {
+    const data = await redis.get(`parentSession:${parentId}:${sessionId}`);
+    if (!data) return null;
+
+    await redis.expire(`parentSession:${parentId}:${sessionId}`, PARENT_SESSION_TTL_SECONDS);
+
+    const session = JSON.parse(data);
+    session.lastActivity = new Date().toISOString();
+    await redis.set(
+      `parentSession:${parentId}:${sessionId}`,
+      JSON.stringify(session),
+      'EX',
+      PARENT_SESSION_TTL_SECONDS
+    );
+
+    return session;
+  } catch (redisErr) {
+    logger.warn({ err: redisErr }, 'Redis unavailable — parent session validation failed');
+    return null;
+  }
+}
+
+/**
+ * Increment parent login attempt counter for an IP.
+ * Returns the current count.
+ */
+export async function incrementLoginAttemptsParent(ip) {
+  try {
+    const key = `${INCREMENT_LOGIN_ATTEMPTS_PARENT}:${ip}`;
+    const count = await redis.incr(key);
+    if (count === 1) {
+      await redis.expire(key, 900); // 15 min TTL
+    }
+    return count;
+  } catch (redisErr) {
+    logger.warn({ err: redisErr }, 'Redis unavailable — parent login attempts not tracked');
+    return 0;
+  }
+}
+
+/**
+ * Parent login: validate email + password, create session, issue tokens.
+ * Returns { accessToken, parentId, email, childFirstName, childId }.
+ */
+export async function parentLogin({ email, password, ip, deviceHint }) {
+  // Find parent by email
+  const parent = await findParentByEmail(email);
+  if (!parent) {
+    createAuditLog({ parentId: 'unknown', sessionId: 'none', event: 'PARENT_LOGIN_FAILED', ip, deviceHint }).catch(() => {});
+    const err = new Error('Invalid credentials');
+    err.code = 'INVALID_CREDENTIALS';
+    err.status = 401;
+    throw err;
+  }
+
+  // Get parent with password
+  const parentWithPassword = await findParentByIdWithPassword(parent._id);
+  if (!parentWithPassword?.password) {
+    createAuditLog({ parentId: parent._id.toString(), sessionId: 'none', event: 'PARENT_LOGIN_FAILED', ip, deviceHint }).catch(() => {});
+    const err = new Error('Password not set — please set up your password first');
+    err.code = 'PASSWORD_NOT_SET';
+    err.status = 401;
+    throw err;
+  }
+
+  const passwordMatch = await bcrypt.compare(password, parentWithPassword.password);
+  if (!passwordMatch) {
+    createAuditLog({ parentId: parent._id.toString(), sessionId: 'none', event: 'PARENT_LOGIN_FAILED', ip, deviceHint }).catch(() => {});
+    const err = new Error('Invalid credentials');
+    err.code = 'INVALID_CREDENTIALS';
+    err.status = 401;
+    throw err;
+  }
+
+  // Find the child linked to this parent
+  const childData = await findActiveChildByParent(parent._id);
+
+  // Generate tokens
+  const accessToken = generateParentAccessToken(parent._id);
+  const refreshToken = generateParentRefreshToken(parent._id);
+
+  const { sessionId, refreshAvailable } = await createParentSession({
+    parentId: parent._id,
+    refreshToken,
+    ip,
+    deviceHint,
+  });
+
+  // Reset login attempts on success
+  if (ip) await resetLoginAttempts(ip);
+
+  logger.info({ parentId: parent._id }, 'Parent login successful');
+
+  return {
+    accessToken,
+    refreshToken,
+    parentId: parent._id.toString(),
+    email: parent.email,
+    childFirstName: childData?.firstName || null,
+    childId: childData?._id?.toString() || null,
+    refreshAvailable,
+    sessionId,
+  };
+}
+
+/**
+ * Parent setup password: validate setup token, set password.
+ * Returns { parentId, email, passwordSet: true }.
+ */
+export async function parentSetupPassword({ token, password }) {
+  // Verify JWT
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch (jwtErr) {
+    if (jwtErr.name === 'TokenExpiredError') {
+      const err = new Error('Password setup token has expired');
+      err.code = 'TOKEN_EXPIRED';
+      err.status = 410;
+      throw err;
+    }
+    const err = new Error('Invalid password setup token');
+    err.code = 'INVALID_TOKEN';
+    err.status = 400;
+    throw err;
+  }
+
+  if (decoded.type !== 'password_setup') {
+    const err = new Error('Invalid token type');
+    err.code = 'INVALID_TOKEN';
+    err.status = 400;
+    throw err;
+  }
+
+  const parentId = decoded.sub;
+
+  // Verify parent exists
+  const parent = await findParentByEmail(
+    (await findParentByIdWithPassword(parentId))?.email || ''
+  );
+
+  if (!parent && !parentId) {
+    const err = new Error('Parent not found');
+    err.code = 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+
+  // Verify token hash matches stored hash
+  const tokenHash = hashToken(token);
+  const parentByToken = await findParentByPasswordSetupToken(tokenHash);
+  if (!parentByToken) {
+    const err = new Error('Invalid or already used password setup token');
+    err.code = 'INVALID_TOKEN';
+    err.status = 400;
+    throw err;
+  }
+
+  // Check expiry at DB level
+  if (parentByToken.passwordSetupExpires && new Date(parentByToken.passwordSetupExpires) < new Date()) {
+    const err = new Error('Password setup token has expired');
+    err.code = 'TOKEN_EXPIRED';
+    err.status = 410;
+    throw err;
+  }
+
+  // Update password (pre-save hook will hash it)
+  await updateParentPassword(parentByToken._id, password);
+
+  logger.info({ parentId: parentByToken._id.toString() }, 'Parent password set');
+
+  return {
+    parentId: parentByToken._id.toString(),
+    email: parentByToken.email,
+    passwordSet: true,
+  };
+}
+
+/**
+ * Parent logout: blacklist tokens, delete session, audit log.
+ * Returns { loggedOut: true }.
+ */
+export async function parentLogout({ parentId, sessionId, accessToken, refreshToken, ip, deviceHint }) {
+  const parentIdStr = parentId.toString();
+
+  // Blacklist access token
+  if (accessToken) {
+    try {
+      const decoded = jwt.decode(accessToken);
+      const remainingSeconds = decoded?.exp ? Math.max(decoded.exp - Math.floor(Date.now() / 1000), 1) : PARENT_SESSION_TTL_SECONDS;
+      await blacklistToken(accessToken, remainingSeconds);
+    } catch {
+      await blacklistToken(accessToken, PARENT_SESSION_TTL_SECONDS);
+    }
+  }
+
+  // Blacklist refresh token
+  if (refreshToken) {
+    try {
+      const decoded = jwt.decode(refreshToken);
+      const remainingSeconds = decoded?.exp ? Math.max(decoded.exp - Math.floor(Date.now() / 1000), 1) : PARENT_REFRESH_TTL_SECONDS;
+      await blacklistToken(refreshToken, remainingSeconds);
+    } catch {
+      await blacklistToken(refreshToken, PARENT_REFRESH_TTL_SECONDS);
+    }
+  }
+
+  // Delete parent session from Redis
+  try {
+    await redis.del(`parentSession:${parentIdStr}:${sessionId}`);
+  } catch (redisErr) {
+    logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent session not deleted on logout');
+  }
+
+  // Delete parent refresh token hash
+  try {
+    await redis.del(`parentRefresh:${parentIdStr}`);
+  } catch (redisErr) {
+    logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent refresh hash not deleted on logout');
+  }
+
+  // Audit log (fire-and-forget)
+  createAuditLog({ parentId: parentIdStr, sessionId: sessionId || 'none', event: 'PARENT_LOGOUT', ip, deviceHint }).catch(() => {});
+
+  logger.info({ parentId: parentIdStr, sessionId }, 'Parent logout successful');
+
+  return { loggedOut: true };
+}
+
+/**
+ * Parent refresh session: verify refresh token, check blacklist, verify stored hash,
+ * issue new access token, rotate refresh token.
+ * Returns { accessToken, parentId }.
+ */
+export async function parentRefreshSession({ refreshToken, ip, deviceHint }) {
+  let decoded;
+  try {
+    decoded = jwt.verify(refreshToken, JWT_SECRET);
+  } catch (jwtErr) {
+    const err = new Error('Invalid or expired refresh token');
+    err.code = 'INVALID_REFRESH_TOKEN';
+    err.status = 401;
+    throw err;
+  }
+
+  if (decoded.type !== 'parent_refresh' || decoded.role !== 'parent') {
+    const err = new Error('Invalid token type');
+    err.code = 'INVALID_REFRESH_TOKEN';
+    err.status = 401;
+    throw err;
+  }
+
+  const parentIdStr = decoded.sub;
+  const tokenHash = hashToken(refreshToken);
+
+  // Check blacklist
+  const blacklisted = await isTokenBlacklisted(refreshToken);
+  if (blacklisted) {
+    const err = new Error('Refresh token has been revoked');
+    err.code = 'TOKEN_REVOKED';
+    err.status = 401;
+    throw err;
+  }
+
+  // Verify stored hash matches
+  try {
+    const storedHash = await redis.get(`parentRefresh:${parentIdStr}`);
+    if (!storedHash || storedHash !== tokenHash) {
+      const err = new Error('Refresh token mismatch');
+      err.code = 'INVALID_REFRESH_TOKEN';
+      err.status = 401;
+      throw err;
+    }
+  } catch (redisErr) {
+    if (redisErr.code === 'INVALID_REFRESH_TOKEN' || redisErr.code === 'TOKEN_REVOKED') throw redisErr;
+    logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent refresh hash check skipped');
+  }
+
+  // Extend parent session TTL
+  try {
+    const pattern = `parentSession:${parentIdStr}:*`;
+    for await (const key of redis.scanIterator({ match: pattern })) {
+      await redis.expire(key, PARENT_SESSION_TTL_SECONDS);
+      const sessionRaw = await redis.get(key);
+      if (sessionRaw) {
+        const sessionObj = JSON.parse(sessionRaw);
+        sessionObj.lastActivity = new Date().toISOString();
+        await redis.set(key, JSON.stringify(sessionObj), 'EX', PARENT_SESSION_TTL_SECONDS);
+      }
+      break;
+    }
+  } catch (redisErr) {
+    logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent session lookup skipped');
+  }
+
+  // Issue new access token
+  const newAccessToken = generateParentAccessToken(parentIdStr);
+
+  // Rotate refresh token
+  const newRefreshToken = generateParentRefreshToken(parentIdStr);
+  const newRefreshHash = hashToken(newRefreshToken);
+
+  try {
+    await redis.set(`parentRefresh:${parentIdStr}`, newRefreshHash, 'EX', PARENT_REFRESH_TTL_SECONDS);
+  } catch (redisErr) {
+    logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — new parent refresh hash not stored');
+  }
+
+  // Blacklist old refresh token
+  try {
+    const oldDecoded = jwt.decode(refreshToken);
+    const remainingSeconds = oldDecoded?.exp ? Math.max(oldDecoded.exp - Math.floor(Date.now() / 1000), 1) : PARENT_REFRESH_TTL_SECONDS;
+    await blacklistToken(refreshToken, remainingSeconds);
+  } catch {
+    await blacklistToken(refreshToken, PARENT_REFRESH_TTL_SECONDS);
+  }
+
+  // Audit log (fire-and-forget)
+  createAuditLog({ parentId: parentIdStr, sessionId: 'parent_refresh', event: 'SESSION_REFRESHED', ip, deviceHint }).catch(() => {});
+
+  logger.info({ parentId: parentIdStr }, 'Parent session refreshed');
+
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+    parentId: parentIdStr,
+  };
+}
+
+/**
+ * Get current parent info: parentId, email, childId, childFirstName, dashNav.
+ */
+export async function getCurrentParent(parentId) {
+  const parentIdStr = parentId.toString();
+  const parentDoc = await findParentById(parentIdStr);
+
+  if (!parentDoc) {
+    const err = new Error('Parent not found');
+    err.code = 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+
+  // Find child linked to this parent
+  const childData = await findActiveChildByParent(parentDoc._id);
+
+  return {
+    parentId: parentIdStr,
+    email: parentDoc.email,
+    childId: childData?._id?.toString() || null,
+    childFirstName: childData?.firstName || null,
+    dashNav: ['activity', 'export', 'delete', 'privacy'],
+  };
 }
