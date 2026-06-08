@@ -391,8 +391,8 @@ parentAuthRouter.post('/login', parentLoginLimiter, async (req, res) => {
 
     const result = await authManager.parentLogin({ email, password, ip, deviceHint });
 
-    // Reset login attempts on success
-    if (ip) await authManager.resetLoginAttempts(ip);
+    // Reset parent login attempts on success
+    if (ip) await authManager.resetLoginAttemptsParent(ip);
 
     // Set refresh token as httpOnly cookie
     res.cookie('parentRefreshToken', result.refreshToken, {

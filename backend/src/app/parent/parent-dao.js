@@ -25,6 +25,6 @@ export async function findParentByIdWithChild(parentId) {
  * Returns the total number of books (all statuses).
  */
 export async function getChildBookCount(childId) {
-  const count = await Book.countDocuments({ authorId: childId }).exec();
+  const count = await Book.countDocuments({ authorId: childId, deletedAt: null }).exec();
   return count;
 }

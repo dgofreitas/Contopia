@@ -985,6 +985,17 @@ export async function incrementLoginAttemptsParent(ip) {
 }
 
 /**
+ * Reset parent login attempt counter for an IP.
+ */
+export async function resetLoginAttemptsParent(ip) {
+  try {
+    await redis.del(`${INCREMENT_LOGIN_ATTEMPTS_PARENT}:${ip}`);
+  } catch (redisErr) {
+    logger.warn({ err: redisErr }, 'Redis unavailable — parent login attempts reset failed');
+  }
+}
+
+/**
  * Parent login: validate email + password, create session, issue tokens.
  * Returns { accessToken, parentId, email, childFirstName, childId }.
  */
@@ -996,6 +1007,14 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
     const err = new Error('Invalid credentials');
     err.code = 'INVALID_CREDENTIALS';
     err.status = 401;
+    throw err;
+  }
+
+  // Check that parent is verified
+  if (!parent.isVerified) {
+    const err = new Error('Email not verified — please verify your email first');
+    err.code = 'NOT_VERIFIED';
+    err.status = 403;
     throw err;
   }
 
@@ -1032,8 +1051,8 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
     deviceHint,
   });
 
-  // Reset login attempts on success
-  if (ip) await resetLoginAttempts(ip);
+  // Reset parent login attempts on success
+  if (ip) await resetLoginAttemptsParent(ip);
 
   logger.info({ parentId: parent._id }, 'Parent login successful');
 
@@ -1081,11 +1100,9 @@ export async function parentSetupPassword({ token, password }) {
   const parentId = decoded.sub;
 
   // Verify parent exists
-  const parent = await findParentByEmail(
-    (await findParentByIdWithPassword(parentId))?.email || ''
-  );
+  const parent = await findParentById(parentId);
 
-  if (!parent && !parentId) {
+  if (!parent) {
     const err = new Error('Parent not found');
     err.code = 'NOT_FOUND';
     err.status = 404;
