@@ -11,6 +11,7 @@ import {
   findChildBooksWithChapters,
   findPendingDeletionByChild,
   findPendingDeletionByParentAndChild,
+  findDeletionStatusByParent,
   createDeletionRequest,
   cancelDeletionRequest,
 } from './parent-dao.js';
@@ -350,5 +351,28 @@ export async function cancelAccountDeletion({ parentId, childId }) {
     deletionRequestId: cancelled._id.toString(),
     status: 'cancelled',
     cancelledAt: cancelled.cancelledAt.toISOString(),
+  };
+}
+
+// ── Deletion Status (STORY-054 FIX) ──────────────────────────────────────────
+
+/**
+ * Get the deletion status for a parent's child.
+ * Returns { hasPendingDeletion: boolean, childId?: string, expiresAt?: string }.
+ * Frontend calls GET /deletion-request/status to determine whether to show
+ * DeletionLockedBanner and the pending-cancellation state in DeleteAccountPanel.
+ * @param {string} parentId — Authenticated parent's ID
+ */
+export async function getDeletionStatus(parentId) {
+  const status = await findDeletionStatusByParent(parentId.toString());
+
+  if (!status) {
+    return { hasPendingDeletion: false };
+  }
+
+  return {
+    hasPendingDeletion: true,
+    childId: status.childId,
+    expiresAt: status.expiresAt,
   };
 }

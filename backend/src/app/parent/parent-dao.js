@@ -159,6 +159,21 @@ export async function markDeletionCompleted(deletionRequestId) {
 }
 
 /**
+ * Find pending DeletionRequest for a parent's child.
+ * Returns { childId, status, expiresAt } or null if no pending request.
+ * Used by GET /deletion-request/status (STORY-054 FIX).
+ */
+export async function findDeletionStatusByParent(parentId) {
+  const result = await DeletionRequest.findOne({ parentId, status: 'pending' }).lean().exec();
+  if (!result) return null;
+  return {
+    childId: result.childId.toString(),
+    status: result.status,
+    expiresAt: result.expiresAt.toISOString(),
+  };
+}
+
+/**
  * Find all books for a child with their chapters populated.
  * Used for data export: includes title, chapters (content, order, title), coverAssetId, createdAt.
  */

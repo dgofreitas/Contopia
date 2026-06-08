@@ -77,6 +77,18 @@ router.get('/export', parentAuthMiddleware, async (req, res) => {
   }
 });
 
+// ── GET /deletion-request/status — Check if account deletion is pending (STORY-054 FIX) ─
+router.get('/deletion-request/status', parentAuthMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const result = await parentManager.getDeletionStatus(req.parentId);
+    return res.status(200).json(ok(result, { requestId }));
+  } catch (err) {
+    return handleParentError(err, req, res);
+  }
+});
+
 // ── POST /deletion-request — Request account deletion (STORY-054) ────────────
 router.post('/deletion-request', parentAuthMiddleware, async (req, res) => {
   const requestId = req.id;
