@@ -1,6 +1,6 @@
 // Contopia — Parent Dashboard Data Access Object
 import { Parent, Child } from '../auth/auth-model.js';
-import { Book, ReadingProgress, ReadingSession } from '../book/book-model.js';
+import { Book, Chapter, ReadingProgress, ReadingSession } from '../book/book-model.js';
 import { getWeeklyReadingTime } from '../book/book-dao.js';
 import { DeletionRequest } from './parent-model.js';
 
@@ -185,7 +185,6 @@ export async function findChildBooksWithChapters(childId) {
     .exec();
 
   // Fetch chapters for each book
-  const { Chapter } = await import('../book/book-model.js');
   const enrichedBooks = await Promise.all(
     books.map(async (book) => {
       const chapters = await Chapter.find({ bookId: book._id, deletedAt: null })

@@ -549,7 +549,12 @@ describe('Parent Router — STORY-053', () => {
     });
 
     it('should return 404 when parent has no child', async () => {
-      parentDao.findParentByIdWithChild.mockResolvedValue(null);
+      // Manager throws NOT_FOUND when child not found (resolved internally by manager)
+      parentManager.requestAccountDeletion.mockRejectedValue({
+        code: 'NOT_FOUND',
+        status: 404,
+        message: 'No child account found',
+      });
 
       const res = await request(testApp)
         .post('/api/parent/deletion-request')

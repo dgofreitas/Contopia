@@ -99,17 +99,9 @@ router.post('/deletion-request', parentAuthMiddleware, async (req, res) => {
       return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
-    // Resolve child from parent's account
-    const { findParentByIdWithChild } = await import('./parent-dao.js');
-    const result = await findParentByIdWithChild(req.parentId.toString());
-    if (!result || !result.child) {
-      return res.status(404).json(fail('NOT_FOUND', 'No child account found', { requestId }));
-    }
-
     const { confirmText } = parsed.data;
     const deletionResult = await parentManager.requestAccountDeletion({
       parentId: req.parentId,
-      childId: result.child._id.toString(),
       confirmText,
     });
 

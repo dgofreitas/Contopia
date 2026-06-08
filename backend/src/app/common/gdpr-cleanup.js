@@ -2,6 +2,7 @@
 import pino from 'pino';
 import { Child } from '../auth/auth-model.js';
 import { hardDeleteChildById, softDeleteChildById, createAuditLog } from '../auth/auth-dao.js';
+import { Book, Chapter, ReadingProgress, ReadingSession } from '../book/book-model.js';
 import { purgeAssetsByAuthorManager } from '../storage/storage-manager.js';
 import { findExpiredDeletionRequests, markDeletionCompleted } from '../parent/parent-dao.js';
 import { createActivityLog } from '../book/book-dao.js';
@@ -71,8 +72,9 @@ export async function cleanupExpiredAccounts() {
 
 /**
  * Find and process expired DeletionRequests (status='pending' where expiresAt < now).
- * For each: soft-delete Child, revoke Redis sessions, create ActivityLog, mark DeletionRequest completed.
- * The existing soft-delete cleanup above will hard-delete the Child after another 30 days.
+ * For each: hard-delete cascade (Books→Chapters, Assets, ReadingProgress, ReadingSession),
+ * purge S3 assets, soft-delete Child, revoke Redis sessions, create ActivityLog,
+ * mark DeletionRequest completed.
  */
 async function processExpiredDeletionRequests() {
   let deletionProcessed = 0;
@@ -87,10 +89,35 @@ async function processExpiredDeletionRequests() {
       const childId = request.childId.toString();
       const parentId = request.parentId.toString();
 
-      // Soft-delete Child (existing cleanup will hard-delete after 30 days)
+      // 1. Find all books by this child (needed for chapter cascade)
+      const books = await Book.find({ authorId: childId }).select('_id').lean().exec();
+      const bookIds = books.map((b) => b._id);
+
+      // 2. Hard-delete all Chapters where bookId in books
+      if (bookIds.length > 0) {
+        await Chapter.deleteMany({ bookId: { $in: bookIds } }).lean().exec();
+      }
+
+      // 3. Hard-delete all Books by this child
+      await Book.deleteMany({ authorId: childId }).lean().exec();
+
+      // 4. Hard-delete all ReadingProgress for this child
+      await ReadingProgress.deleteMany({ userId: childId }).lean().exec();
+
+      // 5. Hard-delete all ReadingSession for this child
+      await ReadingSession.deleteMany({ childId: childId }).lean().exec();
+
+      // 6. Purge S3 assets (covers, files) for this child
+      try {
+        await purgeAssetsByAuthorManager(childId);
+      } catch (purgeErr) {
+        logger.warn({ err: purgeErr, childId }, 'Asset purge failed during DeletionRequest processing — continuing');
+      }
+
+      // 7. Soft-delete Child (existing cleanup will hard-delete after 30 days)
       await softDeleteChildById(childId);
 
-      // Revoke all Redis sessions for child
+      // 8. Revoke all Redis sessions for child
       try {
         const childPattern = `session:${childId}:*`;
         for await (const key of redis.scanIterator({ match: childPattern })) {
@@ -100,7 +127,7 @@ async function processExpiredDeletionRequests() {
         logger.warn({ err: redisErr, childId }, 'Failed to revoke child sessions during deletion');
       }
 
-      // Revoke all Redis sessions for parent
+      // 9. Revoke all Redis sessions for parent
       try {
         const parentPattern = `parentSession:${parentId}:*`;
         for await (const key of redis.scanIterator({ match: parentPattern })) {
@@ -110,7 +137,7 @@ async function processExpiredDeletionRequests() {
         logger.warn({ err: redisErr, parentId }, 'Failed to revoke parent sessions during deletion');
       }
 
-      // ActivityLog: ACCOUNT_DELETION_COMPLETED (actor: system)
+      // 10. ActivityLog: ACCOUNT_DELETION_COMPLETED (actor: system)
       try {
         await createActivityLog({
           actorId: childId,
@@ -124,11 +151,11 @@ async function processExpiredDeletionRequests() {
         logger.warn({ err: logErr }, 'ActivityLog creation failed for deletion completion');
       }
 
-      // Mark DeletionRequest as completed
+      // 11. Mark DeletionRequest as completed
       await markDeletionCompleted(request._id);
 
       deletionProcessed++;
-      logger.info({ childId, deletionRequestId: request._id }, 'DeletionRequest completed — child soft-deleted');
+      logger.info({ childId, deletionRequestId: request._id }, 'DeletionRequest completed — child cascade-deleted');
     } catch (err) {
       deletionErrors++;
       logger.warn({ err, childId: request.childId }, 'Failed to process expired DeletionRequest');
