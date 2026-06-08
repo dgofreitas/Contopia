@@ -1,0 +1,44 @@
+{
+  "pageTitle": "Privacy Policy",
+  "languageToggle": "EN",
+  "sections": {
+    "whatWeCollect": {
+      "title": "What we collect",
+      "description": "{{childName}}'s name, books she writes, books she reads, and how long she reads. That's it."
+    },
+    "whatWeNeverDo": {
+      "title": "What we NEVER do",
+      "items": [
+        "We never sell data. Ever.",
+        "We never show ads. Ever.",
+        "We never show {{childName}}'s stories to anyone.",
+        "We never track location."
+      ]
+    },
+    "howLongWeKeep": {
+      "title": "How long we keep data",
+      "description": "Activity data is kept for 12 months, then automatically deleted. Books are kept until you delete the account."
+    },
+    "yourRights": {
+      "title": "Your rights",
+      "items": [
+        "Download all data (Export)",
+        "Delete the account (Delete)",
+        "Ask us anything, anytime"
+      ],
+      "actions": {
+        "export": "Export data",
+        "delete": "Delete account"
+      }
+    },
+    "compliance": {
+      "title": "Compliance",
+      "coppa": "This app complies with COPPA. You control your child's data.",
+      "gdprLgpd": "You have the right to access, download, and delete your child's data at any time."
+    },
+    "questions": {
+      "title": "Questions?",
+      "description": "Send us an email at"
+    }
+  }
+}

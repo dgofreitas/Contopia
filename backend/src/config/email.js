@@ -9,6 +9,7 @@ const SMTP_PORT = parseInt(process.env.SMTP_PORT, 10) || 587;
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
 const FROM_ADDRESS = process.env.PARENT_EMAIL_FROM || 'noreply@estantedigital.example';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'privacy@estantedigital.app';
 
 /**
  * Create and export the Nodemailer transport.
@@ -30,4 +31,4 @@ if (!transport) {
   logger.warn('SMTP_HOST not set — email delivery is disabled');
 }
 
-export { transport, FROM_ADDRESS };
+export { transport, FROM_ADDRESS, SUPPORT_EMAIL };

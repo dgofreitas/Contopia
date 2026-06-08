@@ -17,9 +17,9 @@ import useParentAuth from '../../hooks/useParentAuth';
 import useParentAuthStore from '../../stores/parent-auth-store';
 import useActivitySummary from '../../hooks/useActivitySummary';
 import useActivityBooks from '../../hooks/useActivityBooks';
+import PrivacyPolicyPage from '../../components/parent/PrivacyPolicyPage';
 import { useQuery } from '@tanstack/react-query';
 import parentApiClient from '../../lib/parent-api-client';
-import { HiShieldCheck } from 'react-icons/hi';
 import { Button, Spinner, Alert } from 'flowbite-react';
 
 function ActivityTab() {
@@ -100,58 +100,7 @@ function DeleteTab({ childFirstName, childId, deletionPending }) {
   );
 }
 
-function PrivacyTab() {
-  return (
-    <section aria-labelledby="privacy-heading">
-      <h2 id="privacy-heading" className="text-xl font-semibold text-slate-800 mb-4">
-        Privacy Policy
-      </h2>
-      <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4 text-sm text-slate-600 leading-relaxed">
-        <div className="flex items-start gap-3">
-          <HiShieldCheck className="w-5 h-5 text-slate-500 mt-0.5 shrink-0" aria-hidden="true" />
-          <div>
-            <p className="font-medium text-slate-700 mb-1">COPPA Compliant</p>
-            <p>
-              Contopia complies with the Children&apos;s Online Privacy Protection Act. We only
-              collect information necessary for the app to function and never share it with third
-              parties.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3">
-          <HiShieldCheck className="w-5 h-5 text-slate-500 mt-0.5 shrink-0" aria-hidden="true" />
-          <div>
-            <p className="font-medium text-slate-700 mb-1">No Tracking</p>
-            <p>
-              We show high-level activity aggregates only — book count and reading time — not
-              granular behavioral data. No advertisements or third-party tracking.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3">
-          <HiShieldCheck className="w-5 h-5 text-slate-500 mt-0.5 shrink-0" aria-hidden="true" />
-          <div>
-            <p className="font-medium text-slate-700 mb-1">Data Ownership</p>
-            <p>
-              You own your child&apos;s data. You can export or delete it at any time from this
-              dashboard. No data is retained after account deletion.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3">
-          <HiShieldCheck className="w-5 h-5 text-slate-500 mt-0.5 shrink-0" aria-hidden="true" />
-          <div>
-            <p className="font-medium text-slate-700 mb-1">Separate Sessions</p>
-            <p>
-              Parent and child sessions are completely separate. Logging in here does not grant
-              access to your child&apos;s session, and vice versa.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
+
 
 // Idle session warning banner
 function IdleWarningBanner({ isIdle, idleTime, onContinue }) {
@@ -221,7 +170,7 @@ function ParentDashboardLayout() {
           <Route index element={<ActivityTab />} />
           <Route path="export" element={<ExportTab childFirstName={childFirstName} />} />
           <Route path="delete" element={<DeleteTab childFirstName={childFirstName} childId={childId} deletionPending={deletionPending} />} />
-          <Route path="privacy" element={<PrivacyTab />} />
+          <Route path="privacy" element={<PrivacyPolicyPage />} />
           <Route path="*" element={<Navigate to="/parent/dashboard" replace />} />
         </Routes>
       </main>

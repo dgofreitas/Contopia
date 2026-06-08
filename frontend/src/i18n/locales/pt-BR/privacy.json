@@ -1,0 +1,44 @@
+{
+  "pageTitle": "Política de Privacidade",
+  "languageToggle": "PT",
+  "sections": {
+    "whatWeCollect": {
+      "title": "O que coletamos",
+      "description": "O nome da {{childName}}, os livros que ela escreve, os livros que ela lê e por quanto tempo ela lê. Só isso."
+    },
+    "whatWeNeverDo": {
+      "title": "O que NUNCA fazemos",
+      "items": [
+        "Nós nunca vendemos dados. Nunca.",
+        "Nós nunca mostramos anúncios. Nunca.",
+        "Nós nunca mostramos as histórias da {{childName}} para ninguém.",
+        "Nós nunca rastreamos localização."
+      ]
+    },
+    "howLongWeKeep": {
+      "title": "Por quanto tempo guardamos",
+      "description": "Dados de atividade são mantidos por 12 meses e depois excluídos automaticamente. Os livros ficam guardados até você excluir a conta."
+    },
+    "yourRights": {
+      "title": "Seus direitos",
+      "items": [
+        "Baixar todos os dados (Exportar)",
+        "Excluir a conta (Excluir)",
+        "Nos perguntar qualquer coisa"
+      ],
+      "actions": {
+        "export": "Exportar dados",
+        "delete": "Excluir conta"
+      }
+    },
+    "compliance": {
+      "title": "Conformidade",
+      "coppa": "Este aplicativo está em conformidade com a COPPA. Você controla os dados do seu filho.",
+      "gdprLgpd": "Você tem o direito de acessar, baixar e excluir os dados do seu filho a qualquer momento."
+    },
+    "questions": {
+      "title": "Perguntas?",
+      "description": "Mande um email para"
+    }
+  }
+}
