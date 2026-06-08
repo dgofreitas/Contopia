@@ -14,14 +14,14 @@
 - [x] docs/product/PRIVACY-POLICY.md — content source-of-truth
 
 ## FRONTEND
-- [ ] i18n: Add privacy namespace to frontend/src/i18n/index.js + pt-BR/en privacy.json
-- [ ] hook: usePrivacyPolicy.js TanStack Query hook
-- [ ] component: PrivacyPolicyPage.jsx (full page replacing PrivacyTab)
-- [ ] component: PrivacyPolicySection.jsx
-- [ ] component: PrivacyNeverBadge.jsx
-- [ ] component: PrivacyRightsCard.jsx
-- [ ] component: PrivacyComplianceBox.jsx
-- [ ] modify: ParentDashboardPage.jsx — replace PrivacyTab with PrivacyPolicyPage
+- [x] i18n: Add privacy namespace to frontend/src/i18n/index.js + pt-BR/en privacy.json
+- [x] hook: usePrivacyPolicy.js TanStack Query hook
+- [x] component: PrivacyPolicyPage.jsx (full page replacing PrivacyTab)
+- [x] component: PrivacyPolicySection.jsx
+- [x] component: PrivacyNeverBadge.jsx
+- [x] component: PrivacyRightsCard.jsx
+- [x] component: PrivacyComplianceBox.jsx
+- [x] modify: ParentDashboardPage.jsx — replace PrivacyTab with PrivacyPolicyPage
 
 ## QUALITY AND DELIVERY
 - [ ] TESTS
