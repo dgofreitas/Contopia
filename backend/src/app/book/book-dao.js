@@ -1,6 +1,6 @@
 // Contopia — Book Data Access Object
 import mongoose from 'mongoose';
-import { Book, Chapter, Asset, ReadingProgress, ActivityLog } from './book-model.js';
+import { Book, Chapter, Asset, ReadingProgress, ActivityLog, ReadingSession } from './book-model.js';
 
 // ── Book DAO ──────────────────────────────────────────────────────────────────
 
@@ -396,4 +396,63 @@ export async function findActivityLogs({ actorId, action, targetId, targetType, 
   if (targetId) filter.targetId = targetId;
   if (targetType) filter.targetType = targetType;
   return ActivityLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec();
+}
+
+// ── ReadingSession DAO (STORY-053) ──────────────────────────────────────────────
+
+export async function createReadingSession(data) {
+  const doc = await ReadingSession.create(data);
+  return doc.toObject();
+}
+
+export async function getChildReadingSessions(childId, { since } = {}) {
+  const filter = { childId };
+  if (since) filter.createdAt = { $gte: since };
+  return ReadingSession.find(filter).sort({ createdAt: -1 }).lean().exec();
+}
+
+/**
+ * Sum total reading time (durationMs) for a child since a given date.
+ * Used for weekly aggregation in parent activity summary.
+ */
+export async function getWeeklyReadingTime(childId, sinceDate) {
+  const result = await ReadingSession.aggregate([
+    { $match: { childId: new mongoose.Types.ObjectId(childId), createdAt: { $gte: sinceDate } } },
+    { $group: { _id: null, totalMs: { $sum: '$durationMs' } } },
+  ]).exec();
+  return result.length > 0 ? result[0].totalMs : 0;
+}
+
+/**
+ * Count distinct books that have reading progress updated since a date
+ * with percentage > 0 (i.e., actually read, not just opened).
+ */
+export async function getWeeklyBooksRead(childId, sinceDate) {
+  const result = await ReadingProgress.aggregate([
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(childId),
+        updatedAt: { $gte: sinceDate },
+        percentage: { $gt: 0 },
+        deletedAt: null,
+      },
+    },
+    { $group: { _id: '$bookId' } },
+    { $count: 'total' },
+  ]).exec();
+  return result.length > 0 ? result[0].total : 0;
+}
+
+/**
+ * Get books by author with only title, coverAssetId, status, updatedAt.
+ * NEVER includes chapterIds or content fields (privacy: STORY-053).
+ */
+export async function getChildBooksSummary(childId, { limit = 20, skip = 0 } = {}) {
+  return Book.find({ authorId: childId, deletedAt: null })
+    .select('title coverAssetId status updatedAt')
+    .sort({ updatedAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean()
+    .exec();
 }

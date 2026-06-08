@@ -251,6 +251,11 @@ const chapterSchema = new Schema(
       default: 0,
       min: 0,
     },
+    _version: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
     deletedAt: {
       type: Date,
       default: null,
@@ -434,11 +439,57 @@ activityLogSchema.index({ actorId: 1, createdAt: -1 });
 activityLogSchema.index({ action: 1, createdAt: -1 });
 activityLogSchema.index({ targetId: 1, targetType: 1 });
 
+// ── ReadingSession Schema (STORY-053) ──────────────────────────────────────────
+const readingSessionSchema = new Schema(
+  {
+    childId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Child',
+      required: [true, 'Child ID is required'],
+      index: true,
+    },
+    bookId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Book',
+      required: [true, 'Book ID is required'],
+      index: true,
+    },
+    durationMs: {
+      type: Number,
+      required: [true, 'Duration in milliseconds is required'],
+      min: 0,
+    },
+    startedAt: {
+      type: Date,
+      default: null,
+    },
+    endedAt: {
+      type: Date,
+      default: null,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: { createdAt: true, updatedAt: false },
+    collection: 'reading_sessions',
+  }
+);
+
+// Compound index for weekly aggregation queries
+readingSessionSchema.index({ childId: 1, createdAt: -1 });
+readingSessionSchema.index({ bookId: 1, createdAt: -1 });
+// TTL index: auto-expire sessions after 12 months (NFR-PRV-03)
+readingSessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 31536000 });
+
 // ── Register Models ──────────────────────────────────────────────────────────
 const Book = mongoose.model('Book', bookSchema);
 const Chapter = mongoose.model('Chapter', chapterSchema);
 const Asset = mongoose.model('Asset', assetSchema);
 const ReadingProgress = mongoose.model('ReadingProgress', readingProgressSchema);
 const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
+const ReadingSession = mongoose.model('ReadingSession', readingSessionSchema);
 
-export { Book, Chapter, Asset, ReadingProgress, ActivityLog };
+export { Book, Chapter, Asset, ReadingProgress, ActivityLog, ReadingSession };

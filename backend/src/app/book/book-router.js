@@ -14,6 +14,7 @@ import {
   chapterDeleteParamsSchema,
   chapterReorderSchema,
   progressUpdateSchema,
+  readingSessionSchema,
 } from '../common/validation-schemas.js';
 import * as bookManager from './book-manager.js';
 import * as chapterManager from '../editor/chapter-manager.js';
@@ -231,6 +232,28 @@ router.get('/progress/all', async (req, res) => {
   try {
     const progress = await bookManager.getReadingProgressByUserManager(req.childId);
     return res.status(200).json(ok(progress, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /:bookId/reading-session — Record a reading session (STORY-053) ─────
+router.post('/:bookId/reading-session', validate(bookIdSchema, 'params'), validate(readingSessionSchema, 'body'), async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const session = await bookManager.recordReadingSessionManager(
+      req.childId,
+      req._params.bookId,
+      req._body,
+    );
+
+    return res.status(201).json(ok({
+      sessionId: session._id,
+      durationMs: session.durationMs,
+      bookId: session.bookId,
+      createdAt: session.createdAt,
+    }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
