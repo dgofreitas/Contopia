@@ -133,6 +133,18 @@ router.post('/deletion-request/cancel', parentAuthMiddleware, async (req, res) =
   }
 });
 
+// ── GET /privacy-policy — Privacy policy content (STORY-055) ─────────────────
+router.get('/privacy-policy', parentAuthMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const result = await parentManager.getPrivacyPolicy();
+    return res.status(200).json(ok(result, { requestId }));
+  } catch (err) {
+    return handleParentError(err, req, res);
+  }
+});
+
 // ── Error Handler ─────────────────────────────────────────────────────────────
 function handleParentError(err, req, res) {
   const status = err.status || 500;
