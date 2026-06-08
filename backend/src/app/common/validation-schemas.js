@@ -299,3 +299,15 @@ export const readerPreferencesSchema = z.object({
   (data) => data.fontSize !== undefined || data.theme !== undefined || data.readingMode !== undefined,
   { message: 'At least one preference field must be provided' },
 );
+
+// ── Reading Session Schema (STORY-053) ────────────────────────────────────────
+
+/**
+ * Body schema for POST /api/v1/books/:bookId/reading-session.
+ * durationMs: 1s–24h in milliseconds. startedAt/endedAt are optional ISO datetime strings.
+ */
+export const readingSessionSchema = z.object({
+  durationMs: z.number().int().min(1000).max(86400000),
+  startedAt: z.string().datetime({ offset: true }).optional(),
+  endedAt: z.string().datetime({ offset: true }).optional(),
+});

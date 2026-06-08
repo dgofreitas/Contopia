@@ -21,6 +21,7 @@ import {
   createAsset,
   sumAssetBytesByAuthor,
   findAssetsByBook,
+  createReadingSession,
 } from './book-dao.js';
 import { findAssetRecordById } from '../storage/storage-dao.js';
 import { getSignedUrl as getSignedUrlService } from '../storage/storage-service.js';
@@ -433,4 +434,48 @@ export async function getReadingProgressByUserManager(userId, { limit, skip } = 
  */
 export async function getReadingProgressManager(userId, bookId) {
   return findReadingProgress(userId, bookId);
+}
+
+// ── Reading Session Operations (STORY-053) ───────────────────────────────────
+
+/**
+ * Record a reading session for a child reading a book.
+ * Ownership guard: book.authorId must match childId.
+ * @param {string} childId
+ * @param {string} bookId
+ * @param {{ durationMs: number, startedAt?: Date, endedAt?: Date }} sessionData
+ */
+export async function recordReadingSessionManager(childId, bookId, { durationMs, startedAt, endedAt }) {
+  if (!durationMs || durationMs <= 0) {
+    const err = new Error('Duration must be greater than zero');
+    err.code = 'VALIDATION_ERROR';
+    err.status = 400;
+    throw err;
+  }
+
+  const book = await findBookById(bookId);
+  if (!book) {
+    const err = new Error("We couldn't find that book");
+    err.code = 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+
+  if (book.authorId.toString() !== childId.toString()) {
+    const err = new Error("That doesn't belong to you");
+    err.code = 'FORBIDDEN';
+    err.status = 403;
+    throw err;
+  }
+
+  const session = await createReadingSession({
+    childId,
+    bookId,
+    durationMs,
+    startedAt: startedAt || null,
+    endedAt: endedAt || null,
+  });
+
+  logger.info({ sessionId: session._id, childId, bookId, durationMs }, 'Reading session recorded');
+  return session;
 }
