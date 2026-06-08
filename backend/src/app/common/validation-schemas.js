@@ -63,6 +63,37 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+// ── Parent Auth Schemas (STORY-052) ──────────────────────────────────────────────
+
+/**
+ * Parent login schema — email + password.
+ */
+export const parentLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+/**
+ * Parent setup password schema — token + password (min 8, 1 uppercase, 1 number).
+ */
+export const parentSetupPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+/**
+ * Parent refresh schema — refresh token (from cookie or body).
+ */
+export const parentRefreshSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
 // ── Book Validation Schemas ───────────────────────────────────────────────────
 
 const objectIdRegex = /^[a-f\d]{24}$/i;

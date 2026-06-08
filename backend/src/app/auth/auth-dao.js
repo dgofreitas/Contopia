@@ -111,6 +111,20 @@ export async function findPendingChildByParent(parentId) {
 }
 
 /**
+ * Find an active child for a parent (any name).
+ * Used by parent auth to find the child linked to a parent.
+ */
+export async function findActiveChildByParent(parentId) {
+  return Child.findOne({
+    parentId,
+    isActive: true,
+    deletedAt: null,
+  })
+    .lean()
+    .exec();
+}
+
+/**
  * Create a new child document.
  */
 export async function createChild({ parentId, firstName }) {
@@ -157,6 +171,72 @@ export async function hardDeleteChildById(childId) {
 /**
  * Create a session audit log entry (fire-and-forget style).
  */
-export async function createAuditLog({ childId, sessionId, event, ip, deviceHint }) {
-  return SessionAuditLog.create({ childId, sessionId, event, ip, deviceHint });
+export async function createAuditLog({ childId, parentId, sessionId, event, ip, deviceHint }) {
+  const doc = {};
+  if (childId) doc.childId = childId;
+  if (parentId) doc.parentId = parentId;
+  doc.sessionId = sessionId;
+  doc.event = event;
+  if (ip) doc.ip = ip;
+  if (deviceHint) doc.deviceHint = deviceHint;
+  return SessionAuditLog.create(doc);
+}
+
+// ── Parent Auth DAO Methods ──────────────────────────────────────────────────
+
+/**
+ * Find a parent by ID.
+ */
+export async function findParentById(parentId) {
+  return Parent.findById(parentId).lean().exec();
+}
+
+/**
+ * Find a parent by ID, explicitly selecting the password field.
+ * Used for password validation during parent login.
+ */
+export async function findParentByIdWithPassword(parentId) {
+  return Parent.findById(parentId).select('+password').lean().exec();
+}
+
+/**
+ * Update a parent's password hash and clear setup token fields.
+ */
+export async function updateParentPassword(parentId, password) {
+  return Parent.findByIdAndUpdate(
+    parentId,
+    {
+      $set: { password },
+      $unset: { passwordSetupToken: '', passwordSetupExpires: '' },
+    },
+    { new: true }
+  )
+    .select('+password +passwordSetupToken +passwordSetupExpires')
+    .lean()
+    .exec();
+}
+
+/**
+ * Find a parent by their password setup token.
+ * Selects hidden fields needed for token verification.
+ */
+export async function findParentByPasswordSetupToken(tokenHash) {
+  return Parent.findOne({ passwordSetupToken: tokenHash })
+    .select('+passwordSetupToken +passwordSetupExpires')
+    .lean()
+    .exec();
+}
+
+/**
+ * Set password setup token and expiry on a parent.
+ */
+export async function setParentPasswordSetupToken(parentId, { passwordSetupToken, passwordSetupExpires }) {
+  return Parent.findByIdAndUpdate(
+    parentId,
+    { passwordSetupToken, passwordSetupExpires },
+    { new: true }
+  )
+    .select('+passwordSetupToken +passwordSetupExpires')
+    .lean()
+    .exec();
 }

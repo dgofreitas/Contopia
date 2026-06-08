@@ -1,0 +1,70 @@
+// Contopia — Parent Auth Store (Zustand)
+// NO PERSIST MIDDLEWARE — COPPA compliance requires memory-only storage
+// NFR-PRV-01: Completely separate from child auth-store
+import { create } from 'zustand';
+
+const PARENT_SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes (NFR-SEC-03)
+
+const useParentAuthStore = create((set, get) => ({
+  parentToken: null,
+  parentRefreshToken: null,
+  parentUser: null,
+
+  // Session tracking (NFR-SEC-03: 30-min idle timeout)
+  parentSessionCreatedAt: null,
+  parentLastActivity: null,
+  parentSessionExpiresAt: null,
+
+  // Setters
+  setParentToken: (parentToken) => set({ parentToken }),
+  setParentRefreshToken: (parentRefreshToken) => set({ parentRefreshToken }),
+  setParentUser: (parentUser) => set({ parentUser }),
+
+  setParentSession: ({ parentSessionCreatedAt, parentLastActivity }) =>
+    set({
+      parentSessionCreatedAt,
+      parentLastActivity: parentLastActivity ?? Date.now(),
+      parentSessionExpiresAt: Date.now() + PARENT_SESSION_DURATION_MS,
+    }),
+
+  updateParentActivity: () =>
+    set({
+      parentLastActivity: Date.now(),
+      parentSessionExpiresAt: Date.now() + PARENT_SESSION_DURATION_MS,
+    }),
+
+  // Parent logout: calls POST /api/parent/logout, then clears state
+  parentLogout: async () => {
+    const { parentToken } = get();
+    if (parentToken) {
+      try {
+        const { default: parentApiClient } = await import('../lib/parent-api-client.js');
+        await parentApiClient.post('/logout');
+      } catch {
+        // Token already invalid — still clear local state
+      }
+    }
+    set({
+      parentToken: null,
+      parentRefreshToken: null,
+      parentUser: null,
+      parentSessionCreatedAt: null,
+      parentLastActivity: null,
+      parentSessionExpiresAt: null,
+    });
+  },
+
+  // Clear all state without server call (used when refresh fails)
+  parentClearAll: () => {
+    set({
+      parentToken: null,
+      parentRefreshToken: null,
+      parentUser: null,
+      parentSessionCreatedAt: null,
+      parentLastActivity: null,
+      parentSessionExpiresAt: null,
+    });
+  },
+}));
+
+export default useParentAuthStore;
