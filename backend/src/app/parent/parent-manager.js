@@ -21,6 +21,7 @@ import { findAssetsByBook, createActivityLog } from '../book/book-dao.js';
 import { sendDeletionConfirmationEmail } from '../common/email-service.js';
 import { s3Client, BUCKET_NAME } from '../storage/storage-config.js';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { SUPPORT_EMAIL } from '../../config/email.js';
 
 const logger = pino({ name: 'parent-manager', level: process.env.LOG_LEVEL || 'info' });
 
@@ -369,5 +370,75 @@ export async function getDeletionStatus(parentId) {
     hasPendingDeletion: true,
     childId: status.childId,
     expiresAt: status.expiresAt,
+  };
+}
+
+// ── Privacy Policy (STORY-055) ──────────────────────────────────────────────────
+
+/**
+ * Get the privacy policy content for the parent dashboard.
+ * Returns structured bilingual JSON per API contract (STORY-055).
+ * Content is static — no DB query needed.
+ */
+export async function getPrivacyPolicy() {
+  return {
+    supportEmail: SUPPORT_EMAIL,
+    content: {
+      sections: [
+        {
+          id: 'what-we-collect',
+          title: 'O que coletamos',
+          titleEn: 'What we collect',
+          description: 'O nome da Julia, os livros que ela escreve, os livros que ela lê e por quanto tempo ela lê. Só isso.',
+          descriptionEn: "Julia's name, books she writes, books she reads, and how long she reads. That's it.",
+        },
+        {
+          id: 'what-we-never-do',
+          title: 'O que NUNCA fazemos',
+          titleEn: 'What we NEVER do',
+          items: [
+            { text: 'Nunca vendemos dados.', textEn: 'We never sell data.' },
+            { text: 'Nunca mostramos anúncios.', textEn: 'We never show ads.' },
+            { text: 'Nunca compartilhamos histórias.', textEn: 'We never share stories.' },
+            { text: 'Nunca rastreamos localização.', textEn: 'We never track location.' },
+          ],
+        },
+        {
+          id: 'how-long-we-keep',
+          title: 'Por quanto tempo guardamos',
+          titleEn: 'How long we keep data',
+          description: 'Dados de atividade são mantidos por 12 meses e depois excluídos automaticamente. Os livros ficam guardados até você excluir a conta.',
+          descriptionEn: 'Activity data is kept for 12 months, then automatically deleted. Books are kept until you delete the account.',
+        },
+        {
+          id: 'your-rights',
+          title: 'Seus direitos',
+          titleEn: 'Your rights',
+          items: [
+            { text: 'Baixar todos os dados (Exportar)', textEn: 'Download all data (Export)' },
+            { text: 'Excluir a conta (Excluir)', textEn: 'Delete the account (Delete)' },
+            { text: 'Nos perguntar qualquer coisa', textEn: 'Ask us anything, anytime' },
+          ],
+          actions: [
+            { label: 'Exportar dados', labelEn: 'Export data', path: '/parent/dashboard/export' },
+            { label: 'Excluir conta', labelEn: 'Delete account', path: '/parent/dashboard/delete' },
+          ],
+        },
+      ],
+      compliance: [
+        {
+          id: 'coppa',
+          title: 'COPPA',
+          description: 'Este aplicativo está em conformidade com a COPPA. Você controla os dados do seu filho.',
+          descriptionEn: 'This app complies with COPPA. You control your child\'s data.',
+        },
+        {
+          id: 'gdpr-lgpd',
+          title: 'GDPR / LGPD',
+          description: 'Você tem o direito de acessar, baixar e excluir os dados do seu filho a qualquer momento.',
+          descriptionEn: 'You have the right to access, download, and delete your child\'s data at any time.',
+        },
+      ],
+    },
   };
 }
