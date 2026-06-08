@@ -2,20 +2,25 @@
 // Shell with nav tabs: Activity Summary, Export Data, Delete Account, Privacy Policy
 // NFR-PRV-05: No marketing or promotional content — data-only, neutral design
 // AC5: Distinct visual style — neutral blues/whites, adult typography, no child illustrations
-import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import ParentNavbar from '../../components/parent/ParentNavbar';
 import ParentProtectedRoute from '../../components/parent/ParentProtectedRoute';
 import ActivitySummaryCards from '../../components/parent/ActivitySummaryCards';
 import ActivityBookGrid from '../../components/parent/ActivityBookGrid';
 import PrivacyNoticeBanner from '../../components/parent/PrivacyNoticeBanner';
 import ActivityEmptyState from '../../components/parent/ActivityEmptyState';
+import ExportDataPanel from '../../components/parent/ExportDataPanel';
+import DeleteAccountPanel from '../../components/parent/DeleteAccountPanel';
+import DeletionLockedBanner from '../../components/parent/DeletionLockedBanner';
 import useParentAuth from '../../hooks/useParentAuth';
 import useParentAuthStore from '../../stores/parent-auth-store';
 import useActivitySummary from '../../hooks/useActivitySummary';
 import useActivityBooks from '../../hooks/useActivityBooks';
-import { HiChartBar, HiDownload, HiTrash, HiShieldCheck, HiExclamation } from 'react-icons/hi';
-import { Button, Spinner, Alert, Modal } from 'flowbite-react';
+import { useQuery } from '@tanstack/react-query';
+import parentApiClient from '../../lib/parent-api-client';
+import { HiShieldCheck } from 'react-icons/hi';
+import { Button, Spinner, Alert } from 'flowbite-react';
 
 function ActivityTab() {
   const parentUser = useParentAuthStore((s) => s.parentUser);
@@ -61,75 +66,37 @@ function ActivityTab() {
   );
 }
 
-function ExportTab() {
-  return (
-    <section aria-labelledby="export-heading">
-      <h2 id="export-heading" className="text-xl font-semibold text-slate-800 mb-4">
-        Export Data
-      </h2>
-      <div className="bg-white rounded-lg border border-slate-200 p-6">
-        <HiDownload className="w-8 h-8 text-slate-400 mb-3" aria-hidden="true" />
-        <p className="text-slate-700 font-medium mb-2">Download Your Child&apos;s Data</p>
-        <p className="text-sm text-slate-500 mb-4">
-          Export all books, reading progress, and account data as a portable file.
-        </p>
-        <Button
-          disabled
-          className="bg-slate-600 text-slate-300 cursor-not-allowed"
-          size="sm"
-          aria-label="Export feature coming soon"
-        >
-          Coming Soon
-        </Button>
-      </div>
-    </section>
-  );
+function useDeletionStatus() {
+  const parentToken = useParentAuthStore((s) => s.parentToken);
+
+  return useQuery({
+    queryKey: ['parent-deletion-status'],
+    queryFn: async () => {
+      try {
+        const { data } = await parentApiClient.get('/deletion-request/status');
+        return data;
+      } catch {
+        return { data: { hasPendingDeletion: false } };
+      }
+    },
+    enabled: !!parentToken,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+  });
 }
 
-function DeleteTab() {
-  const [showConfirm, setShowConfirm] = useState(false);
+function ExportTab({ childFirstName }) {
+  return <ExportDataPanel childFirstName={childFirstName} />;
+}
 
+function DeleteTab({ childFirstName, childId, deletionPending }) {
   return (
-    <section aria-labelledby="delete-heading">
-      <h2 id="delete-heading" className="text-xl font-semibold text-slate-800 mb-4">
-        Delete Account
-      </h2>
-      <div className="bg-white rounded-lg border border-red-200 p-6">
-        <HiExclamation className="w-8 h-8 text-red-500 mb-3" aria-hidden="true" />
-        <p className="text-slate-700 font-medium mb-2">Permanently Delete Account</p>
-        <p className="text-sm text-slate-500 mb-4">
-          This will permanently delete your child&apos;s account, all books, reading data, and parent
-          access. This action cannot be undone.
-        </p>
-        <Button
-          disabled
-          className="bg-red-600 text-red-200 cursor-not-allowed"
-          size="sm"
-          aria-label="Delete feature coming soon"
-        >
-          Coming Soon
-        </Button>
-      </div>
-
-      <Modal
-        show={showConfirm}
-        size="md"
-        popup
-        onClose={() => setShowConfirm(false)}
-        aria-labelledby="delete-confirm-title"
-      >
-        <Modal.Header id="delete-confirm-title">Confirm Deletion</Modal.Header>
-        <Modal.Body>
-          <p className="text-base text-slate-700">
-            Are you sure you want to permanently delete this account? This cannot be undone.
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="failure" disabled>Confirm Delete</Button>
-          <Button color="light" onClick={() => setShowConfirm(false)}>Cancel</Button>
-        </Modal.Footer>
-      </Modal>
-    </section>
+    <DeleteAccountPanel
+      childFirstName={childFirstName}
+      childId={childId}
+      deletionPending={deletionPending}
+    />
   );
 }
 
@@ -213,6 +180,11 @@ function IdleWarningBanner({ isIdle, idleTime, onContinue }) {
 function ParentDashboardLayout() {
   const { isIdle, idleTime, continueParentSession } = useParentAuth();
   const parentUser = useParentAuthStore((s) => s.parentUser);
+  const { data: deletionStatusData } = useDeletionStatus();
+
+  const deletionPending = deletionStatusData?.data?.hasPendingDeletion ?? false;
+  const childFirstName = parentUser?.childFirstName || '';
+  const childId = parentUser?.childId || '';
 
   // Fetch parent profile on mount if not already loaded
   const parentToken = useParentAuthStore((s) => s.parentToken);
@@ -244,10 +216,11 @@ function ParentDashboardLayout() {
           idleTime={idleTime}
           onContinue={continueParentSession}
         />
+        {deletionPending && <DeletionLockedBanner />}
         <Routes>
           <Route index element={<ActivityTab />} />
-          <Route path="export" element={<ExportTab />} />
-          <Route path="delete" element={<DeleteTab />} />
+          <Route path="export" element={<ExportTab childFirstName={childFirstName} />} />
+          <Route path="delete" element={<DeleteTab childFirstName={childFirstName} childId={childId} deletionPending={deletionPending} />} />
           <Route path="privacy" element={<PrivacyTab />} />
           <Route path="*" element={<Navigate to="/parent/dashboard" replace />} />
         </Routes>
