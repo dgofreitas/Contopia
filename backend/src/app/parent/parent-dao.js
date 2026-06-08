@@ -1,7 +1,8 @@
 // Contopia — Parent Dashboard Data Access Object
 import { Parent, Child } from '../auth/auth-model.js';
-import { Book, ReadingProgress, ReadingSession } from '../book/book-model.js';
+import { Book, Chapter, ReadingProgress, ReadingSession } from '../book/book-model.js';
 import { getWeeklyReadingTime } from '../book/book-dao.js';
+import { DeletionRequest } from './parent-model.js';
 
 /**
  * Find a parent by ID with their child populated.
@@ -97,4 +98,103 @@ export async function getChildBookTitlesWithCovers(childId, { limit = 20, skip =
  */
 export async function countChildBooks(childId) {
   return Book.countDocuments({ authorId: childId, deletedAt: null }).exec();
+}
+
+// ── DeletionRequest DAO Methods (STORY-054) ──────────────────────────────────────
+
+/**
+ * Create a new DeletionRequest document.
+ */
+export async function createDeletionRequest(data) {
+  const doc = await DeletionRequest.create(data);
+  return doc.toObject();
+}
+
+/**
+ * Find a pending DeletionRequest for a specific child.
+ * Used to prevent duplicate deletion requests and to block child login.
+ */
+export async function findPendingDeletionByChild(childId) {
+  return DeletionRequest.findOne({ childId, status: 'pending' }).lean().exec();
+}
+
+/**
+ * Find a pending DeletionRequest for a parent+child pair.
+ * Used for cancellation: find the pending request to cancel.
+ */
+export async function findPendingDeletionByParentAndChild(parentId, childId) {
+  return DeletionRequest.findOne({ parentId, childId, status: 'pending' }).lean().exec();
+}
+
+/**
+ * Cancel a DeletionRequest: set status='cancelled' and cancelledAt=now.
+ */
+export async function cancelDeletionRequest(deletionRequestId) {
+  const now = new Date();
+  return DeletionRequest.findByIdAndUpdate(
+    deletionRequestId,
+    { status: 'cancelled', cancelledAt: now },
+    { new: true }
+  ).lean().exec();
+}
+
+/**
+ * Find expired pending DeletionRequests (for GDPR cron job).
+ * Returns requests where status='pending' and expiresAt < now.
+ */
+export async function findExpiredDeletionRequests() {
+  return DeletionRequest.find({ status: 'pending', expiresAt: { $lt: new Date() } }).lean().exec();
+}
+
+/**
+ * Mark a DeletionRequest as completed: set status='completed' and completedAt=now.
+ */
+export async function markDeletionCompleted(deletionRequestId) {
+  const now = new Date();
+  return DeletionRequest.findByIdAndUpdate(
+    deletionRequestId,
+    { status: 'completed', completedAt: now },
+    { new: true }
+  ).lean().exec();
+}
+
+/**
+ * Find pending DeletionRequest for a parent's child.
+ * Returns { childId, status, expiresAt } or null if no pending request.
+ * Used by GET /deletion-request/status (STORY-054 FIX).
+ */
+export async function findDeletionStatusByParent(parentId) {
+  const result = await DeletionRequest.findOne({ parentId, status: 'pending' }).lean().exec();
+  if (!result) return null;
+  return {
+    childId: result.childId.toString(),
+    status: result.status,
+    expiresAt: result.expiresAt.toISOString(),
+  };
+}
+
+/**
+ * Find all books for a child with their chapters populated.
+ * Used for data export: includes title, chapters (content, order, title), coverAssetId, createdAt.
+ */
+export async function findChildBooksWithChapters(childId) {
+  const books = await Book.find({ authorId: childId, deletedAt: null })
+    .select('title coverAssetId createdAt')
+    .sort({ createdAt: 1 })
+    .lean()
+    .exec();
+
+  // Fetch chapters for each book
+  const enrichedBooks = await Promise.all(
+    books.map(async (book) => {
+      const chapters = await Chapter.find({ bookId: book._id, deletedAt: null })
+        .select('order title content')
+        .sort({ order: 1 })
+        .lean()
+        .exec();
+      return { ...book, chapters };
+    })
+  );
+
+  return enrichedBooks;
 }

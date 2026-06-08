@@ -37,6 +37,30 @@ const I18N = {
   },
 };
 
+// ── Deletion Confirmation i18n Strings (STORY-054) ──────────────────────────────
+const DELETION_I18N = {
+  'pt-BR': {
+    subject: 'Contopia — Confirmação de exclusão de conta',
+    greeting: 'Olá!',
+    bodyIntro: 'Recebemos sua solicitação para excluir a conta de',
+    bodyDetails: 'A conta será permanentemente excluída em 30 dias. Durante esse período, a conta ficará bloqueada e não poderá ser acessada.',
+    cancelNote: 'Se mudou de ideia, entre em contato com nosso suporte para cancelar a exclusão.',
+    supportContact: 'Suporte: suporte@contopia.com.br',
+    lang: 'pt-BR',
+    heading: 'Confirmação de Exclusão de Conta 📋',
+  },
+  en: {
+    subject: 'Contopia — Account Deletion Confirmation',
+    greeting: 'Hello!',
+    bodyIntro: 'We received your request to delete the account for',
+    bodyDetails: 'The account will be permanently deleted in 30 days. During this period, the account will be locked and cannot be accessed.',
+    cancelNote: 'If you changed your mind, please contact our support to cancel the deletion.',
+    supportContact: 'Support: support@contopia.com',
+    lang: 'en',
+    heading: 'Account Deletion Confirmation 📋',
+  },
+};
+
 function getStrings(locale) {
   return I18N[locale] || I18N['pt-BR'];
 }
@@ -134,6 +158,113 @@ export async function sendVerificationEmail({ to, childFirstName, verificationLi
 
       if (!isTransient || attempt === MAX_RETRIES) {
         logger.error({ recipientHash, errCode: err.code }, 'Email delivery failed — giving up');
+        return { success: false };
+      }
+
+      await sleep(BACKOFF_DELAYS[attempt - 1]);
+    }
+  }
+
+  return { success: false };
+}
+
+// ── Deletion Confirmation Email (STORY-054) ──────────────────────────────────────
+
+function getDeletionStrings(locale) {
+  return DELETION_I18N[locale] || DELETION_I18N['pt-BR'];
+}
+
+/**
+ * Build the deletion confirmation email HTML body.
+ */
+function buildDeletionHtml(childFirstName, expiresAt, locale = 'pt-BR') {
+  const s = getDeletionStrings(locale);
+  const expiryDate = new Date(expiresAt).toLocaleDateString(locale === 'pt-BR' ? 'pt-BR' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return `<!DOCTYPE html>
+<html lang="${s.lang}">
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333;">
+  <h2 style="color:#c0392b;">${s.heading}</h2>
+  <p>${s.greeting}</p>
+  <p>${s.bodyIntro} <strong>${childFirstName}</strong>.</p>
+  <p>${s.bodyDetails}</p>
+  <p><strong>${s.cancelNote}</strong></p>
+  <p style="text-align:center;margin:20px 0;padding:12px;background:#fef9e7;border-radius:6px;">
+    ${s.supportContact}
+  </p>
+  <hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">
+  <p><small>Exclusão programada para: ${expiryDate}</small></p>
+</body>
+</html>`;
+}
+
+/**
+ * Build the deletion confirmation email plain text fallback.
+ */
+function buildDeletionText(childFirstName, expiresAt, locale = 'pt-BR') {
+  const s = getDeletionStrings(locale);
+  const expiryDate = new Date(expiresAt).toLocaleDateString(locale === 'pt-BR' ? 'pt-BR' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return `${s.heading}
+
+${s.greeting} ${s.bodyIntro} ${childFirstName}.
+
+${s.bodyDetails}
+
+${s.cancelNote}
+
+${s.supportContact}
+
+---
+Scheduled deletion date: ${expiryDate}`;
+}
+
+/**
+ * Send a deletion confirmation email with retry logic (STORY-054).
+ * Returns { success: boolean }.
+ * Never throws — graceful fallback on SMTP unavailability.
+ */
+export async function sendDeletionConfirmationEmail({ to, childFirstName, expiresAt, locale = 'pt-BR' }) {
+  const recipientHash = hashEmail(to);
+
+  if (!transport) {
+    logger.warn({ recipientHash }, 'SMTP unavailable — deletion confirmation email skipped');
+    return { success: false };
+  }
+
+  const s = getDeletionStrings(locale);
+  const mailOptions = {
+    from: FROM_ADDRESS,
+    to,
+    subject: s.subject,
+    html: buildDeletionHtml(childFirstName, expiresAt, locale),
+    text: buildDeletionText(childFirstName, expiresAt, locale),
+  };
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const info = await transport.sendMail(mailOptions);
+      logger.info({ recipientHash, attempt, messageId: info.messageId }, 'Deletion confirmation email dispatched');
+      return { success: true, messageId: info.messageId };
+    } catch (err) {
+      const isTransient = TRANSIENT_CODES.has(err.code);
+
+      logger.warn(
+        { recipientHash, attempt, errCode: err.code, isTransient },
+        'Deletion email send attempt failed'
+      );
+
+      if (!isTransient || attempt === MAX_RETRIES) {
+        logger.error({ recipientHash, errCode: err.code }, 'Deletion email delivery failed — giving up');
         return { success: false };
       }
 

@@ -211,6 +211,14 @@ router.post('/child-login', loginLimiter, childLoginLimiter, async (req, res) =>
     }
 
     const { childId, parentId } = parsed.data;
+
+    // STORY-054: Check for pending deletion request — block login if found
+    const { findPendingDeletionByChild } = await import('../parent/parent-dao.js');
+    const pendingDeletion = await findPendingDeletionByChild(childId);
+    if (pendingDeletion) {
+      return res.status(403).json(fail('ACCOUNT_SCHEDULED_FOR_DELETION', 'This account is scheduled for deletion. Contact support to cancel.', { requestId }));
+    }
+
     const ip = req.ip;
     const deviceHint = sanitizeUserAgent(req);
     const result = await authManager.childLogin({ childId, parentId, ip, deviceHint });
