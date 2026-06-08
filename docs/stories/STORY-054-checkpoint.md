@@ -8,14 +8,14 @@
 - [ ] Merge Request
 
 ## BACKEND
-- [ ] model: DeletionRequest schema in `backend/src/app/parent/parent-model.js`
-- [ ] dao: Add deletion request DAO methods to `backend/src/app/parent/parent-dao.js`
-- [ ] manager: Add exportChildData(), requestAccountDeletion(), cancelAccountDeletion() to `backend/src/app/parent/parent-manager.js`
-- [ ] router: Add GET /export, POST /deletion-request, POST /deletion-request/cancel to `backend/src/app/parent/parent-router.js`
-- [ ] shared/gdpr: Process DeletionRequests in `backend/src/app/common/gdpr-cleanup.js`
-- [ ] shared/email: Add sendDeletionConfirmationEmail() to `backend/src/app/common/email-service.js`
-- [ ] shared/auth: Block child login during deletion in `backend/src/app/auth/auth-router.js`
-- [ ] shared/validation: Add deletionRequestSchema, deletionCancelSchema to `backend/src/app/common/validation-schemas.js`
+- [x] model: DeletionRequest schema in `backend/src/app/parent/parent-model.js`
+- [x] dao: Add deletion request DAO methods to `backend/src/app/parent/parent-dao.js`
+- [x] manager: Add exportChildData(), requestAccountDeletion(), cancelAccountDeletion() to `backend/src/app/parent/parent-manager.js`
+- [x] router: Add GET /export, POST /deletion-request, POST /deletion-request/cancel to `backend/src/app/parent/parent-router.js`
+- [x] shared/gdpr: Process DeletionRequests in `backend/src/app/common/gdpr-cleanup.js`
+- [x] shared/email: Add sendDeletionConfirmationEmail() to `backend/src/app/common/email-service.js`
+- [x] shared/auth: Block child login during deletion in `backend/src/app/auth/auth-router.js`
+- [x] shared/validation: Add deletionRequestSchema, deletionCancelSchema to `backend/src/app/common/validation-schemas.js`
 
 ## FRONTEND
 - [x] component: `ExportDataPanel.jsx` — export UI with download button, progress, success toast
