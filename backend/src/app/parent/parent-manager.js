@@ -222,14 +222,15 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /**
  * Request account deletion for a child.
  * - Validates confirmText === "DELETE"
+ * - Resolves childId via findParentByIdWithChild(parentId)
  * - Checks no pending deletion already exists (409 if duplicate)
  * - Creates DeletionRequest with 30-day expiry
  * - Sends confirmation email
  * - Creates ActivityLog entry
- * @param {{ parentId: string, childId: string, confirmText: string }} params
+ * @param {{ parentId: string, confirmText: string }} params
  * @returns {{ deletionRequestId: string, childId: string, status: string, expiresAt: string, confirmationEmailSent: boolean }}
  */
-export async function requestAccountDeletion({ parentId, childId, confirmText }) {
+export async function requestAccountDeletion({ parentId, confirmText }) {
   if (confirmText !== 'DELETE') {
     const err = new Error('Confirmation text must be "DELETE"');
     err.code = 'VALIDATION_ERROR';
@@ -237,16 +238,7 @@ export async function requestAccountDeletion({ parentId, childId, confirmText })
     throw err;
   }
 
-  // Check for existing pending deletion
-  const existing = await findPendingDeletionByChild(childId);
-  if (existing) {
-    const err = new Error('A deletion request is already pending for this account');
-    err.code = 'DELETION_ALREADY_PENDING';
-    err.status = 409;
-    throw err;
-  }
-
-  // Resolve parent+child to get email and name
+  // Resolve parent+child to get childId and email/name
   const result = await findParentByIdWithChild(parentId.toString());
   if (!result || !result.child) {
     const err = new Error('No child account found');
@@ -255,11 +247,14 @@ export async function requestAccountDeletion({ parentId, childId, confirmText })
     throw err;
   }
 
-  // Verify child belongs to this parent
-  if (result.child._id.toString() !== childId.toString()) {
-    const err = new Error('Child does not belong to this parent');
-    err.code = 'FORBIDDEN';
-    err.status = 403;
+  const childId = result.child._id;
+
+  // Check for existing pending deletion
+  const existing = await findPendingDeletionByChild(childId);
+  if (existing) {
+    const err = new Error('A deletion request is already pending for this account');
+    err.code = 'DELETION_ALREADY_PENDING';
+    err.status = 409;
     throw err;
   }
 
