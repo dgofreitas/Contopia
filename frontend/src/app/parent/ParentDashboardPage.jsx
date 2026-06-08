@@ -6,37 +6,57 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import ParentNavbar from '../../components/parent/ParentNavbar';
 import ParentProtectedRoute from '../../components/parent/ParentProtectedRoute';
+import ActivitySummaryCards from '../../components/parent/ActivitySummaryCards';
+import ActivityBookGrid from '../../components/parent/ActivityBookGrid';
+import PrivacyNoticeBanner from '../../components/parent/PrivacyNoticeBanner';
+import ActivityEmptyState from '../../components/parent/ActivityEmptyState';
 import useParentAuth from '../../hooks/useParentAuth';
 import useParentAuthStore from '../../stores/parent-auth-store';
+import useActivitySummary from '../../hooks/useActivitySummary';
+import useActivityBooks from '../../hooks/useActivityBooks';
 import { HiChartBar, HiDownload, HiTrash, HiShieldCheck, HiExclamation } from 'react-icons/hi';
 import { Button, Spinner, Alert, Modal } from 'flowbite-react';
 
 function ActivityTab() {
   const parentUser = useParentAuthStore((s) => s.parentUser);
+  const { data: summaryData, isLoading: summaryLoading } = useActivitySummary();
+  const { data: booksData, isLoading: booksLoading } = useActivityBooks({ limit: 20, offset: 0 });
+  const isLoading = summaryLoading || booksLoading;
+
+  const summary = summaryData?.data;
+  const books = booksData?.data?.books ?? [];
+  const childFirstName = summary?.childFirstName || parentUser?.childFirstName || '';
+  const hasActivity = summary?.hasActivity;
+
   return (
     <section aria-labelledby="activity-heading">
       <h2 id="activity-heading" className="text-xl font-semibold text-slate-800 mb-4">
-        Activity Summary
+        Resumo de Atividade
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <p className="text-sm text-slate-500 mb-1">Child</p>
-          <p className="text-lg font-medium text-slate-800">
-            {parentUser?.childFirstName || '—'}
-          </p>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Spinner aria-label="Loading activity data" />
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <p className="text-sm text-slate-500 mb-1">Books Created</p>
-          <p className="text-lg font-medium text-slate-800">—</p>
+      ) : hasActivity === false ? (
+        <ActivityEmptyState childFirstName={childFirstName} />
+      ) : (
+        <div className="space-y-6">
+          <ActivitySummaryCards
+            booksWritten={summary?.booksWritten ?? 0}
+            booksRead={summary?.booksRead ?? 0}
+            readingTimeMinutes={summary?.readingTimeMinutes ?? 0}
+            childFirstName={childFirstName}
+          />
+          <PrivacyNoticeBanner childFirstName={childFirstName} />
+          {books.length > 0 && (
+            <div>
+              <h3 className="text-md font-medium text-slate-700 mb-3">Livros</h3>
+              <ActivityBookGrid books={books} />
+            </div>
+          )}
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <p className="text-sm text-slate-500 mb-1">Reading Time</p>
-          <p className="text-lg font-medium text-slate-800">—</p>
-        </div>
-      </div>
-      <p className="mt-6 text-sm text-slate-400">
-        Detailed activity data will appear here as your child uses the app.
-      </p>
+      )}
     </section>
   );
 }

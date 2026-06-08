@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ParentDashboardPage from '../app/parent/ParentDashboardPage';
 
 const { mockParentToken, mockParentUser, mockSetParentUser, mockParentGet } = vi.hoisted(() => {
@@ -20,8 +21,20 @@ const { mockParentToken, mockParentUser, mockSetParentUser, mockParentGet } = vi
 vi.mock('../lib/parent-api-client', () => ({
   default: {
     post: vi.fn().mockResolvedValue({ data: {} }),
-    get: vi.fn().mockResolvedValue({
-      data: { data: { parentId: 'p1', email: 'parent@test.com', childId: 'c1', childFirstName: 'Julia', dashNav: ['activity', 'export', 'delete', 'privacy'] } },
+    get: vi.fn().mockImplementation((url) => {
+      if (url === '/activity/summary') {
+        return Promise.resolve({
+          data: { data: { booksWritten: 5, booksRead: 3, readingTimeMinutes: 45, childFirstName: 'Julia', childId: 'c1', hasActivity: true } },
+        });
+      }
+      if (url === '/activity/books') {
+        return Promise.resolve({
+          data: { data: { books: [], total: 0, limit: 20, offset: 0 } },
+        });
+      }
+      return Promise.resolve({
+        data: { data: { parentId: 'p1', email: 'parent@test.com', childId: 'c1', childFirstName: 'Julia', dashNav: ['activity', 'export', 'delete', 'privacy'] } },
+      });
     }),
   },
 }));
@@ -60,13 +73,16 @@ vi.mock('../hooks/useParentAuth', () => ({
 }));
 
 function renderDashboardPage(initialRoute = '/parent/dashboard') {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={[initialRoute]}>
-      <Routes>
-        <Route path="/parent/login" element={<div data-testid="parent-login">Login</div>} />
-        <Route path="/parent/dashboard/*" element={<ParentDashboardPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialRoute]}>
+        <Routes>
+          <Route path="/parent/login" element={<div data-testid="parent-login">Login</div>} />
+          <Route path="/parent/dashboard/*" element={<ParentDashboardPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -77,14 +93,18 @@ describe('ParentDashboardPage', () => {
 
   // ── AC3: Dashboard shell with nav tabs ──
 
-  it('renders Activity Summary as default tab', () => {
+  it('renders Activity Summary as default tab', async () => {
     renderDashboardPage();
-    expect(screen.getByText('Activity Summary')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Resumo de Atividade')).toBeInTheDocument();
+    });
   });
 
-  it('renders child name in activity tab', () => {
+  it('renders child name in activity tab', async () => {
     renderDashboardPage();
-    expect(screen.getByText('Julia')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Julia/)).toBeInTheDocument();
+    });
   });
 
   it('navigates to Export tab', async () => {
