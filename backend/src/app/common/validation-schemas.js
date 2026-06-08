@@ -311,3 +311,21 @@ export const readingSessionSchema = z.object({
   startedAt: z.string().datetime({ offset: true }).optional(),
   endedAt: z.string().datetime({ offset: true }).optional(),
 });
+
+// ── Deletion Request Schemas (STORY-054) ────────────────────────────────────────
+
+/**
+ * Body schema for POST /api/parent/deletion-request.
+ * Requires confirmText to be exactly "DELETE" (case-sensitive) for explicit confirmation.
+ */
+export const deletionRequestSchema = z.object({
+  confirmText: z.literal('DELETE'),
+});
+
+/**
+ * Body schema for POST /api/parent/deletion-request/cancel.
+ * Requires childId as a 24-character hex ObjectId string.
+ */
+export const deletionCancelSchema = z.object({
+  childId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid child ID format'),
+});
