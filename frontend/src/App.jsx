@@ -3,7 +3,6 @@ import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { LazyMotion, domAnimation } from 'framer-motion';
 import RegisterPage from './app/auth/RegisterPage';
-import VerifyPage from './app/auth/VerifyPage';
 import WelcomePage from './app/auth/WelcomePage';
 import LoginPage from './app/auth/LoginPage';
 import ShelfPage from './app/shelf/ShelfPage';
@@ -21,7 +20,6 @@ import OfflineBanner from './components/common/OfflineBanner';
 import StorageWarningBanner from './components/common/StorageWarningBanner';
 import ToastContainer from './components/common/ToastContainer';
 import ParentLoginPage from './app/parent/ParentLoginPage';
-import ParentSetupPasswordPage from './app/parent/ParentSetupPasswordPage';
 import ParentDashboardPage from './app/parent/ParentDashboardPage';
 import { useErrorStore } from './stores/error-store';
 import useAuthStore from './stores/auth-store';
@@ -78,11 +76,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/verify/:token" element={<VerifyPage />} />
         <Route path="/login" element={<LoginPage />} />
         {/* Parent routes — STORY-052 (separate from child routes) */}
         <Route path="/parent/login" element={<ParentLoginPage />} />
-        <Route path="/parent/setup-password" element={<ParentSetupPasswordPage />} />
         <Route path="/parent/dashboard/*" element={<ParentDashboardPage />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/shelf" element={<ShelfPage />} />
