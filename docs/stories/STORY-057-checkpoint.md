@@ -14,12 +14,12 @@
 - [x] middleware: Update `app.js` — add cookie-parser middleware for cookie-based JWT parsing
 
 ## FRONTEND
-- [ ] page: Update `RegisterPage.jsx` — new direct registration flow with email + password + ageConsent, success redirect to parent dashboard
-- [ ] component: Update `RegisterForm.jsx` — fields for email, password, ageConsent checkbox, validation
-- [ ] hook: Update `useRegister.js` — call `POST /api/auth/register`, handle cookie-based session, set parent auth store
-- [ ] store: Update `parent-auth-store.js` — handle registration response (set token, user, session)
-- [ ] route: Update `App.jsx` — remove `/verify/:token` and `/parent/setup-password`, adjust `/register`
-- [ ] cleanup: Remove `VerifyPage.jsx`, `useVerify.js`, `ParentSetupPasswordPage.jsx`
+- [x] page: Update `RegisterPage.jsx` — new direct registration flow with email + password + ageConsent, success redirect to parent dashboard
+- [x] component: Update `RegisterForm.jsx` — fields for email, password, ageConsent checkbox, validation
+- [x] hook: Update `useRegister.js` — call `POST /api/auth/register`, handle cookie-based session, set parent auth store
+- [x] store: Update `parent-auth-store.js` — handle registration response (set token, user, session)
+- [x] route: Update `App.jsx` — remove `/verify/:token` and `/parent/setup-password`, adjust `/register`
+- [x] cleanup: Remove `VerifyPage.jsx`, `useVerify.js`, `ParentSetupPasswordPage.jsx`
 
 ## QUALITY AND DELIVERY
 - [ ] TESTS
