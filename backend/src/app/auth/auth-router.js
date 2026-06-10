@@ -91,8 +91,8 @@ function sanitizeUserAgent(req) {
     : null;
 }
 
-// ── POST /register-parent ──────────────────────────────────────────────────
-router.post('/register-parent', registerParentLimiter, async (req, res) => {
+// ── POST /register ───────────────────────────────────────────────────────────
+router.post('/register', registerParentLimiter, async (req, res) => {
   const requestId = req.id;
 
   try {
@@ -102,11 +102,28 @@ router.post('/register-parent', registerParentLimiter, async (req, res) => {
     }
 
     const { email, password } = parsed.data;
-    const result = await authManager.registerParent({ email, password });
+    const ip = req.ip;
+    const deviceHint = sanitizeUserAgent(req);
 
-    logger.info({ parentId: result.parent._id, requestId }, 'Parent registered');
+    const result = await authManager.registerParent({ email, password, ageConsent: parsed.data.ageConsent, ip, deviceHint });
 
-    return res.status(201).json(ok({ parentId: result.parent._id.toString() }, { requestId }));
+    // Set refresh token as httpOnly cookie (same as login)
+    res.cookie('parentRefreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/parent',
+    });
+
+    logger.info({ parentId: result.parentId, requestId }, 'Parent registered and auto-logged in');
+
+    return res.status(201).json(ok({
+      accessToken: result.accessToken,
+      parentId: result.parentId,
+      email: result.email,
+      children: result.children,
+    }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
