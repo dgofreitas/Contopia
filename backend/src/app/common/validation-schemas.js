@@ -35,8 +35,9 @@ export const refreshSchema = z.object({
 // ── Parent Auth Schemas (STORY-052) ──────────────────────────────────────────────
 
 /**
- * Parent register schema — email + password (STORY-056 pivot).
+ * Parent register schema — email + password + ageConsent (STORY-057).
  * Password requirements: min 8 chars, 1 uppercase, 1 number.
+ * ageConsent must be explicitly true.
  */
 export const parentRegisterSchema = z.object({
   email: z.string().email(),
@@ -44,6 +45,7 @@ export const parentRegisterSchema = z.object({
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
+  ageConsent: z.literal(true, { message: 'Age consent is required' }),
 });
 
 /**
