@@ -10,7 +10,6 @@ import App from '../App';
 
 // Mock all route components that are not part of this story
 vi.mock('../app/auth/RegisterPage', () => ({ default: () => <div data-testid="register-page">Register</div> }));
-vi.mock('../app/auth/VerifyPage', () => ({ default: () => <div data-testid="verify-page">Verify</div> }));
 vi.mock('../app/auth/WelcomePage', () => ({ default: () => <div data-testid="welcome-page">Welcome</div> }));
 vi.mock('../app/auth/LoginPage', () => ({ default: () => <div data-testid="login-page">Login</div> }));
 vi.mock('../app/editor/EditorPage', () => ({ default: () => <div data-testid="editor-page">Editor</div> }));

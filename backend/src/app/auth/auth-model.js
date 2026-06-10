@@ -19,6 +19,10 @@ const parentSchema = new Schema(
       type: String,
       select: false, // never included by default — only loaded for login
     },
+    ageConsentAt: {
+      type: Date,
+      default: null,
+    },
     lastLogin: {
       type: Date,
       default: null,
@@ -117,7 +121,7 @@ const sessionAuditSchema = new Schema(
     },
     event: {
       type: String,
-      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED', 'PARENT_SESSION_CREATED', 'PARENT_LOGIN_FAILED', 'PARENT_LOGOUT'],
+      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED', 'PARENT_SESSION_CREATED', 'PARENT_LOGIN_FAILED', 'PARENT_LOGOUT', 'PARENT_REGISTRATION_CONSENT'],
       required: true,
     },
     ip: {

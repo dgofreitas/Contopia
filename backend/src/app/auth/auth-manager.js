@@ -503,11 +503,13 @@ export async function getCurrentUser(childId) {
 const MAX_CHILDREN_PER_PARENT = 5;
 
 /**
- * Register a new parent account with email and password.
- * Returns { parent } on success.
+ * Register a new parent account with email, password, and age consent.
+ * After creating the parent, immediately creates a parent session (auto-login),
+ * generates access + refresh tokens, and updates lastLogin timestamp.
+ * Returns { accessToken, refreshToken, parentId, email, children }.
  * Throws ACCOUNT_EXISTS if email is already registered.
  */
-export async function registerParent({ email, password }) {
+export async function registerParent({ email, password, ageConsent, ip, deviceHint }) {
   const existing = await findParentByEmail(email);
   if (existing) {
     const err = new Error('An account with this email already exists');
@@ -516,10 +518,44 @@ export async function registerParent({ email, password }) {
     throw err;
   }
 
-  const parent = await createParent({ email, password });
+  const parent = await createParent({ email, password, ageConsentAt: new Date() });
   logger.info({ parentId: parent._id }, 'New parent registered');
 
-  return { parent };
+  // Audit log: record consent event (fire-and-forget)
+  createAuditLog({ parentId: parent._id.toString(), sessionId: 'registration', event: 'PARENT_REGISTRATION_CONSENT', ip, deviceHint }).catch(() => {});
+
+  // Auto-login: create parent session and issue tokens
+  const accessToken = generateParentAccessToken(parent._id);
+  const refreshToken = generateParentRefreshToken(parent._id);
+
+  const { sessionId, refreshAvailable } = await createParentSession({
+    parentId: parent._id,
+    refreshToken,
+    ip,
+    deviceHint,
+  });
+
+  // Update lastLogin timestamp (best-effort, non-blocking)
+  updateParentLastLogin(parent._id).catch((err) => {
+    logger.warn({ err, parentId: parent._id }, 'Failed to update lastLogin on registration');
+  });
+
+  // Find children linked to this parent (none yet for new account, but keeps shape consistent)
+  const children = await findChildrenByParentId(parent._id);
+
+  return {
+    accessToken,
+    refreshToken,
+    parentId: parent._id.toString(),
+    email: parent.email,
+    children: children.map((c) => ({
+      childId: c._id.toString(),
+      firstName: c.firstName,
+      avatarSeed: c.avatarSeed || 'avatar_default',
+    })),
+    refreshAvailable,
+    sessionId,
+  };
 }
 
 /**

@@ -3,6 +3,7 @@ import 'dotenv/config';
 import crypto from 'node:crypto';
 import express from 'express';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import pino from 'pino';
@@ -40,6 +41,9 @@ app.use(helmet({
     },
   },
 }));
+
+// ── Cookie Parsing ────────────────────────────────────────────────────────────
+app.use(cookieParser());
 
 // ── Body Parsing ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));

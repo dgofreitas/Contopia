@@ -18,20 +18,8 @@ vi.mock('node:crypto', async (importOriginal) => {
 
 vi.mock('jsonwebtoken');
 vi.mock('../auth-dao.js', () => ({
-  findParentByEmail: vi.fn(),
-  findParentByVerificationTokenHash: vi.fn(),
-  createParent: vi.fn(),
-  updateParentVerification: vi.fn(),
-  markParentVerified: vi.fn(),
-  clearParentVerificationToken: vi.fn(),
   findChildById: vi.fn(),
-  findActiveChildByParentAndName: vi.fn(),
-  findPendingChildByParentAndName: vi.fn(),
-  createChild: vi.fn(),
-  activateChild: vi.fn(),
-  findPendingChildByParent: vi.fn(),
   findChildByIdWithPassword: vi.fn(),
-  updateChildPassword: vi.fn(),
   createAuditLog: vi.fn().mockReturnValue({ catch: vi.fn() }),
 }));
 vi.mock('../../../config/redis.js', () => ({
@@ -285,53 +273,6 @@ describe('Auth Manager — Session Functions (STORY-002)', () => {
       expect(redis.del).toHaveBeenCalledWith('session:child1:sess_old999');
       // Login attempts reset
       expect(redis.del).toHaveBeenCalledWith('loginAttempts:10.0.0.1');
-    });
-  });
-
-  // ── loginWithMagicLink ───────────────────────────────────────────────────
-
-  describe('loginWithMagicLink', () => {
-    it('should return magicLinkSent:true and parentEmail', async () => {
-      authDao.findParentByEmail.mockResolvedValue({
-        _id: 'p1',
-        isVerified: true,
-      });
-      authDao.findActiveChildByParentAndName.mockResolvedValue({
-        _id: 'c1',
-        firstName: 'João',
-      });
-
-      const result = await authManager.loginWithMagicLink({
-        parentEmail: 'p@ex.com',
-        childFirstName: 'João',
-      });
-
-      expect(result).toEqual({ magicLinkSent: true, parentEmail: 'p@ex.com' });
-    });
-
-    it('should throw NOT_FOUND when parent not found or not verified', async () => {
-      authDao.findParentByEmail.mockResolvedValue(null);
-
-      await expect(
-        authManager.loginWithMagicLink({ parentEmail: 'nx@ex.com', childFirstName: 'João' }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
-    });
-
-    it('should throw NOT_FOUND when parent found but not verified', async () => {
-      authDao.findParentByEmail.mockResolvedValue({ _id: 'p1', isVerified: false });
-
-      await expect(
-        authManager.loginWithMagicLink({ parentEmail: 'p@ex.com', childFirstName: 'João' }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
-    });
-
-    it('should throw NOT_FOUND when child not found for parent+name', async () => {
-      authDao.findParentByEmail.mockResolvedValue({ _id: 'p1', isVerified: true });
-      authDao.findActiveChildByParentAndName.mockResolvedValue(null);
-
-      await expect(
-        authManager.loginWithMagicLink({ parentEmail: 'p@ex.com', childFirstName: 'Unknown' }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
     });
   });
 
