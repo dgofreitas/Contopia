@@ -7,22 +7,16 @@ import redis from '../../config/redis.js';
 import {
   findParentByEmail,
   findParentById,
-  findParentByVerificationTokenHash,
   createParent,
-  updateParentVerification,
-  markParentVerified,
-  clearParentVerificationToken,
+  updateParentLastLogin,
   findChildById,
   findActiveChildByParentAndName,
   findActiveChildByParent,
-  findPendingChildByParentAndName,
+  findChildrenByParentId,
   createChild,
-  activateChild,
-  findPendingChildByParent,
   findChildByIdWithPassword,
   findParentByIdWithPassword,
   updateParentPassword,
-  findParentByPasswordSetupToken,
   createAuditLog,
   softDeleteChildById,
 } from './auth-dao.js';
@@ -32,30 +26,12 @@ const logger = pino({ name: 'auth-manager', level: process.env.LOG_LEVEL || 'inf
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET env var is required');
-const VERIFICATION_EXPIRY_HOURS = 72;
 const ACCESS_TOKEN_EXPIRY = '30m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days in seconds
 const SESSION_TTL_SECONDS = 30 * 60; // 30 minutes
 
 // ── Token Generation ────────────────────────────────────────────────────────
-
-/**
- * Generate a verification JWT for email confirmation.
- * Claims: sub (parentId), email, childId, type, iat, exp.
- */
-export function generateVerificationToken(parent, child) {
-  return jwt.sign(
-    {
-      sub: parent._id.toString(),
-      email: parent.email,
-      childId: child._id.toString(),
-      type: 'email_verification',
-    },
-    JWT_SECRET,
-    { expiresIn: `${VERIFICATION_EXPIRY_HOURS}h` }
-  );
-}
 
 /**
  * Generate a short-lived access token for a child session.
@@ -319,34 +295,6 @@ export async function loginWithPassword({ childId, password, ip, deviceHint }) {
 }
 
 /**
- * Login with magic link. Placeholder — returns magicLinkSent: true.
- * Actual email sending is a future story.
- */
-export async function loginWithMagicLink({ parentEmail, childFirstName }) {
-  // Find parent and active child
-  const parent = await findParentByEmail(parentEmail);
-  if (!parent || !parent.isVerified) {
-    const err = new Error('Parent not found or not verified');
-    err.code = 'NOT_FOUND';
-    err.status = 404;
-    throw err;
-  }
-
-  const child = await findActiveChildByParentAndName(parent._id, childFirstName);
-  if (!child) {
-    const err = new Error('Child not found');
-    err.code = 'NOT_FOUND';
-    err.status = 404;
-    throw err;
-  }
-
-  // Placeholder: in a future story, send magic link email here
-  logger.info({ parentId: parent._id, childId: child._id }, 'Magic link requested (placeholder)');
-
-  return { magicLinkSent: true, parentEmail };
-}
-
-/**
  * Logout: blacklist tokens, delete session, audit log.
  * Returns { loggedOut: true }.
  */
@@ -552,21 +500,47 @@ export async function getCurrentUser(childId) {
 
 // ── Business Operations ──────────────────────────────────────────────────────
 
+const MAX_CHILDREN_PER_PARENT = 5;
+
 /**
- * Register a parent + child, creating the parent if needed.
- * Returns { parent, child, token, tokenHash }.
- * Throws with code ACCOUNT_EXISTS if an active child with the same name exists.
+ * Register a new parent account with email and password.
+ * Returns { parent } on success.
+ * Throws ACCOUNT_EXISTS if email is already registered.
  */
-export async function registerParentAndChild({ parentEmail, childFirstName }) {
-  // Find or create parent
-  let parent = await findParentByEmail(parentEmail);
-  if (!parent) {
-    parent = await createParent({ email: parentEmail });
-    logger.info({ parentId: parent._id }, 'New parent created');
+export async function registerParent({ email, password }) {
+  const existing = await findParentByEmail(email);
+  if (existing) {
+    const err = new Error('An account with this email already exists');
+    err.code = 'ACCOUNT_EXISTS';
+    err.status = 409;
+    throw err;
   }
 
-  // Check for duplicate active child
-  const existingChild = await findActiveChildByParentAndName(parent._id, childFirstName);
+  const parent = await createParent({ email, password });
+  logger.info({ parentId: parent._id }, 'New parent registered');
+
+  return { parent };
+}
+
+/**
+ * Create a child profile under an existing parent account.
+ * Enforces 5-child limit at application level.
+ * Returns { child } on success.
+ * Throws ACCOUNT_EXISTS if an active child with the same name exists.
+ * Throws CHILD_LIMIT_REACHED if parent already has 5 active children.
+ */
+export async function createChildProfile({ parentId, firstName, avatarSeed }) {
+  // Check 5-child limit
+  const existingChildren = await findChildrenByParentId(parentId);
+  if (existingChildren.length >= MAX_CHILDREN_PER_PARENT) {
+    const err = new Error('Maximum number of child profiles reached (5)');
+    err.code = 'CHILD_LIMIT_REACHED';
+    err.status = 409;
+    throw err;
+  }
+
+  // Check for duplicate active child name
+  const existingChild = await findActiveChildByParentAndName(parentId, firstName);
   if (existingChild) {
     const err = new Error('An active child with this name already exists for this parent');
     err.code = 'ACCOUNT_EXISTS';
@@ -574,155 +548,10 @@ export async function registerParentAndChild({ parentEmail, childFirstName }) {
     throw err;
   }
 
-  // Create child (inactive until email verified)
-  const child = await createChild({ parentId: parent._id, firstName: childFirstName });
-  logger.info({ parentId: parent._id, childId: child._id }, 'Child created — pending verification');
+  const child = await createChild({ parentId, firstName, avatarSeed });
+  logger.info({ parentId, childId: child._id }, 'Child profile created');
 
-  // Generate verification JWT, hash it, store hash + expiry on parent
-  const token = generateVerificationToken(parent, child);
-  const tokenHash = hashToken(token);
-  const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_HOURS * 60 * 60 * 1000);
-
-  await updateParentVerification(parent._id, {
-    verificationToken: tokenHash,
-    verificationTokenExpires: expiresAt,
-  });
-
-  return { parent, child, token, tokenHash };
-}
-
-/**
- * Idempotent registration: if a pending child already exists for the same
- * parent + name, resend verification instead of creating a duplicate.
- * Returns { resent: true, parent, token } on idempotent path,
- * or { resent: false, parent, child, token } on normal registration.
- */
-export async function registerParentAndChildIdempotent({ parentEmail, childFirstName }) {
-  const parent = await findParentByEmail(parentEmail);
-
-  if (parent) {
-    const pendingChild = await findPendingChildByParentAndName(parent._id, childFirstName);
-    if (pendingChild) {
-      // Idempotent: resend verification instead of creating duplicate
-      const { token } = await resendVerification(parentEmail);
-      return { resent: true, parent, token };
-    }
-  }
-
-  // Normal registration
-  const { parent: newParent, child, token } = await registerParentAndChild({
-    parentEmail,
-    childFirstName,
-  });
-
-  return { resent: false, parent: newParent, child, token };
-}
-
-/**
- * Verify an email verification token.
- * Returns { childId } on success.
- * Throws with appropriate code/status on failure.
- */
-export async function verifyEmail(token) {
-  // Hash the token first to look it up
-  const tokenHash = hashToken(token);
-  const parent = await findParentByVerificationTokenHash(tokenHash);
-
-  if (!parent) {
-    const err = new Error('Verification token not found');
-    err.code = 'TOKEN_NOT_FOUND';
-    err.status = 404;
-    throw err;
-  }
-
-  // Verify JWT signature and expiration
-  let decoded;
-  try {
-    decoded = jwt.verify(token, JWT_SECRET);
-  } catch (jwtErr) {
-    if (jwtErr.name === 'TokenExpiredError') {
-      const err = new Error('Verification token has expired');
-      err.code = 'TOKEN_EXPIRED';
-      err.status = 410;
-      throw err;
-    }
-    const err = new Error('Invalid verification token');
-    err.code = 'INVALID_TOKEN';
-    err.status = 400;
-    throw err;
-  }
-
-  // Validate token type
-  if (decoded.type !== 'email_verification') {
-    const err = new Error('Invalid token type');
-    err.code = 'INVALID_TOKEN';
-    err.status = 400;
-    throw err;
-  }
-
-  // Verify hash matches stored hash (double-check)
-  if (parent.verificationToken !== tokenHash) {
-    const err = new Error('Token hash mismatch');
-    err.code = 'INVALID_TOKEN';
-    err.status = 400;
-    throw err;
-  }
-
-  // Check if not already expired (DB-level check)
-  if (parent.verificationTokenExpires && new Date(parent.verificationTokenExpires) < new Date()) {
-    const err = new Error('Verification token has expired');
-    err.code = 'TOKEN_EXPIRED';
-    err.status = 410;
-    throw err;
-  }
-
-  // Mark parent verified, clear token, activate child
-  await markParentVerified(parent._id);
-  await clearParentVerificationToken(parent._id);
-  await activateChild(decoded.childId);
-  logger.info({ parentId: parent._id, childId: decoded.childId }, 'Email verified — child activated');
-
-  return { childId: decoded.childId };
-}
-
-/**
- * Resend verification email.
- * Returns { emailSent: true } on success.
- * Throws NOT_FOUND if parent not found or already verified.
- */
-export async function resendVerification(parentEmail) {
-  const parent = await findParentByEmail(parentEmail);
-
-  if (!parent || parent.isVerified) {
-    const err = new Error('Parent not found or already verified');
-    err.code = 'NOT_FOUND';
-    err.status = 404;
-    throw err;
-  }
-
-  // Find a pending (inactive) child for this parent
-  const pendingChild = await findPendingChildByParent(parent._id);
-
-  if (!pendingChild) {
-    const err = new Error('No pending child found for this parent');
-    err.code = 'NOT_FOUND';
-    err.status = 404;
-    throw err;
-  }
-
-  // Generate new token, update parent
-  const token = generateVerificationToken(parent, pendingChild);
-  const tokenHash = hashToken(token);
-  const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_HOURS * 60 * 60 * 1000);
-
-  await updateParentVerification(parent._id, {
-    verificationToken: tokenHash,
-    verificationTokenExpires: expiresAt,
-  });
-
-  logger.info({ parentId: parent._id }, 'Verification email resent');
-
-  return { token, parentId: parent._id, childFirstName: pendingChild.firstName };
+  return { child };
 }
 
 /**
@@ -843,7 +672,6 @@ const PARENT_ACCESS_TOKEN_EXPIRY = '30m';
 const PARENT_REFRESH_TOKEN_EXPIRY = '7d';
 const PARENT_SESSION_TTL_SECONDS = 30 * 60; // 30 minutes
 const PARENT_REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
-const PASSWORD_SETUP_EXPIRY_HOURS = 24;
 const INCREMENT_LOGIN_ATTEMPTS_PARENT = 'loginAttemptsParent';
 
 /**
@@ -876,21 +704,6 @@ export function generateParentRefreshToken(parentId) {
     },
     JWT_SECRET,
     { expiresIn: PARENT_REFRESH_TOKEN_EXPIRY }
-  );
-}
-
-/**
- * Generate a password setup JWT token for a parent.
- * Claims: sub (parentId), type: 'password_setup'.
- */
-export function generatePasswordSetupToken(parentId) {
-  return jwt.sign(
-    {
-      sub: parentId.toString(),
-      type: 'password_setup',
-    },
-    JWT_SECRET,
-    { expiresIn: `${PASSWORD_SETUP_EXPIRY_HOURS}h` }
   );
 }
 
@@ -1010,20 +823,12 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
     throw err;
   }
 
-  // Check that parent is verified
-  if (!parent.isVerified) {
-    const err = new Error('Email not verified — please verify your email first');
-    err.code = 'NOT_VERIFIED';
-    err.status = 403;
-    throw err;
-  }
-
   // Get parent with password
   const parentWithPassword = await findParentByIdWithPassword(parent._id);
   if (!parentWithPassword?.password) {
     createAuditLog({ parentId: parent._id.toString(), sessionId: 'none', event: 'PARENT_LOGIN_FAILED', ip, deviceHint }).catch(() => {});
-    const err = new Error('Password not set — please set up your password first');
-    err.code = 'PASSWORD_NOT_SET';
+    const err = new Error('Invalid credentials');
+    err.code = 'INVALID_CREDENTIALS';
     err.status = 401;
     throw err;
   }
@@ -1037,8 +842,13 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
     throw err;
   }
 
-  // Find the child linked to this parent
-  const childData = await findActiveChildByParent(parent._id);
+  // Update lastLogin timestamp (best-effort, non-blocking)
+  updateParentLastLogin(parent._id).catch((err) => {
+    logger.warn({ err, parentId: parent._id }, 'Failed to update lastLogin');
+  });
+
+  // Find children linked to this parent
+  const children = await findChildrenByParentId(parent._id);
 
   // Generate tokens
   const accessToken = generateParentAccessToken(parent._id);
@@ -1061,81 +871,13 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
     refreshToken,
     parentId: parent._id.toString(),
     email: parent.email,
-    childFirstName: childData?.firstName || null,
-    childId: childData?._id?.toString() || null,
+    children: children.map((c) => ({
+      childId: c._id.toString(),
+      firstName: c.firstName,
+      avatarSeed: c.avatarSeed || 'avatar_default',
+    })),
     refreshAvailable,
     sessionId,
-  };
-}
-
-/**
- * Parent setup password: validate setup token, set password.
- * Returns { parentId, email, passwordSet: true }.
- */
-export async function parentSetupPassword({ token, password }) {
-  // Verify JWT
-  let decoded;
-  try {
-    decoded = jwt.verify(token, JWT_SECRET);
-  } catch (jwtErr) {
-    if (jwtErr.name === 'TokenExpiredError') {
-      const err = new Error('Password setup token has expired');
-      err.code = 'TOKEN_EXPIRED';
-      err.status = 410;
-      throw err;
-    }
-    const err = new Error('Invalid password setup token');
-    err.code = 'INVALID_TOKEN';
-    err.status = 400;
-    throw err;
-  }
-
-  if (decoded.type !== 'password_setup') {
-    const err = new Error('Invalid token type');
-    err.code = 'INVALID_TOKEN';
-    err.status = 400;
-    throw err;
-  }
-
-  const parentId = decoded.sub;
-
-  // Verify parent exists
-  const parent = await findParentById(parentId);
-
-  if (!parent) {
-    const err = new Error('Parent not found');
-    err.code = 'NOT_FOUND';
-    err.status = 404;
-    throw err;
-  }
-
-  // Verify token hash matches stored hash
-  const tokenHash = hashToken(token);
-  const parentByToken = await findParentByPasswordSetupToken(tokenHash);
-  if (!parentByToken) {
-    const err = new Error('Invalid or already used password setup token');
-    err.code = 'INVALID_TOKEN';
-    err.status = 400;
-    throw err;
-  }
-
-  // Check expiry at DB level
-  if (parentByToken.passwordSetupExpires && new Date(parentByToken.passwordSetupExpires) < new Date()) {
-    const err = new Error('Password setup token has expired');
-    err.code = 'TOKEN_EXPIRED';
-    err.status = 410;
-    throw err;
-  }
-
-  // Update password (pre-save hook will hash it)
-  await updateParentPassword(parentByToken._id, password);
-
-  logger.info({ parentId: parentByToken._id.toString() }, 'Parent password set');
-
-  return {
-    parentId: parentByToken._id.toString(),
-    email: parentByToken.email,
-    passwordSet: true,
   };
 }
 
@@ -1291,7 +1033,7 @@ export async function parentRefreshSession({ refreshToken, ip, deviceHint }) {
 }
 
 /**
- * Get current parent info: parentId, email, childId, childFirstName, dashNav.
+ * Get current parent info: parentId, email, children, dashNav.
  */
 export async function getCurrentParent(parentId) {
   const parentIdStr = parentId.toString();
@@ -1304,14 +1046,18 @@ export async function getCurrentParent(parentId) {
     throw err;
   }
 
-  // Find child linked to this parent
-  const childData = await findActiveChildByParent(parentDoc._id);
+  // Find children linked to this parent
+  const children = await findChildrenByParentId(parentDoc._id);
 
   return {
     parentId: parentIdStr,
     email: parentDoc.email,
-    childId: childData?._id?.toString() || null,
-    childFirstName: childData?.firstName || null,
+    lastLogin: parentDoc.lastLogin,
+    children: children.map((c) => ({
+      childId: c._id.toString(),
+      firstName: c.firstName,
+      avatarSeed: c.avatarSeed || 'avatar_default',
+    })),
     dashNav: ['activity', 'export', 'delete', 'privacy'],
   };
 }

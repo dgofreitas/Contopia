@@ -3,10 +3,9 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import redis from '../../config/redis.js';
-import { registerSchema, resendSchema, childLoginSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentSetupPasswordSchema, parentRefreshSchema } from '../common/validation-schemas.js';
+import { childLoginSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentRegisterSchema, parentRefreshSchema } from '../common/validation-schemas.js';
 import { authMiddleware, parentAuthMiddleware } from '../common/auth-middleware.js';
 import * as authManager from './auth-manager.js';
-import { sendVerificationEmail } from '../common/email-service.js';
 import { ok, fail } from '../common/response-envelope.js';
 
 const logger = pino({ name: 'auth-router', level: process.env.LOG_LEVEL || 'info' });
@@ -46,30 +45,14 @@ function createLimiter({ windowMs, max, message: _message, keyGenerator }) {
   return rateLimit(opts);
 }
 
-const registerLimiter = createLimiter({
+const registerParentLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   message: 'Too many registration attempts.',
   keyGenerator: (req) => {
-    const email = req.body?.parentEmail || '';
+    const email = req.body?.email || '';
     return `${req.ip}:${email.slice(0, 3)}`;
   },
-});
-
-const resendLimiter = createLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
-  message: 'Too many resend attempts.',
-  keyGenerator: (req) => {
-    const email = req.body?.parentEmail || '';
-    return `${req.ip}:${email.slice(0, 3)}`;
-  },
-});
-
-const verifyLimiter = createLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30,
-  message: 'Too many verification attempts.',
 });
 
 const loginLimiter = createLimiter({
@@ -108,93 +91,22 @@ function sanitizeUserAgent(req) {
     : null;
 }
 
-function buildVerificationLink(token) {
-  const base = process.env.APP_URL || 'http://localhost:8000';
-  return `${base}/api/auth/verify/${token}`;
-}
-
-// ── POST /register ──────────────────────────────────────────────────────────
-router.post('/register', registerLimiter, async (req, res) => {
+// ── POST /register-parent ──────────────────────────────────────────────────
+router.post('/register-parent', registerParentLimiter, async (req, res) => {
   const requestId = req.id;
 
   try {
-    // Validate input
-    const parsed = registerSchema.safeParse(req.body);
+    const parsed = parentRegisterSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
-    const { parentEmail, childFirstName } = parsed.data;
+    const { email, password } = parsed.data;
+    const result = await authManager.registerParent({ email, password });
 
-    const result = await authManager.registerParentAndChildIdempotent({
-      parentEmail,
-      childFirstName,
-    });
+    logger.info({ parentId: result.parent._id, requestId }, 'Parent registered');
 
-    if (result.resent) {
-      // Idempotent: verification resent for existing pending child
-      await sendVerificationEmail({
-        to: parentEmail,
-        childFirstName,
-        verificationLink: buildVerificationLink(result.token),
-      });
-      logger.info({ parentId: result.parent._id, requestId }, 'Verification resent (idempotent register)');
-      return res.status(200).json(ok({ parentId: result.parent._id.toString(), emailSent: true, resent: true }, { requestId }));
-    }
-
-    // Normal registration
-    await sendVerificationEmail({
-      to: parentEmail,
-      childFirstName,
-      verificationLink: buildVerificationLink(result.token),
-    });
-
-    logger.info({ parentId: result.parent._id, childId: result.child._id, requestId }, 'Parent+child registered');
-
-    return res.status(201).json(ok({ parentId: result.parent._id.toString(), emailSent: true }, { requestId }));
-  } catch (err) {
-    return handleError(err, req, res);
-  }
-});
-
-// ── GET /verify/:token ──────────────────────────────────────────────────────
-router.get('/verify/:token', verifyLimiter, async (req, res) => {
-  const requestId = req.id;
-
-  try {
-    const { token } = req.params;
-    const result = await authManager.verifyEmail(token);
-
-    logger.info({ childId: result.childId, requestId }, 'Email verified');
-
-    return res.status(200).json(ok({ childId: result.childId }, { requestId }));
-  } catch (err) {
-    return handleError(err, req, res);
-  }
-});
-
-// ── POST /resend-verification ───────────────────────────────────────────────
-router.post('/resend-verification', resendLimiter, async (req, res) => {
-  const requestId = req.id;
-
-  try {
-    const parsed = resendSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
-    }
-
-    const { parentEmail } = parsed.data;
-    const result = await authManager.resendVerification(parentEmail);
-
-    await sendVerificationEmail({
-      to: parentEmail,
-      childFirstName: result.childFirstName,
-      verificationLink: buildVerificationLink(result.token),
-    });
-
-    logger.info({ parentId: result.parentId, requestId }, 'Verification resent');
-
-    return res.status(200).json(ok({ emailSent: true }, { requestId }));
+    return res.status(201).json(ok({ parentId: result.parent._id.toString() }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -272,12 +184,6 @@ router.post('/login', loginLimiter, async (req, res) => {
         method: result.method,
         sessionId: result.sessionId,
       }, { requestId }));
-    }
-
-    if (method === 'magic-link') {
-      const { parentEmail, childFirstName } = parsed.data;
-      const result = await authManager.loginWithMagicLink({ parentEmail, childFirstName });
-      return res.status(200).json(ok({ magicLinkSent: result.magicLinkSent, parentEmail: result.parentEmail }, { requestId }));
     }
   } catch (err) {
     return handleError(err, req, res);
@@ -415,31 +321,7 @@ parentAuthRouter.post('/login', parentLoginLimiter, async (req, res) => {
       accessToken: result.accessToken,
       parentId: result.parentId,
       email: result.email,
-      childFirstName: result.childFirstName,
-      childId: result.childId,
-    }, { requestId }));
-  } catch (err) {
-    return handleError(err, req, res);
-  }
-});
-
-// ── POST /setup-password ─────────────────────────────────────────────────────
-parentAuthRouter.post('/setup-password', async (req, res) => {
-  const requestId = req.id;
-
-  try {
-    const parsed = parentSetupPasswordSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
-    }
-
-    const { token, password } = parsed.data;
-    const result = await authManager.parentSetupPassword({ token, password });
-
-    return res.status(200).json(ok({
-      parentId: result.parentId,
-      email: result.email,
-      passwordSet: result.passwordSet,
+      children: result.children,
     }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
