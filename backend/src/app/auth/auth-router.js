@@ -101,11 +101,11 @@ router.post('/register', registerParentLimiter, async (req, res) => {
       return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
-    const { email, password } = parsed.data;
+    const { email, password, ageConsent } = parsed.data;
     const ip = req.ip;
     const deviceHint = sanitizeUserAgent(req);
 
-    const result = await authManager.registerParent({ email, password, ageConsent: parsed.data.ageConsent, ip, deviceHint });
+    const result = await authManager.registerParent({ email, password, ageConsent, ip, deviceHint });
 
     // Set refresh token as httpOnly cookie (same as login)
     res.cookie('parentRefreshToken', result.refreshToken, {
@@ -219,9 +219,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
 
     const { childId, sessionId, token } = req;
     const ip = req.ip;
-    const deviceHint = req.headers['user-agent']
-      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
-      : null;
+    const deviceHint = sanitizeUserAgent(req);
 
     // Extract refreshToken from body if provided (client may send it for explicit revocation)
     const refreshToken = req.body.refreshToken || null;
@@ -253,9 +251,7 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
 
     const { refreshToken } = parsed.data;
     const ip = req.ip;
-    const deviceHint = req.headers['user-agent']
-      ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
-      : null;
+    const deviceHint = sanitizeUserAgent(req);
 
     const result = await authManager.refreshSession({ refreshToken, ip, deviceHint });
 
