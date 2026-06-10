@@ -9,57 +9,23 @@ export async function findParentByEmail(email) {
 }
 
 /**
- * Find a parent by the SHA-256 hash of their verification JWT.
- * Remember: verificationToken field has select:false, so use .select('+verificationToken +verificationTokenExpires').
+ * Create a new parent document with email and password.
+ * Password is hashed via pre-save hook.
  */
-export async function findParentByVerificationTokenHash(tokenHash) {
-  return Parent.findOne({ verificationToken: tokenHash })
-    .select('+verificationToken +verificationTokenExpires')
-    .lean()
-    .exec();
-}
-
-/**
- * Create a new parent document.
- */
-export async function createParent({ email }) {
-  const doc = await Parent.create({ email });
+export async function createParent({ email, password }) {
+  const doc = await Parent.create({ email, password });
   return doc.toObject();
 }
 
 /**
- * Update parent's verification token hash and expiry.
+ * Update parent's lastLogin timestamp.
  */
-export async function updateParentVerification(parentId, { verificationToken, verificationTokenExpires }) {
-  const doc = await Parent.findByIdAndUpdate(
-    parentId,
-    { verificationToken, verificationTokenExpires },
-    { new: true }
-  )
-    .select('+verificationToken +verificationTokenExpires')
-    .lean()
-    .exec();
-  return doc;
-}
-
-/**
- * Mark parent as verified (isVerified = true).
- */
-export async function markParentVerified(parentId) {
-  return Parent.findByIdAndUpdate(parentId, { isVerified: true }, { new: true }).lean().exec();
-}
-
-/**
- * Clear the verification token hash from parent after verification.
- */
-export async function clearParentVerificationToken(parentId) {
+export async function updateParentLastLogin(parentId) {
   return Parent.findByIdAndUpdate(
     parentId,
-    { $unset: { verificationToken: '', verificationTokenExpires: '' } },
+    { lastLogin: new Date() },
     { new: true }
-  )
-    .lean()
-    .exec();
+  ).lean().exec();
 }
 
 /**
@@ -84,34 +50,21 @@ export async function findActiveChildByParentAndName(parentId, firstName) {
 }
 
 /**
- * Find a pending (inactive) child by parent ID and first name.
- * Used for idempotent registration — resend instead of duplicate.
+ * Find all active children for a parent.
+ * Used by parent dashboard to list child profiles.
  */
-export async function findPendingChildByParentAndName(parentId, firstName) {
-  return Child.findOne({
+export async function findChildrenByParentId(parentId) {
+  return Child.find({
     parentId,
-    firstName,
-    isActive: false,
+    isActive: true,
+    deletedAt: null,
   })
     .lean()
     .exec();
 }
 
 /**
- * Find a pending (inactive) child for a parent (any name).
- * Used by resendVerification to locate the unverified child.
- */
-export async function findPendingChildByParent(parentId) {
-  return Child.findOne({
-    parentId,
-    isActive: false,
-  })
-    .lean()
-    .exec();
-}
-
-/**
- * Find an active child for a parent (any name).
+ * Find an active child for a parent (first match).
  * Used by parent auth to find the child linked to a parent.
  */
 export async function findActiveChildByParent(parentId) {
@@ -127,16 +80,9 @@ export async function findActiveChildByParent(parentId) {
 /**
  * Create a new child document.
  */
-export async function createChild({ parentId, firstName }) {
-  const doc = await Child.create({ parentId, firstName });
+export async function createChild({ parentId, firstName, avatarSeed }) {
+  const doc = await Child.create({ parentId, firstName, avatarSeed: avatarSeed || 'avatar_default' });
   return doc.toObject();
-}
-
-/**
- * Activate a child (isActive = true).
- */
-export async function activateChild(childId) {
-  return Child.findByIdAndUpdate(childId, { isActive: true }, { new: true }).lean().exec();
 }
 
 /**
@@ -200,43 +146,15 @@ export async function findParentByIdWithPassword(parentId) {
 }
 
 /**
- * Update a parent's password hash and clear setup token fields.
+ * Update a parent's password hash.
  */
 export async function updateParentPassword(parentId, password) {
   return Parent.findByIdAndUpdate(
     parentId,
-    {
-      $set: { password },
-      $unset: { passwordSetupToken: '', passwordSetupExpires: '' },
-    },
+    { $set: { password } },
     { new: true }
   )
-    .select('+password +passwordSetupToken +passwordSetupExpires')
-    .lean()
-    .exec();
-}
-
-/**
- * Find a parent by their password setup token.
- * Selects hidden fields needed for token verification.
- */
-export async function findParentByPasswordSetupToken(tokenHash) {
-  return Parent.findOne({ passwordSetupToken: tokenHash })
-    .select('+passwordSetupToken +passwordSetupExpires')
-    .lean()
-    .exec();
-}
-
-/**
- * Set password setup token and expiry on a parent.
- */
-export async function setParentPasswordSetupToken(parentId, { passwordSetupToken, passwordSetupExpires }) {
-  return Parent.findByIdAndUpdate(
-    parentId,
-    { passwordSetupToken, passwordSetupExpires },
-    { new: true }
-  )
-    .select('+passwordSetupToken +passwordSetupExpires')
+    .select('+password')
     .lean()
     .exec();
 }

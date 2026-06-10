@@ -2,26 +2,6 @@
 import { z } from 'zod';
 
 /**
- * Register schema — parent email + child first name.
- * childFirstName allows Unicode letters (accented names common in pt-BR).
- */
-export const registerSchema = z.object({
-  parentEmail: z.string().email(),
-  childFirstName: z
-    .string()
-    .min(1)
-    .max(50)
-    .regex(/^[\p{L}]+$/u, 'First name must contain only letters'),
-});
-
-/**
- * Resend verification schema — just the parent email.
- */
-export const resendSchema = z.object({
-  parentEmail: z.string().email(),
-});
-
-/**
  * Child login schema — childId + parentId.
  */
 export const childLoginSchema = z.object({
@@ -30,24 +10,13 @@ export const childLoginSchema = z.object({
 });
 
 /**
- * Login schema — discriminated union: password method or magic-link method.
+ * Login schema — password method only (magic-link removed in STORY-056).
  */
-export const loginSchema = z.discriminatedUnion('method', [
-  z.object({
-    method: z.literal('password'),
-    childId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
-    password: z.string().min(4).max(20),
-  }),
-  z.object({
-    method: z.literal('magic-link'),
-    parentEmail: z.string().email(),
-    childFirstName: z
-      .string()
-      .min(1)
-      .max(50)
-      .regex(/^[\p{L}]+$/u, 'First name must contain only letters'),
-  }),
-]);
+export const loginSchema = z.object({
+  method: z.literal('password'),
+  childId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
+  password: z.string().min(4).max(20),
+});
 
 /**
  * Logout schema — sessionId echoed for audit (actual sessionId from JWT).
@@ -66,9 +35,10 @@ export const refreshSchema = z.object({
 // ── Parent Auth Schemas (STORY-052) ──────────────────────────────────────────────
 
 /**
- * Parent login schema — email + password.
+ * Parent register schema — email + password (STORY-056 pivot).
+ * Password requirements: min 8 chars, 1 uppercase, 1 number.
  */
-export const parentLoginSchema = z.object({
+export const parentRegisterSchema = z.object({
   email: z.string().email(),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
@@ -77,10 +47,10 @@ export const parentLoginSchema = z.object({
 });
 
 /**
- * Parent setup password schema — token + password (min 8, 1 uppercase, 1 number).
+ * Parent login schema — email + password.
  */
-export const parentSetupPasswordSchema = z.object({
-  token: z.string().min(1),
+export const parentLoginSchema = z.object({
+  email: z.string().email(),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')

@@ -15,38 +15,19 @@ const parentSchema = new Schema(
       trim: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'],
     },
-    verificationToken: {
-      type: String,
-      select: false,
-    },
-    verificationTokenExpires: {
-      type: Date,
-      select: false,
-    },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
     password: {
       type: String,
       select: false, // never included by default — only loaded for login
     },
-    passwordSetupToken: {
-      type: String,
-      select: false,
-    },
-    passwordSetupExpires: {
+    lastLogin: {
       type: Date,
-      select: false,
+      default: null,
     },
   },
   {
     timestamps: true,
   }
 );
-
-parentSchema.index({ verificationToken: 1 }, { sparse: true });
-parentSchema.index({ passwordSetupToken: 1 }, { sparse: true });
 
 parentSchema.pre('save', async function(next) {
   if (this.isModified('password') && this.password) {
@@ -68,7 +49,12 @@ const childSchema = new Schema(
       type: String,
       required: [true, 'First name is required'],
       trim: true,
-      maxlength: 50,
+      maxlength: 30,
+    },
+    avatarSeed: {
+      type: String,
+      required: [true, 'Avatar seed is required'],
+      default: 'avatar_default',
     },
     password: {
       type: String,
@@ -76,7 +62,7 @@ const childSchema = new Schema(
     },
     isActive: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     onboardingCompleted: {
       type: Boolean,

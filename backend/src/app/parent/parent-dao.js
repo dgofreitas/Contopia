@@ -5,8 +5,9 @@ import { getWeeklyReadingTime } from '../book/book-dao.js';
 import { DeletionRequest } from './parent-model.js';
 
 /**
- * Find a parent by ID with their child populated.
+ * Find a parent by ID with their first active child populated.
  * Returns { parent, child } or null if parent not found.
+ * Note: For multiple children, use findChildrenByParentId + findParentById.
  */
 export async function findParentByIdWithChild(parentId) {
   const parent = await Parent.findById(parentId).lean().exec();
@@ -20,6 +21,21 @@ export async function findParentByIdWithChild(parentId) {
   }).lean().exec();
 
   return { parent, child };
+}
+
+/**
+ * Find all active children for a parent.
+ * Used by parent dashboard to list child profiles.
+ */
+export async function findChildrenByParentId(parentId) {
+  return Child.find({
+    parentId,
+    isActive: true,
+    deletedAt: null,
+  })
+    .select('firstName avatarSeed isActive onboardingCompleted createdAt')
+    .lean()
+    .exec();
 }
 
 /**
