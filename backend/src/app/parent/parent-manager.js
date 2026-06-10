@@ -3,6 +3,7 @@ import pino from 'pino';
 import archiver from 'archiver';
 import {
   findParentByIdWithChild,
+  findChildrenByParentId,
   getWeeklyBookCount,
   getWeeklyBooksReadCount,
   getWeeklyReadingTimeForChild,
@@ -15,6 +16,7 @@ import {
   createDeletionRequest,
   cancelDeletionRequest,
 } from './parent-dao.js';
+import { findParentById } from '../auth/auth-dao.js';
 import { findAssetRecordById } from '../storage/storage-dao.js';
 import { getSignedUrl as getSignedUrlService } from '../storage/storage-service.js';
 import { findAssetsByBook, createActivityLog } from '../book/book-dao.js';
@@ -63,6 +65,43 @@ export async function getChildActivitySummary(parentId) {
     childFirstName: result.child.firstName,
     childId: childId.toString(),
     hasActivity,
+  };
+}
+
+// ── Parent Dashboard (STORY-058) ────────────────────────────────────────────────
+
+/**
+ * Get parent dashboard data: email, children list, hasChildren flag.
+ * Used by GET /dashboard for the empty-state & shell view.
+ * @param {string} parentId — Authenticated parent's ID
+ * @returns {{ email: string, children: Array, hasChildren: boolean }}
+ */
+export async function getParentDashboardData(parentId) {
+  const parentIdStr = parentId.toString();
+
+  const parent = await findParentById(parentIdStr);
+
+  if (!parent) {
+    const err = new Error('Parent not found');
+    err.code = 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+
+  const children = await findChildrenByParentId(parentIdStr);
+
+  const mappedChildren = children.map((child) => ({
+    childId: child._id.toString(),
+    firstName: child.firstName,
+    avatarSeed: child.avatarSeed,
+    onboardingCompleted: child.onboardingCompleted,
+    createdAt: child.createdAt,
+  }));
+
+  return {
+    email: parent.email,
+    children: mappedChildren,
+    hasChildren: mappedChildren.length > 0,
   };
 }
 

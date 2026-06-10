@@ -10,6 +10,7 @@ vi.mock('pino', () => ({
 // ── Mock parent DAO ───────────────────────────────────────────────────────────
 vi.mock('../parent-dao.js', () => ({
   findParentByIdWithChild: vi.fn(),
+  findChildrenByParentId: vi.fn(),
   getWeeklyBookCount: vi.fn(),
   getWeeklyBooksReadCount: vi.fn(),
   getWeeklyReadingTimeForChild: vi.fn(),
@@ -21,6 +22,10 @@ vi.mock('../parent-dao.js', () => ({
   findDeletionStatusByParent: vi.fn(),
   createDeletionRequest: vi.fn(),
   cancelDeletionRequest: vi.fn(),
+}));
+
+vi.mock('../../auth/auth-dao.js', () => ({
+  findParentById: vi.fn(),
 }));
 
 // ── Mock storage dependencies ─────────────────────────────────────────────────
@@ -61,6 +66,7 @@ vi.mock('archiver', () => {
 
 import * as parentManager from '../parent-manager.js';
 import * as parentDao from '../parent-dao.js';
+import * as authDao from '../../auth/auth-dao.js';
 import * as storageDao from '../../storage/storage-dao.js';
 import * as storageService from '../../storage/storage-service.js';
 import { findAssetsByBook, createActivityLog } from '../../book/book-dao.js';
@@ -336,6 +342,99 @@ describe('Parent Manager — STORY-053', () => {
       // Assert
       expect(parentDao.getChildBookTitlesWithCovers).toHaveBeenCalledWith(CHILD_ID, { limit: 10, skip: 5 });
       expect(parentDao.countChildBooks).toHaveBeenCalledWith(CHILD_ID);
+    });
+  });
+});
+
+// ── STORY-058: Parent Dashboard Data Tests ─────────────────────────────────────
+
+describe('Parent Manager — STORY-058 (Dashboard Data)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('getParentDashboardData', () => {
+    it('should return parent email and children when parent has children', async () => {
+      // Arrange
+      authDao.findParentById.mockResolvedValue({
+        _id: PARENT_ID,
+        email: 'parent@example.com',
+      });
+      parentDao.findChildrenByParentId.mockResolvedValue([
+        {
+          _id: new mongoose.Types.ObjectId(),
+          firstName: 'Julia',
+          avatarSeed: 'seed_julia',
+          onboardingCompleted: true,
+          createdAt: new Date('2026-01-15T10:00:00Z'),
+        },
+        {
+          _id: new mongoose.Types.ObjectId(),
+          firstName: 'Carlos',
+          avatarSeed: 'seed_carlos',
+          onboardingCompleted: false,
+          createdAt: new Date('2026-03-20T14:30:00Z'),
+        },
+      ]);
+
+      // Act
+      const result = await parentManager.getParentDashboardData(PARENT_ID);
+
+      // Assert
+      expect(result.email).toBe('parent@example.com');
+      expect(result.hasChildren).toBe(true);
+      expect(result.children).toHaveLength(2);
+      expect(result.children[0].firstName).toBe('Julia');
+      expect(result.children[0].onboardingCompleted).toBe(true);
+      expect(result.children[1].firstName).toBe('Carlos');
+      expect(result.children[1].onboardingCompleted).toBe(false);
+      expect(result.children[0].childId).toBeDefined();
+      expect(result.children[0].avatarSeed).toBe('seed_julia');
+      expect(result.children[0].createdAt).toBeDefined();
+    });
+
+    it('should return empty children array and hasChildren=false when parent has no children', async () => {
+      // Arrange
+      authDao.findParentById.mockResolvedValue({
+        _id: PARENT_ID,
+        email: 'newparent@example.com',
+      });
+      parentDao.findChildrenByParentId.mockResolvedValue([]);
+
+      // Act
+      const result = await parentManager.getParentDashboardData(PARENT_ID);
+
+      // Assert
+      expect(result.email).toBe('newparent@example.com');
+      expect(result.hasChildren).toBe(false);
+      expect(result.children).toEqual([]);
+    });
+
+    it('should throw 404 NOT_FOUND when parent does not exist', async () => {
+      // Arrange
+      authDao.findParentById.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(parentManager.getParentDashboardData(PARENT_ID))
+        .rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
+      await expect(parentManager.getParentDashboardData(PARENT_ID))
+        .rejects.toThrow('Parent not found');
+    });
+
+    it('should call findParentById and findChildrenByParentId with correct parentId', async () => {
+      // Arrange
+      authDao.findParentById.mockResolvedValue({
+        _id: PARENT_ID,
+        email: 'parent@example.com',
+      });
+      parentDao.findChildrenByParentId.mockResolvedValue([]);
+
+      // Act
+      await parentManager.getParentDashboardData(PARENT_ID);
+
+      // Assert
+      expect(authDao.findParentById).toHaveBeenCalledWith(PARENT_ID);
+      expect(parentDao.findChildrenByParentId).toHaveBeenCalledWith(PARENT_ID);
     });
   });
 });

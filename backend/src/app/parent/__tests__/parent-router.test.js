@@ -31,6 +31,7 @@ vi.mock('express-rate-limit', () => ({
 vi.mock('../parent-manager.js', () => ({
   getChildActivitySummary: vi.fn(),
   getChildBookList: vi.fn(),
+  getParentDashboardData: vi.fn(),
   exportChildData: vi.fn(),
   requestAccountDeletion: vi.fn(),
   cancelAccountDeletion: vi.fn(),
@@ -98,6 +99,112 @@ describe('Parent Router — STORY-053', () => {
     redis.exists.mockResolvedValue(0);
     redis.incr.mockResolvedValue(1);
     redis.expire.mockResolvedValue(1);
+  });
+
+  // ── GET /dashboard — STORY-058 ────────────────────────────────────────────────
+
+  describe('GET /api/parent/dashboard', () => {
+    it('should return 200 with dashboard data for parent with children', async () => {
+      // Arrange
+      parentManager.getParentDashboardData.mockResolvedValue({
+        email: 'parent@example.com',
+        children: [
+          { childId: 'c1', firstName: 'Julia', avatarSeed: 'seed1', onboardingCompleted: true, createdAt: '2026-01-15T10:00:00Z' },
+          { childId: 'c2', firstName: 'Carlos', avatarSeed: 'seed2', onboardingCompleted: false, createdAt: '2026-03-20T14:30:00Z' },
+        ],
+        hasChildren: true,
+      });
+
+      // Act
+      const res = await request(testApp)
+        .get('/api/parent/dashboard')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.email).toBe('parent@example.com');
+      expect(res.body.data.hasChildren).toBe(true);
+      expect(res.body.data.children).toHaveLength(2);
+      expect(res.body.data.children[0].firstName).toBe('Julia');
+      expect(res.body.data.children[1].firstName).toBe('Carlos');
+    });
+
+    it('should return 200 with empty state when parent has no children', async () => {
+      // Arrange
+      parentManager.getParentDashboardData.mockResolvedValue({
+        email: 'newparent@example.com',
+        children: [],
+        hasChildren: false,
+      });
+
+      // Act
+      const res = await request(testApp)
+        .get('/api/parent/dashboard')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data.email).toBe('newparent@example.com');
+      expect(res.body.data.hasChildren).toBe(false);
+      expect(res.body.data.children).toEqual([]);
+    });
+
+    it('should return 404 when parent not found', async () => {
+      // Arrange
+      parentManager.getParentDashboardData.mockRejectedValue({
+        status: 404,
+        code: 'NOT_FOUND',
+        message: 'Parent not found',
+      });
+
+      // Act
+      const res = await request(testApp)
+        .get('/api/parent/dashboard')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      // Assert
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('should return 401 without auth token', async () => {
+      // Act
+      const res = await request(testApp).get('/api/parent/dashboard');
+
+      // Assert
+      expect(res.status).toBe(401);
+    });
+
+    it('should call getParentDashboardData with parentId from auth', async () => {
+      // Arrange
+      parentManager.getParentDashboardData.mockResolvedValue({
+        email: 'parent@example.com',
+        children: [],
+        hasChildren: false,
+      });
+
+      // Act
+      await request(testApp)
+        .get('/api/parent/dashboard')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      // Assert
+      expect(parentManager.getParentDashboardData).toHaveBeenCalledWith(PARENT_ID);
+    });
+
+    it('should return 500 with generic message when manager throws unexpected error', async () => {
+      // Arrange
+      parentManager.getParentDashboardData.mockRejectedValue(new Error('Unexpected DB error'));
+
+      // Act
+      const res = await request(testApp)
+        .get('/api/parent/dashboard')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      // Assert
+      expect(res.status).toBe(500);
+      expect(res.body.error.message).toBe('Something went wrong — please try again later');
+    });
   });
 
   // ── GET /activity/summary ────────────────────────────────────────────────────

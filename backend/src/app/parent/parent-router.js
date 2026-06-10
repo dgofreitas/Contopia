@@ -10,12 +10,12 @@ const logger = pino({ name: 'parent-router', level: process.env.LOG_LEVEL || 'in
 
 const router = Router();
 
-// ── GET /dashboard ───────────────────────────────────────────────────────────
+// ── GET /dashboard — Parent dashboard data (STORY-058) ────────────────────────
 router.get('/dashboard', parentAuthMiddleware, async (req, res) => {
   const requestId = req.id;
 
   try {
-    const result = await parentManager.getChildActivitySummary(req.parentId);
+    const result = await parentManager.getParentDashboardData(req.parentId);
 
     return res.status(200).json(ok(result, { requestId }));
   } catch (err) {
