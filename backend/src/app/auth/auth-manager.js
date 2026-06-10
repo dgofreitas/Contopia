@@ -518,8 +518,11 @@ export async function registerParent({ email, password, ageConsent, ip, deviceHi
     throw err;
   }
 
-  const parent = await createParent({ email, password });
+  const parent = await createParent({ email, password, ageConsentAt: new Date() });
   logger.info({ parentId: parent._id }, 'New parent registered');
+
+  // Audit log: record consent event (fire-and-forget)
+  createAuditLog({ parentId: parent._id.toString(), sessionId: 'registration', event: 'PARENT_REGISTRATION_CONSENT', ip, deviceHint }).catch(() => {});
 
   // Auto-login: create parent session and issue tokens
   const accessToken = generateParentAccessToken(parent._id);

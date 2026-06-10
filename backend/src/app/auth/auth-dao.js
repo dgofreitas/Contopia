@@ -12,8 +12,8 @@ export async function findParentByEmail(email) {
  * Create a new parent document with email and password.
  * Password is hashed via pre-save hook.
  */
-export async function createParent({ email, password }) {
-  const doc = await Parent.create({ email, password });
+export async function createParent({ email, password, ageConsentAt }) {
+  const doc = await Parent.create({ email, password, ageConsentAt });
   return doc.toObject();
 }
 
