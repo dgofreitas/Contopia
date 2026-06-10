@@ -54,6 +54,16 @@ const useParentAuthStore = create((set, get) => ({
     });
   },
 
+  // Register: set all auth state from registration response
+  register: ({ accessToken, parentId, email, children }) =>
+    set({
+      parentToken: accessToken,
+      parentUser: { parentId, email, children },
+      parentSessionCreatedAt: Date.now(),
+      parentLastActivity: Date.now(),
+      parentSessionExpiresAt: Date.now() + PARENT_SESSION_DURATION_MS,
+    }),
+
   // Clear all state without server call (used when refresh fails)
   parentClearAll: () => {
     set({
