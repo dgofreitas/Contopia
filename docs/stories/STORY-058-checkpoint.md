@@ -8,15 +8,15 @@
 - [ ] Merge Request
 
 ## BACKEND
-- [x] manager: `getParentDashboardData()` in `parent-manager.js`
-- [x] router: Update `GET /dashboard` in `parent-router.js`
+- [ ] manager: `getParentDashboardData()` in `parent-manager.js`
+- [ ] router: Update `GET /dashboard` in `parent-router.js`
 
 ## FRONTEND
-- [ ] page: Redesign `ParentDashboardPage.jsx` with responsive shell, empty state, child list
-- [ ] component: Create `ChildAvatar.jsx` (colorful SVG placeholder / initials)
-- [ ] hook: Create `useParentDashboard` hook calling `GET /dashboard`
-- [ ] route: Update `App.jsx` if needed
-- [ ] route-guard: Update `ParentProtectedRoute` if needed
+- [x] page: Redesign `ParentDashboardPage.jsx` with responsive shell, empty state, child list
+- [x] component: Create `ChildAvatar.jsx` (colorful SVG placeholder / initials)
+- [x] hook: Create `useParentDashboard` hook calling `GET /dashboard`
+- [x] route: Update `App.jsx` if needed
+- [x] route-guard: Update `ParentProtectedRoute` if needed
 
 ## QUALITY AND DELIVERY
 - [ ] TESTS
