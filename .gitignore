@@ -35,7 +35,10 @@ docker-data/
 docker-compose.override.yml.bak
 
 # OpenCode workflow
-.opencode/node_modules/
+.opencode/
 
 # TypeScript
 *.tsbuildinfo
+
+# Temp files
+.tmp/
