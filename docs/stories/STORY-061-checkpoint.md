@@ -6,7 +6,7 @@
 ## SDLC STATUS
 - [x] Technical Analysis — Architect
 - [x] Implementation — TechLead
-- [ ] Merge Request
+- [x] Merge Request — https://github.com/dgofreitas/Contopia/pull/61
 
 ## E2E TESTS
 - [x] playwright.config.js + fixtures + test-data
