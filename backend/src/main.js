@@ -23,6 +23,11 @@ async function start() {
   await connectDB();
   logger.info('MongoDB connection established');
 
+  // Cookie security startup validation
+  if (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE === 'false') {
+    logger.warn('Cookie secure flag is false in production — this is a security risk');
+  }
+
   // Redis client is already connecting (fire-and-forget in config)
   logger.info('Redis client initializing');
 

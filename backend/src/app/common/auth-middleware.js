@@ -1,10 +1,19 @@
 // Contopia — Auth Middleware (JWT validation, blacklist check, session extension)
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import pino from 'pino';
 import redis from '../../config/redis.js';
 import { hashToken } from '../auth/auth-manager.js';
-import { findActiveParentById } from '../auth/auth-dao.js';
+import { findActiveParentById, createAuditLog } from '../auth/auth-dao.js';
 import { fail } from './response-envelope.js';
+
+/**
+ * Hash an identifier (parentId, email, IP) to first 8 chars of SHA-256 hex.
+ * Used for PII-safe audit logging.
+ */
+export function hashIdentifier(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 8);
+}
 
 /**
  * Wrap async Express middleware so rejected promises are forwarded to next(err).
@@ -217,7 +226,13 @@ export const parentAuthMiddleware = asyncHandler(async function parentAuthMiddle
           sessionId = session.sessionId;
           sessionFound = true;
 
-          // Extend TTL and update lastActivity
+          // Check TTL — warn if < 300s (5 min) remaining
+          const ttl = await redis.ttl(key);
+          if (ttl > 0 && ttl < 300) {
+            res.setHeader('X-Session-Expiring', String(ttl));
+          }
+
+          // Extend TTL and update lastActivity (sliding window)
           session.lastActivity = new Date().toISOString();
           await redis.set(key, JSON.stringify(session), 'EX', PARENT_SESSION_TTL_SECONDS);
         }
@@ -225,6 +240,12 @@ export const parentAuthMiddleware = asyncHandler(async function parentAuthMiddle
       }
 
       if (!sessionFound) {
+        // Session expired (Redis key gone) — audit and reject
+        const ip = req.ip;
+        const deviceHint = req.headers['user-agent']
+          ? req.headers['user-agent'].slice(0, 100).replace(/[^\w\s/\-.();]/g, '')
+          : null;
+        createAuditLog({ parentId, sessionId: 'none', event: 'SESSION_EXPIRED', ip, deviceHint, reason: 'idle_timeout' }).catch(() => {});
         return res.status(401).json(fail('SESSION_EXPIRED', 'Parent session has expired', { requestId: req.id }, req.id));
       }
 

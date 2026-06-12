@@ -16,6 +16,9 @@ export default function useParentAuth() {
   const parentSessionExpiresAt = useParentAuthStore((s) => s.parentSessionExpiresAt);
   const updateParentActivity = useParentAuthStore((s) => s.updateParentActivity);
   const parentLogout = useParentAuthStore((s) => s.parentLogout);
+  const sessionExpiring = useParentAuthStore((s) => s.sessionExpiring);
+  const sessionExpiringSeconds = useParentAuthStore((s) => s.sessionExpiringSeconds);
+  const clearSessionExpiring = useParentAuthStore((s) => s.clearSessionExpiring);
 
   const isAuthenticated = !!parentToken;
 

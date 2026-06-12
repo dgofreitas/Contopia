@@ -121,7 +121,7 @@ const sessionAuditSchema = new Schema(
     },
     event: {
       type: String,
-      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED', 'CHILD_SESSION_CREATED', 'PARENT_SESSION_CREATED', 'PARENT_LOGIN_FAILED', 'PARENT_LOGOUT', 'PARENT_REGISTRATION_CONSENT'],
+      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED', 'CHILD_SESSION_CREATED', 'PARENT_SESSION_CREATED', 'PARENT_LOGIN_FAILED', 'PARENT_LOGOUT', 'PARENT_REGISTRATION_CONSENT', 'LOGIN_FAILED'],
       required: true,
     },
     ip: {
@@ -136,8 +136,8 @@ const sessionAuditSchema = new Schema(
   }
 );
 
-// TTL index: auto-delete audit logs after 90 days
-sessionAuditSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+// TTL index: auto-delete audit logs after 365 days
+sessionAuditSchema.index({ createdAt: 1 }, { expireAfterSeconds: 365 * 24 * 60 * 60 });
 
 const Parent = mongoose.model('Parent', parentSchema);
 const Child = mongoose.model('Child', childSchema);

@@ -24,14 +24,31 @@ parentApiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor: handle 401 → attempt parent refresh
+// Response interceptor: detect session expiring header + handle 401 → attempt parent refresh
 parentApiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // STORY-060: Check for server-driven session expiry warning
+    const expiringHeader = response.headers['x-session-expiring'];
+    if (expiringHeader) {
+      const remainingSeconds = Number(expiringHeader);
+      if (!Number.isNaN(remainingSeconds) && remainingSeconds > 0) {
+        useParentAuthStore.getState().setSessionExpiring(remainingSeconds);
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
     // 401 — attempt silent refresh for parent session
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // STORY-060: SESSION_EXPIRED → clear all and redirect with query param
+      if (error.response?.data?.error?.code === 'SESSION_EXPIRED') {
+        useParentAuthStore.getState().parentClearAll();
+        window.location.href = '/parent/login?expired=true';
+        return Promise.reject(error);
+      }
+
       const { parentRefreshToken } = useParentAuthStore.getState();
 
       if (!parentRefreshToken) {

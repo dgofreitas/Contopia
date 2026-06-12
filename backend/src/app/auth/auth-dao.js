@@ -1,5 +1,17 @@
 // Contopia — Auth Data Access Object
+import crypto from 'node:crypto';
+import pino from 'pino';
 import { Parent, Child, SessionAuditLog } from './auth-model.js';
+
+const logger = pino({ name: 'auth-dao', level: process.env.LOG_LEVEL || 'info' });
+
+/**
+ * Hash an identifier (parentId, email, IP) to first 8 chars of SHA-256 hex.
+ * Used for PII-safe structured logging.
+ */
+export function hashIdentifier(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 8);
+}
 
 /**
  * Find a parent by email (case-insensitive, normalized via schema).
@@ -116,8 +128,21 @@ export async function hardDeleteChildById(childId) {
 
 /**
  * Create a session audit log entry (fire-and-forget style).
+ * Stores raw values in MongoDB for internal correlation.
+ * Logs hashed PII via Pino for structured logging.
  */
-export async function createAuditLog({ childId, parentId, sessionId, event, ip, deviceHint }) {
+export async function createAuditLog({ childId, parentId, sessionId, event, ip, deviceHint, reason }) {
+  // Pino structured log with hashed PII
+  logger.info({
+    event,
+    parentId: parentId ? hashIdentifier(parentId) : undefined,
+    email: undefined, // email not available in audit log params
+    ip: ip ? hashIdentifier(ip) : undefined,
+    sessionId,
+    deviceHint,
+    reason,
+  }, 'Audit log');
+
   const doc = {};
   if (childId) doc.childId = childId;
   if (parentId) doc.parentId = parentId;
@@ -125,6 +150,7 @@ export async function createAuditLog({ childId, parentId, sessionId, event, ip, 
   doc.event = event;
   if (ip) doc.ip = ip;
   if (deviceHint) doc.deviceHint = deviceHint;
+  if (reason) doc.reason = reason;
   return SessionAuditLog.create(doc);
 }
 

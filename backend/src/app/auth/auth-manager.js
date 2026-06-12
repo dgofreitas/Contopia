@@ -18,6 +18,7 @@ import {
   findParentByIdWithPassword,
   updateParentPassword,
   createAuditLog,
+  hashIdentifier,
   softDeleteChildById,
 } from './auth-dao.js';
 import { purgeAssetsByAuthorManager } from '../storage/storage-manager.js';
@@ -856,6 +857,7 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
   const parent = await findParentByEmail(email);
   if (!parent) {
     createAuditLog({ parentId: 'unknown', sessionId: 'none', event: 'PARENT_LOGIN_FAILED', ip, deviceHint }).catch(() => {});
+    createAuditLog({ parentId: 'unknown', sessionId: 'none', event: 'LOGIN_FAILED', ip, deviceHint }).catch(() => {});
     const err = new Error('Invalid credentials');
     err.code = 'INVALID_CREDENTIALS';
     err.status = 401;
@@ -866,6 +868,7 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
   const parentWithPassword = await findParentByIdWithPassword(parent._id);
   if (!parentWithPassword?.password) {
     createAuditLog({ parentId: parent._id.toString(), sessionId: 'none', event: 'PARENT_LOGIN_FAILED', ip, deviceHint }).catch(() => {});
+    createAuditLog({ parentId: parent._id.toString(), sessionId: 'none', event: 'LOGIN_FAILED', ip, deviceHint }).catch(() => {});
     const err = new Error('Invalid credentials');
     err.code = 'INVALID_CREDENTIALS';
     err.status = 401;
@@ -875,6 +878,7 @@ export async function parentLogin({ email, password, ip, deviceHint }) {
   const passwordMatch = await bcrypt.compare(password, parentWithPassword.password);
   if (!passwordMatch) {
     createAuditLog({ parentId: parent._id.toString(), sessionId: 'none', event: 'PARENT_LOGIN_FAILED', ip, deviceHint }).catch(() => {});
+    createAuditLog({ parentId: parent._id.toString(), sessionId: 'none', event: 'LOGIN_FAILED', ip, deviceHint }).catch(() => {});
     const err = new Error('Invalid credentials');
     err.code = 'INVALID_CREDENTIALS';
     err.status = 401;
@@ -965,6 +969,7 @@ export async function parentLogout({ parentId, sessionId, accessToken, refreshTo
 
   // Audit log (fire-and-forget)
   createAuditLog({ parentId: parentIdStr, sessionId: sessionId || 'none', event: 'PARENT_LOGOUT', ip, deviceHint }).catch(() => {});
+  createAuditLog({ parentId: parentIdStr, sessionId: sessionId || 'none', event: 'SESSION_LOGOUT', ip, deviceHint }).catch(() => {});
 
   logger.info({ parentId: parentIdStr, sessionId }, 'Parent logout successful');
 
@@ -1069,6 +1074,14 @@ export async function parentRefreshSession({ refreshToken, ip, deviceHint }) {
     refreshToken: newRefreshToken,
     parentId: parentIdStr,
   };
+}
+
+/**
+ * Log a SESSION_EXPIRED audit event for a parent session.
+ * Called from auth-middleware when a session is found expired (idle timeout).
+ */
+export function logSessionExpired(parentId, sessionId, ip, deviceHint) {
+  createAuditLog({ parentId, sessionId, event: 'SESSION_EXPIRED', ip, deviceHint, reason: 'idle_timeout' }).catch(() => {});
 }
 
 /**

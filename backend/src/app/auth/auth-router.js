@@ -32,7 +32,8 @@ function createLimiter({ windowMs, max, message: _message, keyGenerator }) {
     legacyHeaders: false,
     keyGenerator: keyGenerator || ((req) => req.ip),
     handler: (req, res) => {
-      res.status(429).json(fail('RATE_LIMITED', 'Too many attempts.', { requestId: req.id }));
+      res.setHeader('Retry-After', Math.ceil(windowMs / 1000));
+      res.status(429).json(fail('RATE_LIMITED', 'Too many attempts. Please try again later.', { requestId: req.id }));
     },
   };
 
@@ -46,8 +47,8 @@ function createLimiter({ windowMs, max, message: _message, keyGenerator }) {
 }
 
 const registerParentLimiter = createLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
   message: 'Too many registration attempts.',
   keyGenerator: (req) => {
     const email = req.body?.email || '';
@@ -68,8 +69,8 @@ const refreshLimiter = createLimiter({
 });
 
 const parentLoginLimiter = createLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
   message: 'Too many parent login attempts.',
 });
 
@@ -296,7 +297,7 @@ parentAuthRouter.post('/login', parentLoginLimiter, async (req, res) => {
 
     // Check parent login attempts
     const attempts = await authManager.incrementLoginAttemptsParent(ip);
-    if (attempts > 5) {
+    if (attempts > 10) {
       return res.status(429).json(fail('RATE_LIMITED', 'Too many login attempts.', { requestId }));
     }
 
@@ -344,8 +345,14 @@ parentAuthRouter.post('/logout', parentAuthMiddleware, async (req, res) => {
       deviceHint,
     });
 
-    // Clear refresh token cookie
-    res.clearCookie('parentRefreshToken', { path: '/api/parent' });
+    // Clear refresh token cookie with full security flags and Max-Age=0
+    res.cookie('parentRefreshToken', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/api/parent',
+    });
 
     return res.status(200).json(ok({ loggedOut: result.loggedOut }, { requestId }));
   } catch (err) {
