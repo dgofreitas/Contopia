@@ -9,17 +9,17 @@
 
 ## E2E TESTS
 - [x] playwright.config.js + fixtures + test-data
-- [ ] registration.spec.js (Scenario 1)
-- [ ] login.spec.js (Scenario 2)
-- [ ] logout.spec.js (Scenario 3)
-- [ ] session-timeout.spec.js (Scenario 4)
-- [ ] validation.spec.js (Scenario 5)
-- [ ] duplicate-registration.spec.js (Scenario 6)
-- [ ] rate-limiting.spec.js (Scenario 7)
-- [ ] dashboard-regression.spec.js (Scenario 8)
-- [ ] child-session.spec.js (Scenario 9)
-- [ ] accessibility.spec.js (Scenario 10)
-- [ ] cookie-security.spec.js
+- [x] registration.spec.js (Scenario 1) — 6 tests, BLOCKED (env)
+- [x] login.spec.js (Scenario 2) — 4 tests, BLOCKED (env)
+- [x] logout.spec.js (Scenario 3) — 2 tests, BLOCKED (env)
+- [x] session-timeout.spec.js (Scenario 4) — 1 test, BLOCKED (env)
+- [x] validation.spec.js (Scenario 5) — 5 tests, BLOCKED (env)
+- [x] duplicate-registration.spec.js (Scenario 6) — 2 tests, BLOCKED (env)
+- [x] rate-limiting.spec.js (Scenario 7) — 2 tests, BLOCKED (env)
+- [x] dashboard-regression.spec.js (Scenario 8) — 7 tests, BLOCKED (env)
+- [x] child-session.spec.js (Scenario 9) — 2 tests, BLOCKED (env)
+- [x] accessibility.spec.js (Scenario 10) — 9 tests, BLOCKED (env)
+- [x] cookie-security.spec.js — 7 tests, BLOCKED (env)
 
 ## BACKEND API TESTS
 - [ ] auth-api-contract.test.js (6 auth endpoints)
@@ -33,6 +33,6 @@
 - [ ] qa-signoff-report.md
 
 ## QUALITY AND DELIVERY
-- [ ] TESTS
+- [x] TESTS — 46 E2E tests across 11 spec files, Status: REQUIRES FIXES (env not running)
 - [ ] QA
 - [ ] CODE REVIEW
