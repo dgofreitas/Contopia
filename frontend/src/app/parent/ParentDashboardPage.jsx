@@ -153,8 +153,12 @@ function DeleteTab({ childFirstName, childId, deletionPending }) {
   );
 }
 
-function IdleWarningBanner({ isIdle, idleTime, onContinue }) {
+function IdleWarningBanner({ isIdle, idleTime, onContinue, serverDriven, secondsRemaining }) {
   if (!isIdle) return null;
+
+  const message = serverDriven && secondsRemaining
+    ? `Your session will expire in ${Math.ceil(secondsRemaining / 60)} minutes. Save your work.`
+    : `Your session has been idle for ${idleTime + 25} minute${idleTime + 25 !== 1 ? 's' : ''}. You will be logged out after 30 minutes of inactivity.`;
 
   return (
     <Alert
@@ -164,10 +168,7 @@ function IdleWarningBanner({ isIdle, idleTime, onContinue }) {
       aria-live="assertive"
     >
       <div className="flex items-center justify-between">
-        <span>
-          Your session has been idle for {idleTime + 25} minute{idleTime + 25 !== 1 ? 's' : ''}.
-          You will be logged out after 30 minutes of inactivity.
-        </span>
+        <span>{message}</span>
         <Button size="xs" color="warning" onClick={onContinue}>
           Continue Session
         </Button>
@@ -244,7 +245,7 @@ function EmptyState({ onAddChild }) {
 }
 
 function ParentDashboardLayout() {
-  const { isIdle, idleTime, continueParentSession, logout } = useParentAuth();
+  const { isIdle, idleTime, continueParentSession, logout, sessionExpiring, sessionExpiringSeconds } = useParentAuth();
   const parentUser = useParentAuthStore((s) => s.parentUser);
   const parentToken = useParentAuthStore((s) => s.parentToken);
   const { data: deletionStatusData } = useDeletionStatus();
@@ -415,6 +416,8 @@ function ParentDashboardLayout() {
             isIdle={isIdle}
             idleTime={idleTime}
             onContinue={continueParentSession}
+            serverDriven={sessionExpiring}
+            secondsRemaining={sessionExpiringSeconds}
           />
           {deletionPending && <DeletionLockedBanner />}
           {hasChildren ? (

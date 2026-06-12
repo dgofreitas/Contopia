@@ -77,11 +77,26 @@ export default function useParentAuth() {
   // Continue session (called when user dismisses idle warning)
   const continueParentSession = useCallback(() => {
     updateParentActivity();
+    useParentAuthStore.getState().clearSessionExpiring();
     setIsIdle(false);
     setIdleTime(0);
     if (idleIntervalRef.current) clearInterval(idleIntervalRef.current);
     startIdleTimers();
   }, [updateParentActivity, startIdleTimers]);
+
+  // STORY-060: When server signals session expiring, trigger idle warning UI
+  useEffect(() => {
+    if (sessionExpiring && isAuthenticated) {
+      setIsIdle(true);
+      // Start tracking idle time from current moment
+      if (idleIntervalRef.current) clearInterval(idleIntervalRef.current);
+      const idleStart = Date.now();
+      idleIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - idleStart) / 60000);
+        setIdleTime(elapsed);
+      }, 60000);
+    }
+  }, [sessionExpiring, isAuthenticated]);
 
   // Setup activity listeners and timers when authenticated
   useEffect(() => {
@@ -149,5 +164,7 @@ export default function useParentAuth() {
     parentSessionExpiresAt,
     continueParentSession,
     logout,
+    sessionExpiring,
+    sessionExpiringSeconds,
   };
 }
