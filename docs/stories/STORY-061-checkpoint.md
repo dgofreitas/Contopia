@@ -36,4 +36,4 @@
 ## QUALITY AND DELIVERY
 - [x] TESTS — 46 E2E tests across 11 spec files, Status: REQUIRES FIXES (env not running)
 - [x] QA — CONDITIONAL PASS (68/68 API tests PASS, WCAG 20/22 PASS, 46 E2E blocked)
-- [ ] CODE REVIEW
+- [x] CODE REVIEW — BLOCKED (2 Critical, 3 Major issues — see STORY-061-code-review.md)
