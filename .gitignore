@@ -40,5 +40,9 @@ docker-compose.override.yml.bak
 # TypeScript
 *.tsbuildinfo
 
+# Playwright E2E
+e2e/.auth/
+e2e/report/
+
 # Temp files
 .tmp/
