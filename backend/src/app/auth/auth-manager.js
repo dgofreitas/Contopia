@@ -591,51 +591,46 @@ export async function createChildProfile({ parentId, firstName, avatarSeed }) {
 }
 
 /**
- * Child login — authenticate and issue tokens.
- * If password is provided, validate via bcrypt. Otherwise use existing ID-based flow.
- * Returns { accessToken, childId, childFirstName, isOnboardingComplete, method }.
- * Throws NOT_FOUND, NOT_VERIFIED, FORBIDDEN, or INVALID_CREDENTIALS on failure.
+ * Create a child session from an authenticated parent.
+ * STORY-059: Parent-initiated child session creation. Replaces childLogin() (magic-link flow).
+ * Finds child by optional childId or first active child for parent.
+ * Verifies child.isActive, generates tokens, creates session, emits audit log.
+ * Returns { accessToken, refreshToken, child, sessionId }.
  */
-export async function childLogin({ childId, parentId, password, ip, deviceHint }) {
-  const child = await findChildById(childId);
-
-  if (!child) {
-    const err = new Error('Child not found');
-    err.code = 'NOT_FOUND';
-    err.status = 404;
-    throw err;
+export async function createChildSession({ parentId, childId, ip, deviceHint }) {
+  // Resolve child: either by provided childId or first active child
+  let child;
+  if (childId) {
+    child = await findChildById(childId);
+    if (!child) {
+      const err = new Error('Child not found');
+      err.code = 'NOT_FOUND';
+      err.status = 404;
+      throw err;
+    }
+    // Verify child belongs to parent
+    if (child.parentId.toString() !== parentId.toString()) {
+      const err = new Error('Child does not belong to this parent');
+      err.code = 'FORBIDDEN';
+      err.status = 403;
+      throw err;
+    }
+  } else {
+    child = await findActiveChildByParent(parentId);
+    if (!child) {
+      const err = new Error('No active child found for this parent');
+      err.code = 'NOT_FOUND';
+      err.status = 404;
+      throw err;
+    }
   }
 
-  if (child.parentId.toString() !== parentId) {
-    const err = new Error('Parent ID mismatch');
-    err.code = 'FORBIDDEN';
-    err.status = 403;
-    throw err;
-  }
-
+  // Verify child is active
   if (!child.isActive) {
-    const err = new Error('Child account not verified');
+    const err = new Error('Child account is not active');
     err.code = 'NOT_VERIFIED';
     err.status = 403;
     throw err;
-  }
-
-  // If password provided, validate it
-  if (password) {
-    const childWithPassword = await findChildByIdWithPassword(childId);
-    if (!childWithPassword?.password) {
-      const err = new Error('Password not set for this account');
-      err.code = 'INVALID_CREDENTIALS';
-      err.status = 401;
-      throw err;
-    }
-    const match = await bcrypt.compare(password, childWithPassword.password);
-    if (!match) {
-      const err = new Error('Invalid credentials');
-      err.code = 'INVALID_CREDENTIALS';
-      err.status = 401;
-      throw err;
-    }
   }
 
   // Generate tokens and create session
@@ -654,18 +649,26 @@ export async function childLogin({ childId, parentId, password, ip, deviceHint }
   // Re-generate access token with sid claim
   const accessWithSid = generateAccessToken(child, sessionId);
 
-  // Reset login attempts on success
-  if (ip) await resetLoginAttempts(ip);
+  // Audit log: CHILD_SESSION_CREATED (fire-and-forget)
+  createAuditLog({
+    childId: child._id.toString(),
+    parentId: parentId.toString(),
+    sessionId,
+    event: 'CHILD_SESSION_CREATED',
+    ip,
+    deviceHint,
+  }).catch(() => {});
 
-  logger.info({ childId: child._id, method: password ? 'password' : 'id' }, 'Child login successful');
+  logger.info({ childId: child._id.toString(), parentId: parentId.toString(), sessionId }, 'Child session created by parent');
 
-return {
+  return {
     accessToken: accessWithSid,
     refreshToken,
-    childId: child._id.toString(),
-    childFirstName: child.firstName,
-    isOnboardingComplete: child.onboardingCompleted,
-    method: password ? 'password' : 'id',
+    child: {
+      childId: child._id.toString(),
+      childFirstName: child.firstName,
+      isOnboardingComplete: child.onboardingCompleted,
+    },
     refreshAvailable,
     sessionId,
   };

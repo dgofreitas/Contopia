@@ -8,11 +8,11 @@
 - [ ] Merge Request
 
 ## BACKEND
-- [ ] auth-router.js — Remove POST /child-login + childLoginLimiter; add POST /child-session
-- [ ] auth-manager.js — Remove childLogin(); add createChildSession()
-- [ ] auth-dao.js — Add findActiveParentById()
-- [ ] auth-middleware.js — Add parentId active-parent verification + Redis cache
-- [ ] validation-schemas.js — Remove childLoginSchema; add childSessionSchema
+- [x] auth-router.js — Remove POST /child-login + childLoginLimiter; add POST /child-session
+- [x] auth-manager.js — Remove childLogin(); add createChildSession()
+- [x] auth-dao.js — Add findActiveParentById()
+- [x] auth-middleware.js — Add parentId active-parent verification + Redis cache
+- [x] validation-schemas.js — Remove childLoginSchema; add childSessionSchema
 
 ## FRONTEND
 - [x] useChildSession.js — New TanStack Query hook for POST /api/auth/child-session

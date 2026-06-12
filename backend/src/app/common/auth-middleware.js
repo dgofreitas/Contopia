@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import pino from 'pino';
 import redis from '../../config/redis.js';
 import { hashToken } from '../auth/auth-manager.js';
+import { findActiveParentById } from '../auth/auth-dao.js';
 import { fail } from './response-envelope.js';
 
 /**
@@ -53,6 +54,34 @@ export const authMiddleware = asyncHandler(async function authMiddleware(req, re
     // Session isolation: child authMiddleware rejects parent tokens
     if (decoded.role === 'parent') {
       return res.status(401).json(fail('UNAUTHORIZED', 'You need to sign in first', { requestId: req.id }, req.id));
+    }
+
+    // STORY-059: Verify parent account is still active for child tokens
+    // Checks Redis cache first (5m TTL), falls back to DB, caches result.
+    if (decoded.parentId) {
+      const parentCacheKey = `parent:exists:${decoded.parentId}`;
+      let parentActive = false;
+      try {
+        const cached = await redis.get(parentCacheKey);
+        if (cached === '1') {
+          parentActive = true;
+        } else if (cached === '0') {
+          parentActive = false;
+        } else {
+          // Cache miss — check DB
+          const parent = await findActiveParentById(decoded.parentId);
+          parentActive = !!parent;
+          // Cache result with 5m TTL
+          await redis.set(parentCacheKey, parentActive ? '1' : '0', 'EX', 300);
+        }
+      } catch (dbErr) {
+        logger.warn({ err: dbErr, parentId: decoded.parentId }, 'Parent existence check failed — allowing request (fail-open)');
+        parentActive = true; // fail-open: allow request if check fails
+      }
+
+      if (!parentActive) {
+        return res.status(401).json(fail('UNAUTHORIZED', 'Parent account not found or deactivated', { requestId: req.id }, req.id));
+      }
     }
 
     const childId = decoded.sub;
