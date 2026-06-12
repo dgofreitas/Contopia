@@ -16,11 +16,11 @@
 - [x] main.js / app config — Cookie security startup validation warning if secure flag false in production
 
 ## FRONTEND
-- [ ] parent-api-client.js — Response interceptor to detect X-Session-Expiring header and dispatch warning
-- [ ] parent-auth-store.js — Add setSessionExpiring action for server-driven warnings
-- [ ] useParentAuth.js — Integrate server-driven session expiry warning; handle 401 SESSION_EXPIRED → redirect
-- [ ] ParentDashboardPage.jsx — IdleWarningBanner responds to server-driven expiry warnings
-- [ ] ParentLoginPage.jsx — Show "Session expired" message when ?expired=true query param present
+- [x] parent-api-client.js — Response interceptor to detect X-Session-Expiring header and dispatch warning
+- [x] parent-auth-store.js — Add setSessionExpiring action for server-driven warnings
+- [x] useParentAuth.js — Integrate server-driven session expiry warning; handle 401 SESSION_EXPIRED → redirect
+- [x] ParentDashboardPage.jsx — IdleWarningBanner responds to server-driven expiry warnings
+- [x] ParentLoginPage.jsx — Show "Session expired" message when ?expired=true query param present
 
 ## QUALITY AND DELIVERY
 - [ ] TESTS
