@@ -98,11 +98,16 @@ async function globalSetup() {
           const [nameValue, ...attrs] = cookieStr.split(';');
           const [name, ...valParts] = nameValue.split('=');
           const value = valParts.join('=');
+
+          // Parse actual path from Set-Cookie attributes; default to '/' if missing
+          const pathAttr = attrs.find((a) => a.trim().toLowerCase().startsWith('path='));
+          const cookiePath = pathAttr ? pathAttr.split('=')[1].trim() : '/';
+
           const cookie = {
             name: name.trim(),
             value: value.trim(),
             domain: new URL(BACKEND_URL).hostname,
-            path: '/',
+            path: cookiePath,
             httpOnly: attrs.some((a) => a.trim().toLowerCase() === 'httponly'),
             secure: attrs.some((a) => a.trim().toLowerCase() === 'secure'),
             sameSite: attrs.some((a) => a.trim().toLowerCase() === 'samesite=strict')

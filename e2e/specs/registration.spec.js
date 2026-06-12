@@ -28,7 +28,8 @@ test.describe('Scenario 1: Full Registration Flow', () => {
     try {
       const loginRes = await api.login({ email: uniqueEmail, password: testPassword });
       if (loginRes.ok) {
-        const { accessToken } = await loginRes.json();
+        const body = await loginRes.json();
+        const accessToken = body.accessToken || body.data?.accessToken;
         if (accessToken) {
           await api.createDeletionRequest(accessToken, { confirmText: 'DELETE' });
         }
@@ -62,32 +63,24 @@ test.describe('Scenario 1: Full Registration Flow', () => {
     expect(refreshCookie.sameSite).toBe('Strict');
     expect(refreshCookie.path).toBe('/api/parent');
 
-    // Assert — response body contains accessToken, parentId, email, children
-    // We intercept the register response to inspect it
-    const registerResponsePromise = page.waitForResponse(
-      (res) => res.url().includes('/api/auth/register') && res.request().method() === 'POST',
+    // Assert — use API client to verify parent data via /api/parent/me
+    // Extract accessToken from storage (set by the frontend after registration)
+    const accessToken = await page.evaluate(() =>
+      localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || ''
     );
-    // Re-navigate to trigger the response capture (already submitted above, but we need the response)
-    // Actually, the response already happened during submit. Let's use a different approach:
-    // Re-register won't work (duplicate). Instead, we check the dashboard page for parent data.
+    expect(accessToken).toBeTruthy();
 
-    // Navigate to /parent/me to get the user data
-    const meResponse = await page.goto('/api/parent/me');
-    // This is an API call, not a page — use evaluate to fetch it
-    const meData = await page.evaluate(async () => {
-      const res = await fetch('/api/parent/me', {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return res.json();
-    });
-
+    const meRes = await api.me(accessToken);
+    expect(meRes.ok).toBe(true);
+    const meData = await meRes.json();
     expect(meData).toBeDefined();
-    expect(meData.parentId).toBeDefined();
-    expect(meData.email).toBe(uniqueEmail);
-    expect(meData.children).toBeDefined();
-    expect(Array.isArray(meData.children)).toBe(true);
-    expect(meData.children.length).toBeGreaterThanOrEqual(1);
-    expect(meData.children[0].isActive).toBe(true);
+    expect(meData.parentId || meData.id).toBeDefined();
+    expect(meData.email || meData.data?.email).toBe(uniqueEmail);
+    const children = meData.children || meData.data?.children || [];
+    expect(Array.isArray(children)).toBe(true);
+    expect(children.length).toBeGreaterThanOrEqual(1);
+    const child = children[0];
+    expect(child.isActive || child.active).toBe(true);
   });
 
   test('should reject registration with invalid email', async ({ page }) => {

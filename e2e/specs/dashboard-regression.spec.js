@@ -4,10 +4,15 @@
 // THEN all tabs are functional and respond correctly
 //
 // Also verifies child token gets 401 on parent endpoints (auth isolation)
+//
+// Auth: Uses stored storage state from .auth/parent.json (set by globalSetup/auth.setup.js)
+// instead of doing a runtime API login. Fallback to runtime login only if storage state
+// is unavailable.
 
 import { test, expect } from '@playwright/test';
 import { createApiClient } from '../utils/api-client.js';
 import { testParentEmail, testParentPassword } from '../fixtures/test-data.js';
+import { readFileSync, existsSync } from 'fs';
 
 const api = createApiClient();
 
@@ -15,14 +20,36 @@ test.describe('Scenario 8: STORY-052 Dashboard Regression', () => {
   let accessToken = null;
 
   test.beforeAll(async () => {
-    // Login via API to get access token
-    const loginRes = await api.login({
-      email: testParentEmail,
-      password: testParentPassword,
-    });
-    if (loginRes.ok) {
-      const body = await loginRes.json();
-      accessToken = body.accessToken;
+    // Prefer stored auth state from globalSetup (auth.setup.js)
+    const storageStatePath = 'e2e/.auth/parent.json';
+    if (existsSync(storageStatePath)) {
+      try {
+        const state = JSON.parse(readFileSync(storageStatePath, 'utf-8'));
+        // Extract accessToken from origins' localStorage
+        for (const origin of state.origins || []) {
+          for (const item of origin.localStorage || []) {
+            if (item.name === 'accessToken' && item.value) {
+              accessToken = item.value;
+              break;
+            }
+          }
+          if (accessToken) break;
+        }
+      } catch {
+        // Fall through to runtime login
+      }
+    }
+
+    // Fallback: login via API if storage state didn't have accessToken
+    if (!accessToken) {
+      const loginRes = await api.login({
+        email: testParentEmail,
+        password: testParentPassword,
+      });
+      if (loginRes.ok) {
+        const body = await loginRes.json();
+        accessToken = body.accessToken;
+      }
     }
   });
 
