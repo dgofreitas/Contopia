@@ -15,23 +15,33 @@ const useParentAuthStore = create((set, get) => ({
   parentLastActivity: null,
   parentSessionExpiresAt: null,
 
+  // STORY-060: Server-driven session expiry warning
+  sessionExpiring: false,
+  sessionExpiringSeconds: null,
+
   // Setters
   setParentToken: (parentToken) => set({ parentToken }),
   setParentRefreshToken: (parentRefreshToken) => set({ parentRefreshToken }),
   setParentUser: (parentUser) => set({ parentUser }),
 
-  setParentSession: ({ parentSessionCreatedAt, parentLastActivity }) =>
+  setParentSession: ({ parentSessionCreatedAt, parentLastActivity }) => {
     set({
       parentSessionCreatedAt,
       parentLastActivity: parentLastActivity ?? Date.now(),
       parentSessionExpiresAt: Date.now() + PARENT_SESSION_DURATION_MS,
-    }),
+    });
+    get().clearSessionExpiring();
+  },
 
   updateParentActivity: () =>
     set({
       parentLastActivity: Date.now(),
       parentSessionExpiresAt: Date.now() + PARENT_SESSION_DURATION_MS,
     }),
+
+  // STORY-060: Server-driven session expiry actions
+  setSessionExpiring: (seconds) => set({ sessionExpiring: true, sessionExpiringSeconds: seconds }),
+  clearSessionExpiring: () => set({ sessionExpiring: false, sessionExpiringSeconds: null }),
 
   // Parent logout: calls POST /api/parent/logout, then clears state
   parentLogout: async () => {
@@ -51,18 +61,24 @@ const useParentAuthStore = create((set, get) => ({
       parentSessionCreatedAt: null,
       parentLastActivity: null,
       parentSessionExpiresAt: null,
+      sessionExpiring: false,
+      sessionExpiringSeconds: null,
     });
   },
 
   // Register: set all auth state from registration response
-  register: ({ accessToken, parentId, email, children }) =>
+  register: ({ accessToken, parentId, email, children }) => {
     set({
       parentToken: accessToken,
       parentUser: { parentId, email, children },
       parentSessionCreatedAt: Date.now(),
       parentLastActivity: Date.now(),
       parentSessionExpiresAt: Date.now() + PARENT_SESSION_DURATION_MS,
-    }),
+      sessionExpiring: false,
+      sessionExpiringSeconds: null,
+    });
+    get().clearSessionExpiring();
+  },
 
   // Clear all state without server call (used when refresh fails)
   parentClearAll: () => {
@@ -73,6 +89,8 @@ const useParentAuthStore = create((set, get) => ({
       parentSessionCreatedAt: null,
       parentLastActivity: null,
       parentSessionExpiresAt: null,
+      sessionExpiring: false,
+      sessionExpiringSeconds: null,
     });
   },
 }));

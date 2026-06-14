@@ -79,6 +79,12 @@ export default function ParentLoginPage() {
             </p>
           </div>
 
+          {searchParams.get('expired') === 'true' && (
+            <Alert color="info" role="status" aria-live="polite">
+              Your session expired due to inactivity. Please sign in again.
+            </Alert>
+          )}
+
           {error && (
             <Alert color="failure" role="alert" aria-live="assertive">
               {error}
