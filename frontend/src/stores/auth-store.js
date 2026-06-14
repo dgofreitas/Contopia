@@ -78,6 +78,20 @@ const useAuthStore = create((set, get) => ({
       sessionExpiresAt: null,
       sessionTimeoutWarning: false,
     }),
+
+  // Parent-initiated child session: token already issued by backend
+  startSessionFromParent: ({ accessToken, childId, childFirstName, sessionId, isOnboardingComplete }) =>
+    set({
+      token: accessToken,
+      refreshToken: null,
+      user: { childId, childFirstName },
+      onboardingComplete: isOnboardingComplete ?? true,
+      sessionId,
+      sessionCreatedAt: Date.now(),
+      lastActivity: Date.now(),
+      sessionExpiresAt: Date.now() + SESSION_DURATION_MS,
+      sessionTimeoutWarning: false,
+    }),
 }));
 
 export default useAuthStore;

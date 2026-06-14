@@ -3,7 +3,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import redis from '../../config/redis.js';
-import { childLoginSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentRegisterSchema, parentRefreshSchema } from '../common/validation-schemas.js';
+import { childSessionSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentRegisterSchema, parentRefreshSchema } from '../common/validation-schemas.js';
 import { authMiddleware, parentAuthMiddleware } from '../common/auth-middleware.js';
 import * as authManager from './auth-manager.js';
 import { ok, fail } from '../common/response-envelope.js';
@@ -59,16 +59,6 @@ const loginLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5,
   message: 'Too many login attempts.',
-});
-
-const childLoginLimiter = createLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
-  message: 'Too many child login attempts.',
-  keyGenerator: (req) => {
-    const childId = req.body?.childId || '';
-    return `${req.ip}:child:${childId.slice(0, 8)}`;
-  },
 });
 
 const refreshLimiter = createLimiter({
@@ -129,39 +119,33 @@ router.post('/register', registerParentLimiter, async (req, res) => {
   }
 });
 
-// ── POST /child-login ────────────────────────────────────────────────────────
-router.post('/child-login', loginLimiter, childLoginLimiter, async (req, res) => {
+// ── POST /child-session ──────────────────────────────────────────────────────
+// STORY-059: Parent-initiated child session. Parent must be authenticated.
+// Body: { childId?: string } — optional, defaults to first active child.
+router.post('/child-session', parentAuthMiddleware, async (req, res) => {
   const requestId = req.id;
 
   try {
-    const parsed = childLoginSchema.safeParse(req.body);
+    const parsed = childSessionSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
-    const { childId, parentId } = parsed.data;
-
-    // STORY-054: Check for pending deletion request — block login if found
-    const { findPendingDeletionByChild } = await import('../parent/parent-dao.js');
-    const pendingDeletion = await findPendingDeletionByChild(childId);
-    if (pendingDeletion) {
-      return res.status(403).json(fail('ACCOUNT_SCHEDULED_FOR_DELETION', 'This account is scheduled for deletion. Contact support to cancel.', { requestId }));
-    }
-
+    const { childId } = parsed.data;
+    const parentId = req.parentId;
     const ip = req.ip;
     const deviceHint = sanitizeUserAgent(req);
-    const result = await authManager.childLogin({ childId, parentId, ip, deviceHint });
+
+    const result = await authManager.createChildSession({ parentId, childId, ip, deviceHint });
 
     return res.status(200).json(ok({
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken || undefined,
-        childId: result.childId,
-        childFirstName: result.childFirstName,
-        isOnboardingComplete: result.isOnboardingComplete,
-        refreshAvailable: result.refreshAvailable,
-        method: result.method,
-        sessionId: result.sessionId,
-      }, { requestId }));
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      childId: result.child.childId,
+      childFirstName: result.child.childFirstName,
+      isOnboardingComplete: result.child.isOnboardingComplete,
+      sessionId: result.sessionId,
+    }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }

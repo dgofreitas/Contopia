@@ -17,8 +17,10 @@ import useActivitySummary from '../../hooks/useActivitySummary';
 import useActivityBooks from '../../hooks/useActivityBooks';
 import { useQuery } from '@tanstack/react-query';
 import parentApiClient from '../../lib/parent-api-client';
+import useChildSession from '../../hooks/useChildSession';
 import { Button, Spinner, Alert } from 'flowbite-react';
-import { HiMenu, HiX, HiChartBar, HiDownload, HiTrash, HiShieldCheck, HiLogout, HiPlus, HiUser } from 'react-icons/hi';
+import { HiMenu, HiX, HiChartBar, HiDownload, HiTrash, HiShieldCheck, HiLogout, HiPlus, HiUser, HiPlay } from 'react-icons/hi';
+import { useTranslation } from 'react-i18next';
 
 const NAV_ITEMS = [
   { path: '/parent/dashboard', label: 'Activity', icon: HiChartBar },
@@ -63,9 +65,11 @@ function useDeletionStatus() {
 }
 
 function ActivityTab() {
+  const { t } = useTranslation('auth');
   const parentUser = useParentAuthStore((s) => s.parentUser);
   const { data: summaryData, isLoading: summaryLoading } = useActivitySummary();
   const { data: booksData, isLoading: booksLoading } = useActivityBooks({ limit: 20, offset: 0 });
+  const { startChildSession, isPending: isStartingSession, error: sessionError, getErrorMessage } = useChildSession();
   const isLoading = summaryLoading || booksLoading;
 
   const summary = summaryData?.data;
@@ -73,11 +77,40 @@ function ActivityTab() {
   const childFirstName = summary?.childFirstName || parentUser?.childFirstName || '';
   const hasActivity = summary?.hasActivity;
 
+  const children = summaryData?.data?.children || (childFirstName ? [{ childId: parentUser?.childId, firstName: childFirstName }] : []);
+  const hasChildren = children.length > 0;
+
   return (
     <section aria-labelledby="activity-heading">
       <h2 id="activity-heading" className="text-xl font-semibold text-slate-800 mb-4">
         Resumo de Atividade
       </h2>
+
+      {hasChildren && (
+        <div className="mb-6 space-y-3">
+          {children.map((child) => (
+            <div key={child.childId} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+              <ChildAvatar firstName={child.firstName} avatarSeed={child.childId} size={40} />
+              <span className="text-sm font-medium text-slate-700 flex-1">{child.firstName}</span>
+              <Button
+                size="xs"
+                color="amber"
+                disabled={isStartingSession}
+                onClick={() => startChildSession({ childId: child.childId })}
+                aria-label={t('childSession.startSession', { name: child.firstName })}
+              >
+                <HiPlay className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                {isStartingSession ? t('childSession.sessionStarted') : t('childSession.startSession', { name: child.firstName })}
+              </Button>
+            </div>
+          ))}
+          {sessionError && (
+            <Alert color="failure" className="mt-2">
+              {getErrorMessage(sessionError)}
+            </Alert>
+          )}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">

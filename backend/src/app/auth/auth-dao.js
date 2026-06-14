@@ -138,6 +138,16 @@ export async function findParentById(parentId) {
 }
 
 /**
+ * Find an active parent by ID.
+ * Used by authMiddleware to verify parentId claim maps to an active account.
+ * STORY-059: Child session must verify parent still exists and is active.
+ * Note: Parent schema does not have soft-delete (deletedAt) — existence check suffices.
+ */
+export async function findActiveParentById(parentId) {
+  return Parent.findById(parentId).lean().exec();
+}
+
+/**
  * Find a parent by ID, explicitly selecting the password field.
  * Used for password validation during parent login.
  */

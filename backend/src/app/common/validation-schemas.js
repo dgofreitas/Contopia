@@ -2,11 +2,12 @@
 import { z } from 'zod';
 
 /**
- * Child login schema — childId + parentId.
+ * Child session schema — parent-initiated child session creation.
+ * childId is optional; if omitted, the first active child is used.
+ * STORY-059: Replaces childLoginSchema (magic-link flow removed).
  */
-export const childLoginSchema = z.object({
-  childId: z.string().min(1).regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
-  parentId: z.string().min(1).regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
+export const childSessionSchema = z.object({
+  childId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid child ID format').optional(),
 });
 
 /**
