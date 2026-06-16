@@ -382,10 +382,10 @@ function ParentDashboardLayout() {
 
       {/* Sidebar - desktop always visible, mobile toggleable */}
       <aside
+        id="parent-sidebar"
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-slate-800 flex flex-col transform transition-transform duration-200 ease-in-out md:translate-x-0 md:static md:z-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        role="navigation"
         aria-label="Parent dashboard sidebar"
       >
         {sidebarContent}
