@@ -5,7 +5,7 @@
 ## SDLC STATUS
 - [x] Technical Analysis — Architect
 - [x] Implementation — TechLead
-- [ ] Merge Request
+- [x] Merge Request — https://github.com/dgofreitas/Contopia/pull/62
 
 ## BACKEND
 - [x] manager: `getParentDashboardData()` in `parent-manager.js`
