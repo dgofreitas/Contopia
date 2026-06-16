@@ -15,8 +15,7 @@ vi.mock('../../../config/redis.js', () => ({
   default: {
     set: vi.fn(), get: vi.fn(), del: vi.fn(), exists: vi.fn(),
     incr: vi.fn(), expire: vi.fn(), keys: vi.fn(), call: vi.fn(),
-    status: 'ready', on: vi.fn(), scanIterator: vi.fn(),
-    scanIterator: vi.fn(),
+    ttl: vi.fn(), status: 'ready', on: vi.fn(), scanIterator: vi.fn(),
   },
 }));
 
@@ -99,6 +98,7 @@ describe('Parent Router — STORY-053', () => {
     redis.exists.mockResolvedValue(0);
     redis.incr.mockResolvedValue(1);
     redis.expire.mockResolvedValue(1);
+    redis.ttl.mockResolvedValue(1800);
   });
 
   // ── GET /dashboard — STORY-058 ────────────────────────────────────────────────
