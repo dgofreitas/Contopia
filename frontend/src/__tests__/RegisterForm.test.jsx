@@ -11,11 +11,12 @@ describe('RegisterForm', () => {
     mockOnSubmit.mockClear();
   });
 
-  it('renders form with email and name inputs and submit button', () => {
+  it('renders form with email, password inputs, age consent checkbox and submit button', () => {
     render(<RegisterForm onSubmit={mockOnSubmit} isPending={false} />);
 
-    expect(screen.getByLabelText('register.parentEmail')).toBeInTheDocument();
-    expect(screen.getByLabelText('register.childFirstName')).toBeInTheDocument();
+    expect(screen.getByLabelText('register.email')).toBeInTheDocument();
+    expect(screen.getByLabelText('register.password')).toBeInTheDocument();
+    expect(screen.getByLabelText('register.ageConsentLabel')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'register.submit' })).toBeInTheDocument();
   });
 
@@ -23,7 +24,7 @@ describe('RegisterForm', () => {
     const user = userEvent.setup();
     render(<RegisterForm onSubmit={mockOnSubmit} isPending={false} />);
 
-    const emailInput = screen.getByLabelText('register.parentEmail');
+    const emailInput = screen.getByLabelText('register.email');
     await user.type(emailInput, 'invalid-email');
     await user.click(screen.getByRole('button', { name: 'register.submit' }));
 
@@ -31,24 +32,33 @@ describe('RegisterForm', () => {
     expect(screen.getAllByText('register.errorEmailInvalid').length).toBeGreaterThan(0);
   });
 
-  it('shows validation error when name contains numbers/symbols', async () => {
+  it('shows validation error when password is too weak', async () => {
     const user = userEvent.setup();
     render(<RegisterForm onSubmit={mockOnSubmit} isPending={false} />);
 
-    const nameInput = screen.getByLabelText('register.childFirstName');
-    await user.type(nameInput, 'João123');
+    const passwordInput = screen.getByLabelText('register.password');
+    await user.type(passwordInput, 'short');
     await user.click(screen.getByRole('button', { name: 'register.submit' }));
 
-    // Both visible <p> and sr-only <span> render same text — use getAllByText
-    expect(screen.getAllByText('register.errorNameInvalid').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('register.errorPasswordInvalid').length).toBeGreaterThan(0);
+  });
+
+  it('shows validation error when age consent is not checked', async () => {
+    const user = userEvent.setup();
+    render(<RegisterForm onSubmit={mockOnSubmit} isPending={false} />);
+
+    await user.click(screen.getByRole('button', { name: 'register.submit' }));
+
+    expect(screen.getAllByText('register.errorAgeConsent').length).toBeGreaterThan(0);
   });
 
   it('calls onSubmit with correct data when form is valid', async () => {
     const user = userEvent.setup();
     render(<RegisterForm onSubmit={mockOnSubmit} isPending={false} />);
 
-    await user.type(screen.getByLabelText('register.parentEmail'), 'parent@example.com');
-    await user.type(screen.getByLabelText('register.childFirstName'), 'João');
+    await user.type(screen.getByLabelText('register.email'), 'parent@example.com');
+    await user.type(screen.getByLabelText('register.password'), 'Secure1pass');
+    await user.click(screen.getByLabelText('register.ageConsentLabel'));
     await user.click(screen.getByRole('button', { name: 'register.submit' }));
 
     expect(mockOnSubmit).toHaveBeenCalledTimes(1);
@@ -56,8 +66,9 @@ describe('RegisterForm', () => {
     const callArgs = mockOnSubmit.mock.calls[0];
     expect(callArgs[0]).toEqual(
       expect.objectContaining({
-        parentEmail: 'parent@example.com',
-        childFirstName: 'João',
+        email: 'parent@example.com',
+        password: 'Secure1pass',
+        ageConsent: true,
       }),
     );
   });
@@ -99,11 +110,11 @@ describe('RegisterForm', () => {
     const user = userEvent.setup();
     render(<RegisterForm onSubmit={mockOnSubmit} isPending={false} />);
 
-    const emailInput = screen.getByLabelText('register.parentEmail');
+    const emailInput = screen.getByLabelText('register.email');
     await user.type(emailInput, 'bad');
     await user.click(screen.getByRole('button', { name: 'register.submit' }));
 
     expect(emailInput).toHaveAttribute('aria-invalid', 'true');
-    expect(emailInput).toHaveAttribute('aria-describedby', 'parentEmail-error');
+    expect(emailInput).toHaveAttribute('aria-describedby', 'email-error');
   });
 });
