@@ -40,7 +40,9 @@ describe('RegisterForm', () => {
     await user.type(passwordInput, 'short');
     await user.click(screen.getByRole('button', { name: 'register.submit' }));
 
-    expect(screen.getAllByText('register.errorPasswordInvalid').length).toBeGreaterThan(0);
+    // Component renders Zod's raw error message (e.g. "Must contain at least 8 characters")
+    // rather than the i18n key, because errors.password.message takes priority
+    expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
   });
 
   it('shows validation error when age consent is not checked', async () => {
