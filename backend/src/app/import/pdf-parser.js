@@ -1,6 +1,4 @@
 // Contopia — PDF Parser (text extraction + metadata + thumbnail rendering)
-import pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-const { getDocument } = pdfjs;
 import { createCanvas } from 'canvas';
 import pino from 'pino';
 
@@ -16,6 +14,8 @@ const THUMBNAIL_HEIGHT = 280;
  * @returns {{ text: string, title: string|null, author: string|null, numPages: number, isScanned: boolean }}
  */
 export async function extractPdfContent(buffer) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
+  const { getDocument } = pdfjs.default || pdfjs;
   let doc;
   try {
     doc = await getDocument({
@@ -67,6 +67,8 @@ export async function extractPdfContent(buffer) {
  * @returns {Promise<{ buffer: Buffer, width: number, height: number }>}
  */
 export async function renderPdfThumbnail(buffer, { width = THUMBNAIL_WIDTH, height = THUMBNAIL_HEIGHT } = {}) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
+  const { getDocument } = pdfjs.default || pdfjs;
   let doc;
   try {
     doc = await getDocument({
