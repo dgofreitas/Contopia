@@ -8,14 +8,14 @@
 - [ ] Merge Request
 
 ## BACKEND
-- [ ] router: Add `POST /check-email` route to `auth-router.js` with `checkEmailLimiter` (10 req/min/IP)
+- [x] router: Add `POST /check-email` route to `auth-router.js` with `checkEmailLimiter` (10 req/min/IP)
 - [x] manager: Add `checkParentEmail()` to `auth-manager.js` — `findParentByEmail` + audit log + response jitter
 - [x] validation: Add `checkEmailSchema` to `validation-schemas.js`
 - [x] audit: Log `EMAIL_CHECK` event with hashed email on every check-email request
 
 ## FRONTEND
 - [ ] page: Create `UnifiedParentPage.jsx` with states: idle → loading → login/register → error
-- [ ] hook: Create `useCheckEmail.js` — TanStack Query mutation for `POST /api/auth/check-email`
+- [x] hook: Create `useCheckEmail.js` — TanStack Query mutation for `POST /api/auth/check-email`
 - [ ] route: Update `App.jsx` — add `/parent` route, redirect `/register` and `/parent/login` to `/parent`
 - [ ] i18n: Add `unifiedAuth` namespace to `pt-BR/auth.json` and `en/auth.json`
 - [ ] a11y: `aria-live="polite"` for mode changes, `role="alert"` for errors, focus management, label associations
