@@ -9,9 +9,9 @@
 
 ## BACKEND
 - [ ] router: Add `POST /check-email` route to `auth-router.js` with `checkEmailLimiter` (10 req/min/IP)
-- [ ] manager: Add `checkParentEmail()` to `auth-manager.js` — `findParentByEmail` + audit log + response jitter
+- [x] manager: Add `checkParentEmail()` to `auth-manager.js` — `findParentByEmail` + audit log + response jitter
 - [x] validation: Add `checkEmailSchema` to `validation-schemas.js`
-- [ ] audit: Log `EMAIL_CHECK` event with hashed email on every check-email request
+- [x] audit: Log `EMAIL_CHECK` event with hashed email on every check-email request
 
 ## FRONTEND
 - [ ] page: Create `UnifiedParentPage.jsx` with states: idle → loading → login/register → error
