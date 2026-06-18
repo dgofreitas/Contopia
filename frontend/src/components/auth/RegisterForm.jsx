@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Label, TextInput, Button, Alert, Spinner, Checkbox } from 'flowbite-react';
-import { HiMail, HiLockClosed } from 'react-icons/hi';
+import { FaEnvelope, FaLock } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 
 const registerSchema = z
@@ -64,7 +64,7 @@ export default function RegisterForm({ onSubmit, isPending, serverError }) {
           id="email"
           type="email"
           placeholder={t('register.emailPlaceholder')}
-          icon={HiMail}
+          icon={FaEnvelope}
           {...register('email')}
           color={fieldErrors.email ? 'failure' : undefined}
           helperText={fieldErrors.email}
@@ -83,7 +83,7 @@ export default function RegisterForm({ onSubmit, isPending, serverError }) {
           id="password"
           type="password"
           placeholder={t('register.passwordPlaceholder')}
-          icon={HiLockClosed}
+          icon={FaLock}
           {...register('password')}
           color={fieldErrors.password ? 'failure' : undefined}
           helperText={fieldErrors.password}

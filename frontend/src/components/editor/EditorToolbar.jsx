@@ -1,11 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { HiBold, HiItalic, HiHeading, HiMinus, HiArrowLeft, HiArrowRight } from 'react-icons/hi';
+import { FaBold, FaItalic, FaHeading } from 'react-icons/fa';
+import { HiMinus, HiArrowLeft, HiArrowRight } from 'react-icons/hi';
 
 const TOOLBAR_ITEMS = [
-  { key: 'bold', icon: HiBold, action: 'toggleBold', canAction: 'toggleBold', toggleable: true, activeCheck: 'bold' },
-  { key: 'italic', icon: HiItalic, action: 'toggleItalic', canAction: 'toggleItalic', toggleable: true, activeCheck: 'italic' },
-  { key: 'heading', icon: HiHeading, action: 'toggleHeading', canAction: 'toggleHeading', toggleable: true, activeCheck: 'heading', options: { level: 2 } },
+  { key: 'bold', icon: FaBold, action: 'toggleBold', canAction: 'toggleBold', toggleable: true, activeCheck: 'bold' },
+  { key: 'italic', icon: FaItalic, action: 'toggleItalic', canAction: 'toggleItalic', toggleable: true, activeCheck: 'italic' },
+  { key: 'heading', icon: FaHeading, action: 'toggleHeading', canAction: 'toggleHeading', toggleable: true, activeCheck: 'heading', options: { level: 2 } },
   { key: 'chapterBreak', icon: HiMinus, action: 'setHorizontalRule', canAction: 'setHorizontalRule', toggleable: false, activeCheck: null },
   { key: 'undo', icon: HiArrowLeft, action: 'undo', canAction: 'undo', toggleable: false, activeCheck: null },
   { key: 'redo', icon: HiArrowRight, action: 'redo', canAction: 'redo', toggleable: false, activeCheck: null },
