@@ -50,6 +50,14 @@ export const parentRegisterSchema = z.object({
 });
 
 /**
+ * Check email schema — email existence check for unified auth flow (STORY-062).
+ * Returns whether an account exists for the given email (no PII disclosed).
+ */
+export const checkEmailSchema = z.object({
+  email: z.string().email(),
+});
+
+/**
  * Parent login schema — email + password.
  */
 export const parentLoginSchema = z.object({
