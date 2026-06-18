@@ -1113,3 +1113,26 @@ export async function getCurrentParent(parentId) {
     dashNav: ['activity', 'export', 'delete', 'privacy'],
   };
 }
+
+// ── Email Check (STORY-062) ──────────────────────────────────────────────────
+
+/**
+ * Check if a parent account exists for the given email.
+ * Used by the unified auth flow to determine login vs register mode.
+ * Includes timing-attack mitigation via random jitter delay.
+ * Fire-and-forget audit log with hashed email for anomaly detection.
+ * Returns { exists: boolean } — no PII disclosed.
+ */
+export async function checkParentEmail({ email, ip, deviceHint }) {
+  const parent = await findParentByEmail(email);
+
+  // Audit log (fire-and-forget) with hashed email for anomaly detection
+  const emailHash = hashIdentifier(email);
+  createAuditLog({ parentId: 'unknown', sessionId: 'email_check', event: 'EMAIL_CHECK', ip, deviceHint, emailHash }).catch(() => {});
+
+  // Random jitter delay (50–150ms) to mitigate timing attacks
+  const jitter = Math.random() * 100 + 50;
+  await new Promise((resolve) => setTimeout(resolve, jitter));
+
+  return { exists: !!parent };
+}
