@@ -3,7 +3,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import redis from '../../config/redis.js';
-import { childSessionSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentRegisterSchema, parentRefreshSchema } from '../common/validation-schemas.js';
+import { childSessionSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentRegisterSchema, parentRefreshSchema, checkEmailSchema } from '../common/validation-schemas.js';
 import { authMiddleware, parentAuthMiddleware } from '../common/auth-middleware.js';
 import * as authManager from './auth-manager.js';
 import { ok, fail } from '../common/response-envelope.js';
@@ -74,6 +74,12 @@ const parentLoginLimiter = createLimiter({
   message: 'Too many parent login attempts.',
 });
 
+const checkEmailLimiter = createLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Too many email check attempts.',
+});
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function sanitizeUserAgent(req) {
@@ -115,6 +121,30 @@ router.post('/register', registerParentLimiter, async (req, res) => {
       email: result.email,
       children: result.children,
     }, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /check-email ────────────────────────────────────────────────────────
+// STORY-062: Pre-auth endpoint for unified parent auth flow.
+// Returns whether a parent account exists for the given email (no PII disclosed).
+router.post('/check-email', checkEmailLimiter, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = checkEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
+    }
+
+    const { email } = parsed.data;
+    const ip = req.ip;
+    const deviceHint = sanitizeUserAgent(req);
+
+    const result = await authManager.checkParentEmail({ email, ip, deviceHint });
+
+    return res.status(200).json(ok({ exists: result.exists }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
