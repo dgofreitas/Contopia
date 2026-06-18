@@ -1,6 +1,7 @@
 // Contopia — PDF Parser (text extraction + metadata + thumbnail rendering)
-import pdfjs from 'pdfjs-dist/legacy/build/pdf.js';
-const { getDocument } = pdfjs;
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { getDocument } = require('./pdfjs-wrapper.cjs');
 import { createCanvas } from 'canvas';
 import pino from 'pino';
 
