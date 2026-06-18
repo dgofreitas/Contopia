@@ -4,7 +4,7 @@
 
 ## SDLC STATUS
 - [x] Technical Analysis — Architect
-- [ ] Implementation — TechLead
+- [x] Implementation — TechLead
 - [ ] Merge Request
 
 ## BACKEND
@@ -14,23 +14,23 @@
 - [x] audit: Log `EMAIL_CHECK` event with hashed email on every check-email request
 
 ## FRONTEND
-- [ ] page: Create `UnifiedParentPage.jsx` with states: idle → loading → login/register → error
+- [x] page: Create `UnifiedParentPage.jsx` with states: idle → loading → login/register → error
 - [x] hook: Create `useCheckEmail.js` — TanStack Query mutation for `POST /api/auth/check-email`
-- [ ] route: Update `App.jsx` — add `/parent` route, redirect `/register` and `/parent/login` to `/parent`
-- [ ] i18n: Add `unifiedAuth` namespace to `pt-BR/auth.json` and `en/auth.json`
-- [ ] a11y: `aria-live="polite"` for mode changes, `role="alert"` for errors, focus management, label associations
-- [ ] api-client: Update `parent-api-client.js` — change 401 redirect from `/parent/login` to `/parent`
-- [ ] hook: Update `useParentAuth.js` — change redirect from `/parent/login` to `/parent`
+- [x] route: Update `App.jsx` — add `/parent` route, redirect `/register` and `/parent/login` to `/parent`
+- [x] i18n: Add `unifiedAuth` namespace to `pt-BR/auth.json` and `en/auth.json`
+- [x] a11y: `aria-live="polite"` for mode changes, `role="alert"` for errors, focus management, label associations
+- [x] api-client: Update `parent-api-client.js` — change 401 redirect from `/parent/login` to `/parent`
+- [x] hook: Update `useParentAuth.js` — change redirect from `/parent/login` to `/parent`
 
 ## CLEANUP
-- [ ] Remove `RegisterPage.jsx`
-- [ ] Remove `ParentLoginPage.jsx`
-- [ ] Remove `RegisterForm.jsx`
-- [ ] Remove `useRegister.js`
-- [ ] Remove old `/register` and `/parent/login` routes from `App.jsx`
-- [ ] Keep: `parent-api-client.js`, `parent-auth-store.js`, `useParentAuth.js` (updated, not removed)
+- [x] Remove `RegisterPage.jsx`
+- [x] Remove `ParentLoginPage.jsx`
+- [x] Remove `RegisterForm.jsx`
+- [x] Remove `useRegister.js`
+- [x] Remove old `/register` and `/parent/login` routes from `App.jsx`
+- [x] Keep: `parent-api-client.js`, `parent-auth-store.js`, `useParentAuth.js` (updated, not removed)
 
 ## QUALITY AND DELIVERY
-- [ ] TESTS — Backend: check-email unit/integration, rate limit, audit log, timing. Frontend: UnifiedParentPage states, mode switching, validation, accessibility
+- [x] TESTS — Backend: check-email unit/integration, rate limit, audit log, timing. Frontend: UnifiedParentPage 19/19 passing (states, mode switching, validation, accessibility, error handling, forgot password, 409 race condition), useCheckEmail 6/6 passing. Fixed: MockTextInput forwardRef for react-hook-form register(), vi.hoisted for mockAxiosPost, getAllByText for duplicate heading text, test-id selectors for register form fields.
 - [ ] QA — Coverage ≥90%, a11y validated, all 8 acceptance criteria verified
 - [ ] CODE REVIEW
