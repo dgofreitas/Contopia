@@ -4,8 +4,13 @@
 
 ## SDLC STATUS
 - [x] Technical Analysis — Architect
-- [x] Implementation — TechLead
-- [ ] Merge Request
+- [ ] Implementation — TechLead (BUG FIX: icon overlapping labels)
+- [ ] Merge Request — https://github.com/dgofreitas/Contopia/pull/64
+
+## BUG FIX NOTE
+- Visual bug reported: icons (FaEnvelope, FaLock) inside TextInput overlap with Label text above the input.
+- Affects: unified-email, login-email-display, login-password, register-email-display, register-password, register-confirm-password fields.
+- Fix then re-run: TESTS → QA → CODE REVIEW → MR update.
 
 ## BACKEND
 - [x] router: Add `POST /check-email` route to `auth-router.js` with `checkEmailLimiter` (10 req/min/IP)
@@ -18,9 +23,11 @@
 - [x] hook: Create `useCheckEmail.js` — TanStack Query mutation for `POST /api/auth/check-email`
 - [x] route: Update `App.jsx` — add `/parent` route, redirect `/register` and `/parent/login` to `/parent`
 - [x] i18n: Add `unifiedAuth` namespace to `pt-BR/auth.json` and `en/auth.json`
+- [x] i18n: Replace hardcoded English texts in UnifiedParentPage.jsx with i18n keys (password rules, confirm password label/placeholder, COPPA notice, Zod schema messages)
 - [x] a11y: `aria-live="polite"` for mode changes, `role="alert"` for errors, focus management, label associations
 - [x] api-client: Update `parent-api-client.js` — change 401 redirect from `/parent/login` to `/parent`
 - [x] hook: Update `useParentAuth.js` — change redirect from `/parent/login` to `/parent`
+- [x] bugfix: Fix icon/label overlap in `UnifiedParentPage.jsx` — TextInput `icon={FaEnvelope/FaLock}` overlaps Label text above input. Ensure icon sits inside input at left, label readable above.
 
 ## CLEANUP
 - [x] Remove `RegisterPage.jsx`
@@ -31,6 +38,6 @@
 - [x] Keep: `parent-api-client.js`, `parent-auth-store.js`, `useParentAuth.js` (updated, not removed)
 
 ## QUALITY AND DELIVERY
-- [x] TESTS — Backend: check-email unit/integration, rate limit, audit log, timing. Frontend: UnifiedParentPage 19/19 passing (states, mode switching, validation, accessibility, error handling, forgot password, 409 race condition), useCheckEmail 6/6 passing. Fixed: MockTextInput forwardRef for react-hook-form register(), vi.hoisted for mockAxiosPost, getAllByText for duplicate heading text, test-id selectors for register form fields.
-- [ ] QA — Coverage ≥90%, a11y validated, all 8 acceptance criteria verified
+- [ ] TESTS
+- [ ] QA
 - [ ] CODE REVIEW

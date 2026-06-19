@@ -15,29 +15,32 @@ import useCheckEmail from '../../hooks/useCheckEmail';
 import useParentAuthStore from '../../stores/parent-auth-store';
 import axios from 'axios';
 
-// --- Zod schemas ---
-const emailSchema = z.object({
-  email: z.string().email(),
-});
-
-const loginSchema = z.object({
-  password: z.string().min(1, 'Required'),
-});
-
-const registerSchema = z
-  .object({
-    password: z
-      .string()
-      .min(8, 'Must be at least 8 characters')
-      .regex(/[A-Z]/, 'Must contain an uppercase letter')
-      .regex(/[0-9]/, 'Must contain a number'),
-    confirmPassword: z.string(),
-    ageConsent: z.literal(true),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords must match',
-    path: ['confirmPassword'],
+// --- Zod schema factories (accept `t` for i18n messages) ---
+const createEmailSchema = (t) =>
+  z.object({
+    email: z.string().email(t('unifiedAuth.errorEmailInvalid')),
   });
+
+const createLoginSchema = (t) =>
+  z.object({
+    password: z.string().min(1, t('unifiedAuth.errorRequired')),
+  });
+
+const createRegisterSchema = (t) =>
+  z
+    .object({
+      password: z
+        .string()
+        .min(8, t('unifiedAuth.passwordRuleMinLength'))
+        .regex(/[A-Z]/, t('unifiedAuth.passwordRuleUppercase'))
+        .regex(/[0-9]/, t('unifiedAuth.passwordRuleNumber')),
+      confirmPassword: z.string(),
+      ageConsent: z.literal(true),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('unifiedAuth.errorPasswordMismatch'),
+      path: ['confirmPassword'],
+    });
 
 export default function UnifiedParentPage() {
   const { t } = useTranslation('auth');
@@ -62,17 +65,17 @@ export default function UnifiedParentPage() {
 
   // --- react-hook-form instances ---
   const emailForm = useForm({
-    resolver: zodResolver(emailSchema),
+    resolver: zodResolver(createEmailSchema(t)),
     defaultValues: { email: '' },
   });
 
   const loginForm = useForm({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(createLoginSchema(t)),
     defaultValues: { password: '' },
   });
 
   const registerForm = useForm({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(createRegisterSchema(t)),
     defaultValues: { password: '', confirmPassword: '', ageConsent: false },
   });
 
@@ -261,32 +264,36 @@ export default function UnifiedParentPage() {
                   className="space-y-4"
                   aria-label={t('unifiedAuth.title')}
                 >
-                  <div>
+                  <div className="relative">
                     <Label
                       htmlFor="unified-email"
                       value={t('unifiedAuth.emailLabel')}
                       className="mb-1 text-base font-medium text-slate-700"
                     />
-                    <TextInput
-                      id="unified-email"
-                      type="email"
-                      placeholder={t('unifiedAuth.emailPlaceholder')}
-                      icon={FaEnvelope}
-                      disabled={isCheckingEmail}
-                      {...emailForm.register('email')}
-                      color={emailForm.formState.errors.email ? 'failure' : undefined}
-                      helperText={
-                        emailForm.formState.errors.email
-                          ? t('unifiedAuth.errorEmailInvalid')
-                          : undefined
-                      }
-                      aria-describedby={
-                        emailForm.formState.errors.email ? 'unified-email-error' : undefined
-                      }
-                      aria-invalid={!!emailForm.formState.errors.email}
-                      className="mt-1"
-                      autoComplete="email"
-                    />
+                    <div className="relative">
+                      <TextInput
+                        id="unified-email"
+                        type="email"
+                        placeholder={t('unifiedAuth.emailPlaceholder')}
+                        disabled={isCheckingEmail}
+                        {...emailForm.register('email')}
+                        color={emailForm.formState.errors.email ? 'failure' : undefined}
+                        helperText={
+                          emailForm.formState.errors.email
+                            ? t('unifiedAuth.errorEmailInvalid')
+                            : undefined
+                        }
+                        aria-describedby={
+                          emailForm.formState.errors.email ? 'unified-email-error' : undefined
+                        }
+                        aria-invalid={!!emailForm.formState.errors.email}
+                        className="mt-1 pl-10"
+                        autoComplete="email"
+                      />
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                        <FaEnvelope className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                      </div>
+                    </div>
                     {emailForm.formState.errors.email && (
                       <span id="unified-email-error" className="sr-only">
                         {t('unifiedAuth.errorEmailInvalid')}
@@ -336,14 +343,18 @@ export default function UnifiedParentPage() {
                       value={t('unifiedAuth.emailLabel')}
                       className="mb-1 text-base font-medium text-slate-700"
                     />
-                    <TextInput
-                      id="login-email-display"
-                      type="email"
-                      value={email}
-                      disabled
-                      icon={FaEnvelope}
-                      className="mt-1"
-                    />
+                    <div className="relative">
+                      <TextInput
+                        id="login-email-display"
+                        type="email"
+                        value={email}
+                        disabled
+                        className="mt-1 pl-10"
+                      />
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                        <FaEnvelope className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                      </div>
+                    </div>
                   </div>
 
                   <form
@@ -358,27 +369,31 @@ export default function UnifiedParentPage() {
                         value={t('login.password')}
                         className="mb-1 text-base font-medium text-slate-700"
                       />
-                      <TextInput
-                        id="login-password"
-                        type="password"
-                        placeholder={t('login.passwordPlaceholder')}
-                        icon={FaLock}
-                        disabled={isSubmitting}
-                        {...loginForm.register('password')}
-                        color={loginForm.formState.errors.password ? 'failure' : undefined}
-                        helperText={
-                          loginForm.formState.errors.password
-                            ? loginForm.formState.errors.password.message
-                            : undefined
-                        }
-                        aria-invalid={!!loginForm.formState.errors.password}
-                        autoComplete="current-password"
-                        className="mt-1"
-                        ref={(e) => {
-                          loginForm.register('password').ref(e);
-                          passwordRef.current = e;
-                        }}
-                      />
+                      <div className="relative">
+                        <TextInput
+                          id="login-password"
+                          type="password"
+                          placeholder={t('login.passwordPlaceholder')}
+                          disabled={isSubmitting}
+                          {...loginForm.register('password')}
+                          color={loginForm.formState.errors.password ? 'failure' : undefined}
+                          helperText={
+                            loginForm.formState.errors.password
+                              ? loginForm.formState.errors.password.message
+                              : undefined
+                          }
+                          aria-invalid={!!loginForm.formState.errors.password}
+                          autoComplete="current-password"
+                          className="mt-1 pl-10"
+                          ref={(e) => {
+                            loginForm.register('password').ref(e);
+                            passwordRef.current = e;
+                          }}
+                        />
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                          <FaLock className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                        </div>
+                      </div>
                     </div>
 
                     {/* Forgot password link */}
@@ -450,14 +465,18 @@ export default function UnifiedParentPage() {
                       value={t('unifiedAuth.emailLabel')}
                       className="mb-1 text-base font-medium text-slate-700"
                     />
-                    <TextInput
-                      id="register-email-display"
-                      type="email"
-                      value={email}
-                      disabled
-                      icon={FaEnvelope}
-                      className="mt-1"
-                    />
+                    <div className="relative">
+                      <TextInput
+                        id="register-email-display"
+                        type="email"
+                        value={email}
+                        disabled
+                        className="mt-1 pl-10"
+                      />
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                        <FaEnvelope className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                      </div>
+                    </div>
                   </div>
 
                   <form
@@ -472,45 +491,49 @@ export default function UnifiedParentPage() {
                         value={t('register.password')}
                         className="mb-1 text-base font-medium text-slate-700"
                       />
-                      <TextInput
-                        id="register-password"
-                        type="password"
-                        placeholder={t('register.passwordPlaceholder')}
-                        icon={FaLock}
-                        disabled={isSubmitting}
-                        {...registerForm.register('password')}
-                        color={registerForm.formState.errors.password ? 'failure' : undefined}
-                        helperText={
-                          registerForm.formState.errors.password
-                            ? registerForm.formState.errors.password.message
-                            : undefined
-                        }
-                        aria-describedby="password-rules"
-                        aria-invalid={!!registerForm.formState.errors.password}
-                        autoComplete="new-password"
-                        className="mt-1"
-                        ref={(e) => {
-                          registerForm.register('password').ref(e);
-                          passwordRef.current = e;
-                        }}
-                      />
+                      <div className="relative">
+                        <TextInput
+                          id="register-password"
+                          type="password"
+                          placeholder={t('register.passwordPlaceholder')}
+                          disabled={isSubmitting}
+                          {...registerForm.register('password')}
+                          color={registerForm.formState.errors.password ? 'failure' : undefined}
+                          helperText={
+                            registerForm.formState.errors.password
+                              ? registerForm.formState.errors.password.message
+                              : undefined
+                          }
+                          aria-describedby="password-rules"
+                          aria-invalid={!!registerForm.formState.errors.password}
+                          autoComplete="new-password"
+                          className="mt-1 pl-10"
+                          ref={(e) => {
+                            registerForm.register('password').ref(e);
+                            passwordRef.current = e;
+                          }}
+                        />
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                          <FaLock className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                        </div>
+                      </div>
                       <ul id="password-rules" className="mt-2 space-y-1" role="list">
                         <li
                           className={`text-sm flex items-center gap-1 ${hasMinLength ? 'text-green-600' : 'text-slate-400'}`}
                         >
                           <span aria-hidden="true">{hasMinLength ? '✓' : '○'}</span>{' '}
-                          {t('register.errorPasswordInvalid').split(',')[0] || 'At least 8 characters'}
+                          {t('unifiedAuth.passwordRuleMinLength')}
                         </li>
                         <li
                           className={`text-sm flex items-center gap-1 ${hasUppercase ? 'text-green-600' : 'text-slate-400'}`}
                         >
                           <span aria-hidden="true">{hasUppercase ? '✓' : '○'}</span>{' '}
-                          1 uppercase letter
+                          {t('unifiedAuth.passwordRuleUppercase')}
                         </li>
                         <li
                           className={`text-sm flex items-center gap-1 ${hasNumber ? 'text-green-600' : 'text-slate-400'}`}
                         >
-                          <span aria-hidden="true">{hasNumber ? '✓' : '○'}</span> 1 number
+                          <span aria-hidden="true">{hasNumber ? '✓' : '○'}</span> {t('unifiedAuth.passwordRuleNumber')}
                         </li>
                       </ul>
                     </div>
@@ -518,26 +541,30 @@ export default function UnifiedParentPage() {
                     <div>
                       <Label
                         htmlFor="register-confirm-password"
-                        value="Confirm Password"
+                        value={t('unifiedAuth.confirmPasswordLabel')}
                         className="mb-1 text-base font-medium text-slate-700"
                       />
-                      <TextInput
-                        id="register-confirm-password"
-                        type="password"
-                        placeholder="Confirm your password"
-                        icon={FaLock}
-                        disabled={isSubmitting}
-                        {...registerForm.register('confirmPassword')}
-                        color={registerForm.formState.errors.confirmPassword ? 'failure' : undefined}
-                        helperText={
-                          registerForm.formState.errors.confirmPassword
-                            ? registerForm.formState.errors.confirmPassword.message
-                            : undefined
-                        }
-                        aria-invalid={!!registerForm.formState.errors.confirmPassword}
-                        autoComplete="new-password"
-                        className="mt-1"
-                      />
+                      <div className="relative">
+                        <TextInput
+                          id="register-confirm-password"
+                          type="password"
+                          placeholder={t('unifiedAuth.confirmPasswordPlaceholder')}
+                          disabled={isSubmitting}
+                          {...registerForm.register('confirmPassword')}
+                          color={registerForm.formState.errors.confirmPassword ? 'failure' : undefined}
+                          helperText={
+                            registerForm.formState.errors.confirmPassword
+                              ? registerForm.formState.errors.confirmPassword.message
+                              : undefined
+                          }
+                          aria-invalid={!!registerForm.formState.errors.confirmPassword}
+                          autoComplete="new-password"
+                          className="mt-1 pl-10"
+                        />
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                          <FaLock className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -615,7 +642,7 @@ export default function UnifiedParentPage() {
         </div>
 
         <p className="mt-6 text-center text-sm text-slate-400">
-          COPPA compliant · We only collect what's needed
+           {t('unifiedAuth.coppaNotice')}
         </p>
       </m.div>
     </main>
