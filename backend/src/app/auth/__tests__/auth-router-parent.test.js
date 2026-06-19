@@ -72,18 +72,29 @@ vi.mock('../../common/validation-schemas.js', () => ({
   logoutSchema: { safeParse: vi.fn() },
   refreshSchema: { safeParse: vi.fn() },
   childLoginSchema: { safeParse: vi.fn() },
+  createChildSchema: {
+    safeParse: vi.fn((data) => {
+      if (!data || !data.firstName || typeof data.firstName !== 'string' || data.firstName.trim().length === 0) {
+        return { success: false, error: { issues: [{ message: 'First name is required' }] } };
+      }
+      return { success: true, data };
+    }),
+  },
 }));
 
-// Mock auth-manager
-const mockAuthManager = {
-  parentLogin: vi.fn(),
-  parentLogout: vi.fn(),
-  parentRefreshSession: vi.fn(),
-  getCurrentParent: vi.fn(),
-  incrementLoginAttemptsParent: vi.fn(),
-  resetLoginAttemptsParent: vi.fn(),
-  registerParent: vi.fn(),
-};
+// Mock auth-manager (use vi.hoisted so the factory can reference mockAuthManager)
+const { mockAuthManager } = vi.hoisted(() => ({
+  mockAuthManager: {
+    parentLogin: vi.fn(),
+    parentLogout: vi.fn(),
+    parentRefreshSession: vi.fn(),
+    getCurrentParent: vi.fn(),
+    incrementLoginAttemptsParent: vi.fn(),
+    resetLoginAttemptsParent: vi.fn(),
+    registerParent: vi.fn(),
+    createChildProfile: vi.fn(),
+  },
+}));
 
 vi.mock('../auth-manager.js', () => mockAuthManager);
 
@@ -354,6 +365,76 @@ describe('Parent Auth Router (STORY-060)', () => {
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+  });
+
+  // ── POST /children (STORY-062) ───────────────────────────────────────────
+
+  describe('POST /api/parent/children', () => {
+    it('should return 201 and child data on successful creation', async () => {
+      mockAuthManager.createChildProfile.mockResolvedValue({
+        child: {
+          _id: '64abc123def4567890123456',
+          firstName: 'Julia',
+          avatarSeed: 'julia-seed',
+        },
+      });
+
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/parent/children')
+        .send({ firstName: 'Julia' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.childId).toBe('64abc123def4567890123456');
+      expect(res.body.data.firstName).toBe('Julia');
+      expect(res.body.data.avatarSeed).toBe('julia-seed');
+      expect(mockAuthManager.createChildProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ parentId: 'parent123', firstName: 'Julia' })
+      );
+    });
+
+    it('should return 400 on validation error (missing firstName)', async () => {
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/parent/children')
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(mockAuthManager.createChildProfile).not.toHaveBeenCalled();
+    });
+
+    it('should return 409 when child limit reached', async () => {
+      mockAuthManager.createChildProfile.mockRejectedValue(
+        Object.assign(new Error('Maximum number of child profiles reached (5)'), {
+          status: 409, code: 'CHILD_LIMIT_REACHED',
+        })
+      );
+
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/parent/children')
+        .send({ firstName: 'SixthChild' });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('CHILD_LIMIT_REACHED');
+    });
+
+    it('should return 409 when child name already exists', async () => {
+      mockAuthManager.createChildProfile.mockRejectedValue(
+        Object.assign(new Error('An active child with this name already exists for this parent'), {
+          status: 409, code: 'ACCOUNT_EXISTS',
+        })
+      );
+
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/parent/children')
+        .send({ firstName: 'Julia' });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('ACCOUNT_EXISTS');
     });
   });
 });
