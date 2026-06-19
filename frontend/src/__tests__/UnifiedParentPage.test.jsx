@@ -217,7 +217,7 @@ describe('UnifiedParentPage (STORY-062)', () => {
 
   it('should show COPPA compliance notice', () => {
     renderPage();
-    expect(screen.getByText(/COPPA compliant/i)).toBeInTheDocument();
+    expect(screen.getByText('unifiedAuth.coppaNotice')).toBeInTheDocument();
   });
 
   it('should render the form with aria-label for accessibility', () => {
@@ -522,5 +522,171 @@ describe('UnifiedParentPage (STORY-062)', () => {
     renderPage(['/parent?expired=true']);
 
     expect(screen.getByText('childSession.parentSessionExpired')).toBeInTheDocument();
+  });
+
+  // ── Register Form Validation ─────────────────────────────────────────────
+
+  it('should show age consent validation error when consent is not checked on register', async () => {
+    mockCheckEmailSuccess(false);
+    const user = userEvent.setup();
+    renderPage();
+
+    const emailInput = screen.getByLabelText('unifiedAuth.emailLabel');
+    await user.type(emailInput, 'new@example.com');
+    await user.click(screen.getByText('unifiedAuth.continueButton'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('unifiedAuth.registerHeading').length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Fill password and confirm but leave age consent unchecked
+    const passwordInput = screen.getByTestId('input-register-password');
+    await user.type(passwordInput, 'StrongPass1');
+
+    const confirmInput = screen.getByTestId('input-register-confirm-password');
+    await user.type(confirmInput, 'StrongPass1');
+
+    // Submit without checking age consent
+    await user.click(screen.getByText('unifiedAuth.registerButton'));
+
+    await waitFor(() => {
+      // The age consent error appears in both <p role="alert"> and <span class="sr-only">
+      const errors = screen.getAllByText('register.errorAgeConsent');
+      expect(errors.length).toBeGreaterThanOrEqual(2);
+      // At least one should have role="alert"
+      const alertErrors = errors.filter((e) => e.getAttribute('role') === 'alert');
+      expect(alertErrors.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('should show confirm password mismatch error on register', async () => {
+    mockCheckEmailSuccess(false);
+    const user = userEvent.setup();
+    renderPage();
+
+    const emailInput = screen.getByLabelText('unifiedAuth.emailLabel');
+    await user.type(emailInput, 'new@example.com');
+    await user.click(screen.getByText('unifiedAuth.continueButton'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('unifiedAuth.registerHeading').length).toBeGreaterThanOrEqual(1);
+    });
+
+    const passwordInput = screen.getByTestId('input-register-password');
+    await user.type(passwordInput, 'StrongPass1');
+
+    const confirmInput = screen.getByTestId('input-register-confirm-password');
+    await user.type(confirmInput, 'DifferentPass1');
+
+    // Check age consent
+    const ageConsent = screen.getByRole('checkbox', { name: /ageConsentLabel/i });
+    await user.click(ageConsent);
+
+    await user.click(screen.getByText('unifiedAuth.registerButton'));
+
+    await waitFor(() => {
+      expect(screen.getByText('unifiedAuth.errorPasswordMismatch')).toBeInTheDocument();
+    });
+  });
+
+  it('should show password rule validation errors on register for weak password', async () => {
+    mockCheckEmailSuccess(false);
+    const user = userEvent.setup();
+    renderPage();
+
+    const emailInput = screen.getByLabelText('unifiedAuth.emailLabel');
+    await user.type(emailInput, 'weakpass@example.com');
+    await user.click(screen.getByText('unifiedAuth.continueButton'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('unifiedAuth.registerHeading').length).toBeGreaterThanOrEqual(1);
+    });
+
+    const passwordInput = screen.getByTestId('input-register-password');
+    await user.type(passwordInput, 'short'); // Too short, no uppercase, no number
+
+    const confirmInput = screen.getByTestId('input-register-confirm-password');
+    await user.type(confirmInput, 'short');
+
+    const ageConsent = screen.getByRole('checkbox', { name: /ageConsentLabel/i });
+    await user.click(ageConsent);
+
+    await user.click(screen.getByText('unifiedAuth.registerButton'));
+
+    await waitFor(() => {
+      // Password should fail min length validation — text appears in both
+      // the rules list (always present) and the validation error helper text
+      const errors = screen.getAllByText('unifiedAuth.passwordRuleMinLength');
+      expect(errors.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  // ── Login Submitting State ─────────────────────────────────────────────
+
+  it('should show spinner on login button during submission', async () => {
+    mockCheckEmailSuccess(true);
+    let resolveLogin;
+    const loginPromise = new Promise((resolve) => { resolveLogin = resolve; });
+    mocks.axiosPost.mockReturnValue(loginPromise);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    const emailInput = screen.getByLabelText('unifiedAuth.emailLabel');
+    await user.type(emailInput, 'existing@example.com');
+    await user.click(screen.getByText('unifiedAuth.continueButton'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('unifiedAuth.loginHeading').length).toBeGreaterThanOrEqual(1);
+    });
+
+    const passwordInput = screen.getByTestId('input-login-password');
+    await user.type(passwordInput, 'password123');
+
+    // Click login — this starts the async operation
+    await user.click(screen.getByText('unifiedAuth.loginButton'));
+
+    // Spinner should appear while submitting
+    await waitFor(() => {
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    });
+
+    // Resolve the login promise to clean up
+    resolveLogin({ data: { data: { accessToken: 'token', parentId: 'p1', email: 'existing@example.com', childId: 'c1', childFirstName: 'Child', refreshToken: 'rt' } } });
+  });
+
+  // ── Generic Error on Register ──────────────────────────────────────────
+
+  it('should show generic error when register fails with unknown error', async () => {
+    mockCheckEmailSuccess(false);
+    const user = userEvent.setup();
+    renderPage();
+
+    const emailInput = screen.getByLabelText('unifiedAuth.emailLabel');
+    await user.type(emailInput, 'error@example.com');
+    await user.click(screen.getByText('unifiedAuth.continueButton'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('unifiedAuth.registerHeading').length).toBeGreaterThanOrEqual(1);
+    });
+
+    const passwordInput = screen.getByTestId('input-register-password');
+    await user.type(passwordInput, 'StrongPass1');
+
+    const confirmInput = screen.getByTestId('input-register-confirm-password');
+    await user.type(confirmInput, 'StrongPass1');
+
+    const ageConsent = screen.getByRole('checkbox', { name: /ageConsentLabel/i });
+    await user.click(ageConsent);
+
+    const axiosError = new Error('Server error');
+    axiosError.response = { status: 500, data: { error: { code: 'UNKNOWN' } } };
+    mocks.axiosPost.mockRejectedValue(axiosError);
+
+    await user.click(screen.getByText('unifiedAuth.registerButton'));
+
+    await waitFor(() => {
+      expect(screen.getByText('unifiedAuth.errorGeneric')).toBeInTheDocument();
+    });
   });
 });
