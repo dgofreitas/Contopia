@@ -391,7 +391,7 @@ export default function UnifiedParentPage() {
                           }}
                         />
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
-                          <FaLock className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                          <FaLock className="h-5 w-5 text-slate-400 -translate-y-[1px]" aria-hidden="true" />
                         </div>
                       </div>
                     </div>
@@ -514,7 +514,7 @@ export default function UnifiedParentPage() {
                           }}
                         />
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
-                          <FaLock className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                          <FaLock className="h-5 w-5 text-slate-400 -translate-y-[1px]" aria-hidden="true" />
                         </div>
                       </div>
                       <ul id="password-rules" className="mt-2 space-y-1" role="list">
@@ -562,7 +562,7 @@ export default function UnifiedParentPage() {
                           className="mt-1 pl-10"
                         />
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
-                          <FaLock className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                          <FaLock className="h-5 w-5 text-slate-400 -translate-y-[1px]" aria-hidden="true" />
                         </div>
                       </div>
                     </div>
