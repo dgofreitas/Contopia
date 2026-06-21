@@ -50,6 +50,14 @@ export const parentRegisterSchema = z.object({
 });
 
 /**
+ * Check email schema — email existence check for unified auth flow (STORY-062).
+ * Returns whether an account exists for the given email (no PII disclosed).
+ */
+export const checkEmailSchema = z.object({
+  email: z.string().email(),
+});
+
+/**
  * Parent login schema — email + password.
  */
 export const parentLoginSchema = z.object({
@@ -65,6 +73,19 @@ export const parentLoginSchema = z.object({
  */
 export const parentRefreshSchema = z.object({
   refreshToken: z.string().min(1),
+});
+
+/**
+ * Create child profile schema — parent creates a dependent (STORY-062).
+ * firstName: required, 1–40 chars, letters/spaces/hyphens only (no numbers/symbols).
+ * dateOfBirth: optional ISO date string (YYYY-MM-DD).
+ * avatarSeed: optional, max 30 chars — used for avatar generation deterministically.
+ */
+export const createChildSchema = z.object({
+  firstName: z.string().trim().min(1, 'First name is required').max(40)
+    .regex(/^[A-Za-zÀ-ÿ\s'-]+$/, 'First name contains invalid characters'),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be YYYY-MM-DD').optional(),
+  avatarSeed: z.string().trim().max(30).optional(),
 });
 
 // ── Book Validation Schemas ───────────────────────────────────────────────────

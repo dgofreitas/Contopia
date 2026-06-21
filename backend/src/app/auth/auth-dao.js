@@ -91,9 +91,12 @@ export async function findActiveChildByParent(parentId) {
 
 /**
  * Create a new child document.
+ * STORY-063: persists optional `dateOfBirth` (YYYY-MM-DD) when provided.
  */
-export async function createChild({ parentId, firstName, avatarSeed }) {
-  const doc = await Child.create({ parentId, firstName, avatarSeed: avatarSeed || 'avatar_default' });
+export async function createChild({ parentId, firstName, avatarSeed, dateOfBirth }) {
+  const payload = { parentId, firstName, avatarSeed };
+  if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
+  const doc = await Child.create(payload);
   return doc.toObject();
 }
 
@@ -131,12 +134,12 @@ export async function hardDeleteChildById(childId) {
  * Stores raw values in MongoDB for internal correlation.
  * Logs hashed PII via Pino for structured logging.
  */
-export async function createAuditLog({ childId, parentId, sessionId, event, ip, deviceHint, reason }) {
+export async function createAuditLog({ childId, parentId, sessionId, event, ip, deviceHint, reason, emailHash }) {
   // Pino structured log with hashed PII
   logger.info({
     event,
     parentId: parentId ? hashIdentifier(parentId) : undefined,
-    email: undefined, // email not available in audit log params
+    emailHash: emailHash || undefined,
     ip: ip ? hashIdentifier(ip) : undefined,
     sessionId,
     deviceHint,
@@ -148,6 +151,7 @@ export async function createAuditLog({ childId, parentId, sessionId, event, ip, 
   if (parentId) doc.parentId = parentId;
   doc.sessionId = sessionId;
   doc.event = event;
+  if (emailHash) doc.emailHash = emailHash;
   if (ip) doc.ip = ip;
   if (deviceHint) doc.deviceHint = deviceHint;
   if (reason) doc.reason = reason;

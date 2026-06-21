@@ -1,6 +1,8 @@
 // Contopia — Parent Dashboard Business Logic Manager
 import pino from 'pino';
-import archiver from 'archiver';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const archiver = require('archiver');
 import {
   findParentByIdWithChild,
   findChildrenByParentId,

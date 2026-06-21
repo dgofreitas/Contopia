@@ -53,12 +53,16 @@ const childSchema = new Schema(
       type: String,
       required: [true, 'First name is required'],
       trim: true,
-      maxlength: 30,
+      maxlength: 40,
     },
     avatarSeed: {
       type: String,
-      required: [true, 'Avatar seed is required'],
       default: 'avatar_default',
+    },
+    dateOfBirth: {
+      type: String,
+      match: [/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be YYYY-MM-DD'],
+      default: null,
     },
     password: {
       type: String,
@@ -121,8 +125,11 @@ const sessionAuditSchema = new Schema(
     },
     event: {
       type: String,
-      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED', 'CHILD_SESSION_CREATED', 'PARENT_SESSION_CREATED', 'PARENT_LOGIN_FAILED', 'PARENT_LOGOUT', 'PARENT_REGISTRATION_CONSENT', 'LOGIN_FAILED'],
+      enum: ['SESSION_CREATED', 'SESSION_REFRESHED', 'SESSION_LOGOUT', 'SESSION_EXPIRED', 'SESSION_REVOKED', 'CHILD_SESSION_CREATED', 'CHILD_CREATED', 'PARENT_SESSION_CREATED', 'PARENT_LOGIN_FAILED', 'PARENT_LOGOUT', 'PARENT_REGISTRATION_CONSENT', 'LOGIN_FAILED', 'EMAIL_CHECK'],
       required: true,
+    },
+    emailHash: {
+      type: String,
     },
     ip: {
       type: String,

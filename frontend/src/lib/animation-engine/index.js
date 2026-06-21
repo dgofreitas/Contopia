@@ -1,4 +1,4 @@
-export { DURATION, EASING, getDuration, getEasing } from './presets.js';
+export { DURATION, EASING, getDuration, getEasing, STAGGER_PER_INDEX_MS, MAX_STAGGER_MS } from './presets.js';
 export { registerAnimation, cancelAnimation, isAnimating } from './interruptibility.js';
 export { useVisibilityPause } from './use-visibility-pause.js';
 export { animate } from './animate.js';

@@ -22,6 +22,7 @@ import {
   softDeleteChildById,
 } from './auth-dao.js';
 import { purgeAssetsByAuthorManager } from '../storage/storage-manager.js';
+import { createActivityLog } from '../book/book-dao.js';
 
 const logger = pino({ name: 'auth-manager', level: process.env.LOG_LEVEL || 'info' });
 
@@ -82,22 +83,29 @@ export async function createSession({ childId, parentId, accessToken: _accessTok
   const sessionId = `sess_${crypto.randomBytes(8).toString('hex')}`;
   const childIdStr = childId.toString();
 
-  // Single-session policy: scan and destroy any existing sessions for this child
+  // Single-session policy: scan and destroy any existing sessions for this child.
+  // NOTE: project uses ioredis (not node-redis) — `scanIterator` is not available;
+  // use cursor-based `scan` loop.
   try {
     const pattern = `session:${childIdStr}:*`;
-    for await (const key of redis.scanIterator({ match: pattern })) {
-      try {
-        const sessionData = await redis.get(key);
-        if (sessionData) {
-          const session = JSON.parse(sessionData);
-          // Blacklist old access token is handled by caller; session is being replaced
-          logger.info({ childId: childIdStr, oldSessionId: session.sessionId }, 'Destroying old session (single-session policy)');
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      for (const key of (keys || [])) {
+        try {
+          const sessionData = await redis.get(key);
+          if (sessionData) {
+            const session = JSON.parse(sessionData);
+            // Blacklist old access token is handled by caller; session is being replaced
+            logger.info({ childId: childIdStr, oldSessionId: session.sessionId }, 'Destroying old session (single-session policy)');
+          }
+          await redis.del(key);
+        } catch (delErr) {
+          logger.warn({ err: delErr, key }, 'Failed to delete old session key');
         }
-        await redis.del(key);
-      } catch (delErr) {
-        logger.warn({ err: delErr, key }, 'Failed to delete old session key');
       }
-    }
+    } while (cursor !== '0' && cursor !== 0);
   } catch (scanErr) {
     logger.warn({ err: scanErr, childId: childIdStr }, 'Redis scan for old sessions failed');
   }
@@ -406,23 +414,30 @@ export async function refreshSession({ refreshToken, ip, deviceHint }) {
     throw err;
   }
 
-  // Find existing session to get sessionId
+  // Find existing session to get sessionId.
+  // NOTE: project uses ioredis (not node-redis) — `scanIterator` is not available;
+  // use cursor-based `scan` loop. We only need the first matching key.
   let sessionId = null;
   try {
     const pattern = `session:${childIdStr}:*`;
-    for await (const key of redis.scanIterator({ match: pattern })) {
-      // Reset session TTL
-      await redis.expire(key, SESSION_TTL_SECONDS);
-      const sessionRaw = await redis.get(key);
-      if (sessionRaw) {
-        const sessionObj = JSON.parse(sessionRaw);
-        sessionId = sessionObj.sessionId;
-        // Update lastActivity
-        sessionObj.lastActivity = new Date().toISOString();
-        await redis.set(key, JSON.stringify(sessionObj), 'EX', SESSION_TTL_SECONDS);
+    let cursor = '0';
+    outer: do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      for (const key of (keys || [])) {
+        // Reset session TTL
+        await redis.expire(key, SESSION_TTL_SECONDS);
+        const sessionRaw = await redis.get(key);
+        if (sessionRaw) {
+          const sessionObj = JSON.parse(sessionRaw);
+          sessionId = sessionObj.sessionId;
+          // Update lastActivity
+          sessionObj.lastActivity = new Date().toISOString();
+          await redis.set(key, JSON.stringify(sessionObj), 'EX', SESSION_TTL_SECONDS);
+        }
+        break outer; // only process first match
       }
-      break; // only process first match
-    }
+    } while (cursor !== '0' && cursor !== 0);
   } catch (redisErr) {
     logger.warn({ err: redisErr, childId: childIdStr }, 'Redis unavailable — session lookup skipped');
   }
@@ -477,15 +492,22 @@ export async function getCurrentUser(childId) {
     throw err;
   }
 
-  // Find session in Redis
+  // Find session in Redis.
+  // NOTE: project uses ioredis (not node-redis) — `scanIterator` is not available;
+  // use cursor-based `scan` loop. We only need the first matching key.
   let sessionMeta = null;
   try {
     const pattern = `session:${childIdStr}:*`;
-    for await (const key of redis.scanIterator({ match: pattern })) {
-      const raw = await redis.get(key);
-      if (raw) sessionMeta = JSON.parse(raw);
-      break; // only need first match
-    }
+    let cursor = '0';
+    outer: do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      for (const key of (keys || [])) {
+        const raw = await redis.get(key);
+        if (raw) sessionMeta = JSON.parse(raw);
+        break outer; // only need first match
+      }
+    } while (cursor !== '0' && cursor !== 0);
   } catch (redisErr) {
     logger.warn({ err: redisErr, childId: childIdStr }, 'Redis unavailable — session metadata not retrieved');
   }
@@ -562,11 +584,13 @@ export async function registerParent({ email, password, ageConsent, ip, deviceHi
 /**
  * Create a child profile under an existing parent account.
  * Enforces 5-child limit at application level.
+ * STORY-063: persists optional `dateOfBirth` and emits CHILD_CREATED activity log
+ * with a SHA-256 hash of the childId in metadata.
  * Returns { child } on success.
  * Throws ACCOUNT_EXISTS if an active child with the same name exists.
  * Throws CHILD_LIMIT_REACHED if parent already has 5 active children.
  */
-export async function createChildProfile({ parentId, firstName, avatarSeed }) {
+export async function createChildProfile({ parentId, firstName, avatarSeed, dateOfBirth }) {
   // Check 5-child limit
   const existingChildren = await findChildrenByParentId(parentId);
   if (existingChildren.length >= MAX_CHILDREN_PER_PARENT) {
@@ -585,8 +609,23 @@ export async function createChildProfile({ parentId, firstName, avatarSeed }) {
     throw err;
   }
 
-  const child = await createChild({ parentId, firstName, avatarSeed });
+  const child = await createChild({ parentId, firstName, avatarSeed, dateOfBirth });
   logger.info({ parentId, childId: child._id }, 'Child profile created');
+
+  // Audit activity log: CHILD_CREATED (fire-and-forget)
+  // STORY-063 / NFR-PRV-06: hashed childId for audit trail
+  const childIdStr = child._id.toString();
+  const hashedChildId = crypto.createHash('sha256').update(childIdStr).digest('hex');
+  createActivityLog({
+    actorId: parentId,
+    actorType: 'parent',
+    action: 'CHILD_CREATED',
+    targetId: child._id,
+    targetType: 'child',
+    metadata: { childId: hashedChildId },
+  }).catch((err) => {
+    logger.warn({ err, parentId, childId: childIdStr }, 'ActivityLog creation failed for CHILD_CREATED');
+  });
 
   return { child };
 }
@@ -1025,19 +1064,26 @@ export async function parentRefreshSession({ refreshToken, ip, deviceHint }) {
     logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent refresh hash check skipped');
   }
 
-  // Extend parent session TTL
+  // Extend parent session TTL.
+  // NOTE: project uses ioredis (not node-redis) — `scanIterator` is not available;
+  // use cursor-based `scan` loop. We only need the first matching key.
   try {
     const pattern = `parentSession:${parentIdStr}:*`;
-    for await (const key of redis.scanIterator({ match: pattern })) {
-      await redis.expire(key, PARENT_SESSION_TTL_SECONDS);
-      const sessionRaw = await redis.get(key);
-      if (sessionRaw) {
-        const sessionObj = JSON.parse(sessionRaw);
-        sessionObj.lastActivity = new Date().toISOString();
-        await redis.set(key, JSON.stringify(sessionObj), 'EX', PARENT_SESSION_TTL_SECONDS);
+    let cursor = '0';
+    outer: do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      for (const key of (keys || [])) {
+        await redis.expire(key, PARENT_SESSION_TTL_SECONDS);
+        const sessionRaw = await redis.get(key);
+        if (sessionRaw) {
+          const sessionObj = JSON.parse(sessionRaw);
+          sessionObj.lastActivity = new Date().toISOString();
+          await redis.set(key, JSON.stringify(sessionObj), 'EX', PARENT_SESSION_TTL_SECONDS);
+        }
+        break outer;
       }
-      break;
-    }
+    } while (cursor !== '0' && cursor !== 0);
   } catch (redisErr) {
     logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent session lookup skipped');
   }
@@ -1112,4 +1158,27 @@ export async function getCurrentParent(parentId) {
     })),
     dashNav: ['activity', 'export', 'delete', 'privacy'],
   };
+}
+
+// ── Email Check (STORY-062) ──────────────────────────────────────────────────
+
+/**
+ * Check if a parent account exists for the given email.
+ * Used by the unified auth flow to determine login vs register mode.
+ * Includes timing-attack mitigation via random jitter delay.
+ * Fire-and-forget audit log with hashed email for anomaly detection.
+ * Returns { exists: boolean } — no PII disclosed.
+ */
+export async function checkParentEmail({ email, ip, deviceHint }) {
+  const parent = await findParentByEmail(email);
+
+  // Audit log (fire-and-forget) with hashed email for anomaly detection
+  const emailHash = hashIdentifier(email);
+  createAuditLog({ parentId: 'unknown', sessionId: 'email_check', event: 'EMAIL_CHECK', ip, deviceHint, emailHash }).catch(() => {});
+
+  // Random jitter delay (50–150ms) to mitigate timing attacks
+  const jitter = Math.random() * 100 + 50;
+  await new Promise((resolve) => setTimeout(resolve, jitter));
+
+  return { exists: !!parent };
 }

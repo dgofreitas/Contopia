@@ -6,7 +6,7 @@
 # ============================================================================
 FROM node:22-alpine AS base
 
-RUN apk add --no-cache dumb-init wget
+RUN apk add --no-cache dumb-init wget python3 make g++ cairo-dev pango-dev libpng-dev jpeg-dev giflib-dev gcompat
 
 WORKDIR /app
 

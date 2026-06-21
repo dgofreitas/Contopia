@@ -165,7 +165,38 @@ describe('Auth DAO', () => {
 
       const result = await authDao.createChild({ parentId: 'p1', firstName: 'A' });
       expect(result).toEqual(raw);
-      expect(Child.create).toHaveBeenCalledWith({ parentId: 'p1', firstName: 'A' });
+      // STORY-063: DAO passes avatarSeed through directly; model default applies when undefined.
+      expect(Child.create).toHaveBeenCalledWith({ parentId: 'p1', firstName: 'A', avatarSeed: undefined });
+    });
+
+    it('should persist dateOfBirth when provided (STORY-063)', async () => {
+      const raw = { _id: 'c1', parentId: 'p1', firstName: 'A', dateOfBirth: '2018-05-12' };
+      const mock = { ...raw, toObject: vi.fn().mockReturnValue(raw) };
+      Child.create.mockResolvedValue(mock);
+
+      const result = await authDao.createChild({
+        parentId: 'p1',
+        firstName: 'A',
+        avatarSeed: 'seed',
+        dateOfBirth: '2018-05-12',
+      });
+      expect(result).toEqual(raw);
+      expect(Child.create).toHaveBeenCalledWith({
+        parentId: 'p1',
+        firstName: 'A',
+        avatarSeed: 'seed',
+        dateOfBirth: '2018-05-12',
+      });
+    });
+
+    it('should omit dateOfBirth from payload when not provided (STORY-063)', async () => {
+      const raw = { _id: 'c1', parentId: 'p1', firstName: 'A' };
+      const mock = { ...raw, toObject: vi.fn().mockReturnValue(raw) };
+      Child.create.mockResolvedValue(mock);
+
+      await authDao.createChild({ parentId: 'p1', firstName: 'A' });
+      // STORY-063: DAO passes avatarSeed through directly; model default applies when undefined.
+      expect(Child.create).toHaveBeenCalledWith({ parentId: 'p1', firstName: 'A', avatarSeed: undefined });
     });
   });
 

@@ -17,6 +17,9 @@ export function getDuration(value) {
   return value;
 }
 
+export const STAGGER_PER_INDEX_MS = 50;
+export const MAX_STAGGER_MS = 500;
+
 export function getEasing(value) {
   if (typeof value === 'string' && value in EASING) {
     return EASING[value];

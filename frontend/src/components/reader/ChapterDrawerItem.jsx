@@ -1,15 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { HiCheckCircle, HiMinusCircle, HiCircle } from 'react-icons/hi';
+import { FaCheckCircle, FaMinusCircle, FaRegCircle } from 'react-icons/fa';
 
 const STATUS_ICONS = {
-  read: HiCheckCircle,
-  'in-progress': HiMinusCircle,
-  unread: HiCircle,
+  read: FaCheckCircle,
+  'in-progress': FaMinusCircle,
+  unread: FaRegCircle,
 };
 
 export default function ChapterDrawerItem({ chapter, status, onClick, isCurrent }) {
   const { t } = useTranslation('reader');
-  const Icon = STATUS_ICONS[status] || HiCircle;
+  const Icon = STATUS_ICONS[status] || FaRegCircle;
 
   const statusLabel = {
     read: t('chapterRead'),

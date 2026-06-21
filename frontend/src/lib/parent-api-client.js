@@ -45,7 +45,7 @@ parentApiClient.interceptors.response.use(
       // STORY-060: SESSION_EXPIRED → clear all and redirect with query param
       if (error.response?.data?.error?.code === 'SESSION_EXPIRED') {
         useParentAuthStore.getState().parentClearAll();
-        window.location.href = '/parent/login?expired=true';
+        window.location.href = '/parent?expired=true';
         return Promise.reject(error);
       }
 
@@ -53,7 +53,7 @@ parentApiClient.interceptors.response.use(
 
       if (!parentRefreshToken) {
         useParentAuthStore.getState().parentClearAll();
-        window.location.href = '/parent/login';
+        window.location.href = '/parent';
         return Promise.reject(error);
       }
 
@@ -86,7 +86,7 @@ parentApiClient.interceptors.response.use(
       } catch (refreshError) {
         processRefreshQueue(refreshError, null);
         useParentAuthStore.getState().parentClearAll();
-        window.location.href = '/parent/login';
+        window.location.href = '/parent';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

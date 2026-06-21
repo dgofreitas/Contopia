@@ -32,7 +32,7 @@ export default function useParentAuth() {
 
   const handleAutoLogout = useCallback(async () => {
     await parentLogout();
-    window.location.href = '/parent/login';
+    window.location.href = '/parent';
   }, [parentLogout]);
 
   // Start idle timers (25m warning, 30m expire)
@@ -154,7 +154,7 @@ export default function useParentAuth() {
 
   const logout = useCallback(async () => {
     await parentLogout();
-    window.location.href = '/parent/login';
+    window.location.href = '/parent';
   }, [parentLogout]);
 
   return {

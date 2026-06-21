@@ -3,7 +3,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import redis from '../../config/redis.js';
-import { childSessionSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentRegisterSchema, parentRefreshSchema } from '../common/validation-schemas.js';
+import { childSessionSchema, loginSchema, logoutSchema, refreshSchema, parentLoginSchema, parentRegisterSchema, parentRefreshSchema, checkEmailSchema, createChildSchema } from '../common/validation-schemas.js';
 import { authMiddleware, parentAuthMiddleware } from '../common/auth-middleware.js';
 import * as authManager from './auth-manager.js';
 import { ok, fail } from '../common/response-envelope.js';
@@ -74,6 +74,18 @@ const parentLoginLimiter = createLimiter({
   message: 'Too many parent login attempts.',
 });
 
+const checkEmailLimiter = createLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Too many email check attempts.',
+});
+
+const createChildLimiter = createLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Too many child creation attempts.',
+});
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function sanitizeUserAgent(req) {
@@ -115,6 +127,30 @@ router.post('/register', registerParentLimiter, async (req, res) => {
       email: result.email,
       children: result.children,
     }, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /check-email ────────────────────────────────────────────────────────
+// STORY-062: Pre-auth endpoint for unified parent auth flow.
+// Returns whether a parent account exists for the given email (no PII disclosed).
+router.post('/check-email', checkEmailLimiter, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = checkEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
+    }
+
+    const { email } = parsed.data;
+    const ip = req.ip;
+    const deviceHint = sanitizeUserAgent(req);
+
+    const result = await authManager.checkParentEmail({ email, ip, deviceHint });
+
+    return res.status(200).json(ok({ exists: result.exists }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
@@ -406,6 +442,36 @@ parentAuthRouter.get('/me', parentAuthMiddleware, async (req, res) => {
     const result = await authManager.getCurrentParent(req.parentId);
 
     return res.status(200).json(ok(result, { requestId }));
+  } catch (err) {
+    return handleError(err, req, res);
+  }
+});
+
+// ── POST /children — Create a child profile under the authenticated parent (STORY-062) ──
+parentAuthRouter.post('/children', createChildLimiter, parentAuthMiddleware, async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const parsed = createChildSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
+    }
+
+    const { firstName, avatarSeed, dateOfBirth } = parsed.data;
+    const parentId = req.parentId;
+    const ip = req.ip;
+    const deviceHint = sanitizeUserAgent(req);
+
+    const result = await authManager.createChildProfile({ parentId, firstName, avatarSeed, dateOfBirth });
+
+    logger.info({ requestId, parentId, childId: result.child._id }, 'Child profile created via /api/parent/children');
+
+    return res.status(201).json(ok({
+      childId: result.child._id.toString(),
+      firstName: result.child.firstName,
+      dateOfBirth: result.child.dateOfBirth || null,
+      avatarSeed: result.child.avatarSeed || null,
+    }, { requestId }));
   } catch (err) {
     return handleError(err, req, res);
   }
