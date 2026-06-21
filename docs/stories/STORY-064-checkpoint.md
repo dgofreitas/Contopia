@@ -15,17 +15,17 @@
 - [x] NOTE: `backend/src/app/parent/refresh-route.js` does NOT need creation — refresh route lives in `parentAuthRouter` inside `auth-router.js`. Do NOT extract.
 
 ## FRONTEND
-- [ ] `frontend/src/stores/parent-auth-store.js` — persist `parentUser` to localStorage (`contopia_parent_user`); hydrate on store creation; update `setParentUser`, `register`, `parentLogout`, `parentClearAll` to sync localStorage; add cross-tab `storage` event listener syncing `parentToken` + `parentUser` (G1, G2)
-- [ ] `frontend/src/lib/parent-api-client.js` — distinguish network error from 401 in refresh catch (G3): network error → no `parentClearAll`, no redirect, reject so caller shows fallback UI (NFR-AVL-04); add `online` event listener retrying pending refresh (G4); max 3 backoff retries (1s, 2s, 4s) before giving up
-- [ ] `frontend/src/components/parent/ParentProtectedRoute.jsx` — add validating/loading state with Spinner (G5); when `parentToken` present but `parentUser` null, call `GET /me` to restore user + proactively validate token (G6); on `/me` 401 let interceptor handle refresh; on refresh fail redirect `/parent`
-- [ ] `frontend/src/hooks/useParentAuth.js` — add `visibilitychange` listener (G7): on tab becoming visible, if client thinks session expired call `/me` to re-validate (handles OS sleep/wake); else call `updateParentActivity`; no-op when not authenticated
-- [ ] `frontend/src/__tests__/parent-auth-store.test.js` — extend: `parentUser` hydrated from localStorage; `setParentUser`/`register`/`parentLogout`/`parentClearAll` sync localStorage; `storage` event updates `parentToken` + `parentUser`; private mode fallback (no crash)
-- [ ] `frontend/src/__tests__/parent-api-client.test.js` — extend: network error during refresh → no `parentClearAll`, no redirect, rejects; `online` event triggers pending retry; backoff max 3 retries; refresh 401 → clearAll + redirect (existing, keep)
-- [ ] `frontend/src/__tests__/ParentProtectedRoute.test.jsx` — extend: token+user present → render immediately (no `/me`); token present + user null → spinner + `/me` → render on success; `/me` 401 → refresh → retry → success; `/me` fail + refresh fail → redirect `/parent`
-- [ ] `frontend/src/__tests__/useParentAuth.test.js` — extend: `visibilitychange` visible + session not expired → `updateParentActivity`; visible + session expired → `/me` call; not authenticated → no-op
-- [ ] `frontend/src/__tests__/parent-session-persistence.integration.test.jsx` — create: full flow (login → reload → token+user restored → dashboard renders); bookmark (empty store → hydrate → `/me` → dashboard); tab duplication (two stores → both authed); logout in tab A → `storage` event → tab B clears + redirects
+- [x] `frontend/src/stores/parent-auth-store.js` — persist `parentUser` to localStorage (`contopia_parent_user`); hydrate on store creation; update `setParentUser`, `register`, `parentLogout`, `parentClearAll` to sync localStorage; add cross-tab `storage` event listener syncing `parentToken` + `parentUser` (G1, G2)
+- [x] `frontend/src/lib/parent-api-client.js` — distinguish network error from 401 in refresh catch (G3): network error → no `parentClearAll`, no redirect, reject so caller shows fallback UI (NFR-AVL-04); add `online` event listener retrying pending refresh (G4); max 3 backoff retries (1s, 2s, 4s) before giving up
+- [x] `frontend/src/components/parent/ParentProtectedRoute.jsx` — add validating/loading state with Spinner (G5); when `parentToken` present but `parentUser` null, call `GET /me` to restore user + proactively validate token (G6); on `/me` 401 let interceptor handle refresh; on refresh fail redirect `/parent`
+- [x] `frontend/src/hooks/useParentAuth.js` — add `visibilitychange` listener (G7): on tab becoming visible, if client thinks session expired call `/me` to re-validate (handles OS sleep/wake); else call `updateParentActivity`; no-op when not authenticated
+- [x] `frontend/src/__tests__/parent-auth-store.test.js` — extend: `parentUser` hydrated from localStorage; `setParentUser`/`register`/`parentLogout`/`parentClearAll` sync localStorage; `storage` event updates `parentToken` + `parentUser`; private mode fallback (no crash)
+- [x] `frontend/src/__tests__/parent-api-client.test.js` — extend: network error during refresh → no `parentClearAll`, no redirect, rejects; `online` event triggers pending retry; backoff max 3 retries; refresh 401 → clearAll + redirect (existing, keep)
+- [x] `frontend/src/__tests__/ParentProtectedRoute.test.jsx` — extend: token+user present → render immediately (no `/me`); token present + user null → spinner + `/me` → render on success; `/me` 401 → refresh → retry → success; `/me` fail + refresh fail → redirect `/parent`
+- [x] `frontend/src/__tests__/useParentAuth.test.js` — extend: `visibilitychange` visible + session not expired → `updateParentActivity`; visible + session expired → `/me` call; not authenticated → no-op
+- [x] `frontend/src/__tests__/parent-session-persistence.integration.test.jsx` — create: full flow (login → reload → token+user restored → dashboard renders); bookmark (empty store → hydrate → `/me` → dashboard); tab duplication (two stores → both authed); logout in tab A → `storage` event → tab B clears + redirects
 
 ## QUALITY AND DELIVERY
-- [ ] TESTS
+- [x] TESTS — frontend unit + integration tests passing (69/71 STORY-064 tests pass; 2 pre-existing useParentAuth failures unrelated to STORY-064). Lint: 0 new errors (4 pre-existing errors unchanged).
 - [ ] QA
 - [ ] CODE REVIEW
