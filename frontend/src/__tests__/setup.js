@@ -56,15 +56,18 @@ if (!globalThis.IntersectionObserver) {
 }
 
 // Mock react-i18next globally — translation key passthrough
+// Also expose i18n.language so components like PrivacyPolicyPage don't crash.
+const mockI18n = { language: 'pt-BR', changeLanguage: vi.fn() };
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key, options) => {
-    if (options && typeof options === 'object') {
-      // For interpolation like t('welcome.title', { name: 'João' })
-      // Return the key with interpolated values for assertion
-      return key.replace(/{{\s*(\w+)\s*}}/g, (_, k) => options[k] ?? '');
-    }
-    return key;
-  }}),
+  useTranslation: () => ({
+    t: (key, options) => {
+      if (options && typeof options === 'object') {
+        return key.replace(/{{\s*(\w+)\s*}}/g, (_, k) => options[k] ?? '');
+      }
+      return key;
+    },
+    i18n: mockI18n,
+  }),
   Trans: ({ children }) => children,
   initReactI18next: { type: '3rdParty', init: vi.fn() },
 }));
