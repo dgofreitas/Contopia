@@ -27,6 +27,12 @@ vi.mock('../stores/parent-auth-store', () => {
   return { default: storeFn };
 });
 
+// STORY-064: Mock parent-api-client.get used by the visibilitychange handler.
+const mockParentGet = vi.fn();
+vi.mock('../lib/parent-api-client', () => ({
+  default: { get: (...args) => mockParentGet(...args) },
+}));
+
 function resetState() {
   Object.assign(mockState, {
     parentToken: null,
@@ -43,6 +49,7 @@ describe('useParentAuth', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     resetState();
     mockGetState.mockReturnValue(mockState);
+    mockParentGet.mockReset();
     vi.spyOn(window, 'location', 'get').mockReturnValue({
       href: '',
       assign: vi.fn(),
@@ -256,5 +263,92 @@ describe('useParentAuth', () => {
 
     expect(mockState.parentLogout).toHaveBeenCalled();
     window.location = originalLocation;
+  });
+
+  // ── STORY-064 (G7): visibilitychange re-validation ──
+
+  it('calls updateParentActivity on visibilitychange when session not expired', () => {
+    const updateParentActivity = vi.fn();
+    mockState.parentToken = 'parent-jwt';
+    mockState.parentLastActivity = Date.now();
+    mockState.parentSessionExpiresAt = Date.now() + 10 * 60 * 1000; // 10 min left
+    mockState.updateParentActivity = updateParentActivity;
+    mockGetState.mockReturnValue(mockState);
+
+    renderHook(() => useParentAuth());
+
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(updateParentActivity).toHaveBeenCalled();
+    expect(mockParentGet).not.toHaveBeenCalled();
+  });
+
+  it('calls /me on visibilitychange when client thinks session expired', () => {
+    const updateParentActivity = vi.fn();
+    mockState.parentToken = 'parent-jwt';
+    mockState.parentLastActivity = Date.now();
+    mockState.parentSessionExpiresAt = Date.now() - 1000; // already expired
+    mockState.updateParentActivity = updateParentActivity;
+    mockGetState.mockReturnValue(mockState);
+    mockParentGet.mockResolvedValue({ data: { data: { parentId: 'p1' } } });
+
+    renderHook(() => useParentAuth());
+
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(mockParentGet).toHaveBeenCalledWith('/me');
+    expect(updateParentActivity).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op on visibilitychange when not authenticated', () => {
+    mockState.parentToken = null;
+    mockState.updateParentActivity = vi.fn();
+
+    renderHook(() => useParentAuth());
+
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(mockState.updateParentActivity).not.toHaveBeenCalled();
+    expect(mockParentGet).not.toHaveBeenCalled();
+  });
+
+  it('does not act when visibilitychange fires to hidden', () => {
+    const updateParentActivity = vi.fn();
+    mockState.parentToken = 'parent-jwt';
+    mockState.parentLastActivity = Date.now();
+    mockState.parentSessionExpiresAt = Date.now() + 10 * 60 * 1000;
+    mockState.updateParentActivity = updateParentActivity;
+    mockGetState.mockReturnValue(mockState);
+
+    renderHook(() => useParentAuth());
+
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(updateParentActivity).not.toHaveBeenCalled();
+    expect(mockParentGet).not.toHaveBeenCalled();
   });
 });
