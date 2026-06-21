@@ -1,7 +1,5 @@
 # Contopia — Dev Override (Two-Target Pattern)
-# Copy this file to docker-compose.override.yml for local development.
-# Docker Compose auto-loads docker-compose.override.yml alongside docker-compose.yml.
-#
+# Docker Compose auto-loads this alongside docker-compose.yml
 # Uses pre-built :dev images. If missing, `docker compose up --build` builds
 # them via build.target override (development stage).
 #
@@ -11,9 +9,9 @@
 
 services:
   frontend:
-    image: contopia/frontend:dev            # ← swap to dev image (node + vite)
+    image: contopia/frontend:dev # ← swap to dev image (node + vite)
     build:
-      target: development                   # ← build dev target if image missing
+      target: development # ← build dev target if image missing
     volumes:
       - ./frontend/src:/app/src:delegated
       - ./frontend/public:/app/public:delegated
@@ -22,17 +20,17 @@ services:
       - ./shared:/app/shared:delegated
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=${VITE_API_URL:-/api}   # Vite dev server lê process.env em runtime
+      - VITE_API_URL=${VITE_API_URL:-/api} # Vite dev server lê process.env em runtime
     command: ['npm', 'run', 'dev', '--', '--host', '--port', '80']
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/"]
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1/']
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 10s
 
   backend:
-    image: contopia/backend:dev             # ← swap to dev image (node + devDeps)
+    image: contopia/backend:dev # ← swap to dev image (node + devDeps)
     build:
       target: development
     volumes:
