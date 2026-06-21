@@ -94,7 +94,7 @@ export async function findActiveChildByParent(parentId) {
  * STORY-063: persists optional `dateOfBirth` (YYYY-MM-DD) when provided.
  */
 export async function createChild({ parentId, firstName, avatarSeed, dateOfBirth }) {
-  const payload = { parentId, firstName, avatarSeed: avatarSeed || 'avatar_default' };
+  const payload = { parentId, firstName, avatarSeed };
   if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
   const doc = await Child.create(payload);
   return doc.toObject();

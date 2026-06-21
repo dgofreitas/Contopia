@@ -53,11 +53,10 @@ const childSchema = new Schema(
       type: String,
       required: [true, 'First name is required'],
       trim: true,
-      maxlength: 30,
+      maxlength: 40,
     },
     avatarSeed: {
       type: String,
-      required: [true, 'Avatar seed is required'],
       default: 'avatar_default',
     },
     dateOfBirth: {

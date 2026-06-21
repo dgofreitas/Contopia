@@ -165,7 +165,8 @@ describe('Auth DAO', () => {
 
       const result = await authDao.createChild({ parentId: 'p1', firstName: 'A' });
       expect(result).toEqual(raw);
-      expect(Child.create).toHaveBeenCalledWith({ parentId: 'p1', firstName: 'A', avatarSeed: 'avatar_default' });
+      // STORY-063: DAO passes avatarSeed through directly; model default applies when undefined.
+      expect(Child.create).toHaveBeenCalledWith({ parentId: 'p1', firstName: 'A', avatarSeed: undefined });
     });
 
     it('should persist dateOfBirth when provided (STORY-063)', async () => {
@@ -194,7 +195,8 @@ describe('Auth DAO', () => {
       Child.create.mockResolvedValue(mock);
 
       await authDao.createChild({ parentId: 'p1', firstName: 'A' });
-      expect(Child.create).toHaveBeenCalledWith({ parentId: 'p1', firstName: 'A', avatarSeed: 'avatar_default' });
+      // STORY-063: DAO passes avatarSeed through directly; model default applies when undefined.
+      expect(Child.create).toHaveBeenCalledWith({ parentId: 'p1', firstName: 'A', avatarSeed: undefined });
     });
   });
 
