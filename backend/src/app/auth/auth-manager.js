@@ -7,6 +7,7 @@ import redis from '../../config/redis.js';
 import {
   findParentByEmail,
   findParentById,
+  findActiveParentById,
   createParent,
   updateParentLastLogin,
   findChildById,
@@ -1064,6 +1065,36 @@ export async function parentRefreshSession({ refreshToken, ip, deviceHint }) {
     logger.warn({ err: redisErr, parentId: parentIdStr }, 'Redis unavailable — parent refresh hash check skipped');
   }
 
+  // STORY-064 (G8): Verify parent account is still active before issuing new tokens.
+  // Mirrors the child authMiddleware pattern (auth-middleware.js lines 70-94):
+  // Redis cache key `parent:exists:{parentId}` (5m TTL) → DB fallback via findActiveParentById.
+  const parentCacheKey = `parent:exists:${parentIdStr}`;
+  let parentActive = false;
+  try {
+    const cached = await redis.get(parentCacheKey);
+    if (cached === '1') {
+      parentActive = true;
+    } else if (cached === '0') {
+      parentActive = false;
+    } else {
+      // Cache miss — check DB
+      const parent = await findActiveParentById(parentIdStr);
+      parentActive = !!parent;
+      // Cache result with 5m TTL
+      await redis.set(parentCacheKey, parentActive ? '1' : '0', 'EX', 300);
+    }
+  } catch (dbErr) {
+    logger.warn({ err: dbErr, parentId: parentIdStr }, 'Parent existence check failed — allowing refresh (fail-open)');
+    parentActive = true; // fail-open: allow refresh if check fails
+  }
+
+  if (!parentActive) {
+    const err = new Error('Parent account not found or deactivated');
+    err.code = 'UNAUTHORIZED';
+    err.status = 401;
+    throw err;
+  }
+
   // Extend parent session TTL.
   // NOTE: project uses ioredis (not node-redis) — `scanIterator` is not available;
   // use cursor-based `scan` loop. We only need the first matching key.
@@ -1111,7 +1142,9 @@ export async function parentRefreshSession({ refreshToken, ip, deviceHint }) {
   }
 
   // Audit log (fire-and-forget)
-  createAuditLog({ parentId: parentIdStr, sessionId: 'parent_refresh', event: 'SESSION_REFRESHED', ip, deviceHint }).catch(() => {});
+  // STORY-064 (G9 / NFR-OBS-04): hash parentId for PII-safe audit logging.
+  const hashedParentId = hashIdentifier(parentIdStr);
+  createAuditLog({ parentId: hashedParentId, sessionId: 'parent_refresh', event: 'SESSION_REFRESHED', ip, deviceHint }).catch(() => {});
 
   logger.info({ parentId: parentIdStr }, 'Parent session refreshed');
 
