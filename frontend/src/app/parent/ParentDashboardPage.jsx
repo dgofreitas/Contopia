@@ -64,7 +64,7 @@ function useDeletionStatus() {
   });
 }
 
-function ActivityTab() {
+function ActivityTab({ hasChildren, onAddChild }) {
   const { t } = useTranslation('auth');
   const parentUser = useParentAuthStore((s) => s.parentUser);
   const { data: summaryData, isLoading: summaryLoading } = useActivitySummary();
@@ -78,7 +78,32 @@ function ActivityTab() {
   const hasActivity = summary?.hasActivity;
 
   const children = summaryData?.data?.children || (childFirstName ? [{ childId: parentUser?.childId, firstName: childFirstName }] : []);
-  const hasChildren = children.length > 0;
+  const hasChildrenLocal = hasChildren !== undefined ? hasChildren : children.length > 0;
+
+  // Empty state: no children registered yet — guide parent to add a dependent
+  if (!hasChildrenLocal && !isLoading) {
+    return (
+      <section aria-labelledby="activity-heading" data-testid="activity-empty-tab">
+        <h2 id="activity-heading" className="text-xl font-semibold text-slate-800 mb-4">
+          {t('dashboardEmptyState.activityTitle')}
+        </h2>
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-slate-200">
+          <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-4 ring-4 ring-amber-100">
+            <span className="text-4xl" aria-hidden="true">&#128218;</span>
+          </div>
+          <p className="text-slate-500 mb-6 max-w-md">{t('dashboardEmptyState.activityDescription')}</p>
+          <Button
+            color="amber"
+            onClick={onAddChild}
+            className="shadow-md hover:shadow-lg transition-shadow"
+          >
+            <HiPlus className="mr-2 h-5 w-5" aria-hidden="true" />
+            {t('dashboardEmptyState.addChildButton')}
+          </Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby="activity-heading">
@@ -86,7 +111,7 @@ function ActivityTab() {
         Resumo de Atividade
       </h2>
 
-      {hasChildren && (
+      {hasChildrenLocal && (
         <div className="mb-6 space-y-3">
           {children.map((child) => (
             <div key={child.childId} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
@@ -139,11 +164,61 @@ function ActivityTab() {
   );
 }
 
-function ExportTab({ childFirstName }) {
+function ExportTab({ childFirstName, hasChildren, onAddChild }) {
+  const { t } = useTranslation('auth');
+
+  if (hasChildren === false) {
+    return (
+      <section aria-labelledby="export-heading" data-testid="export-empty-tab">
+        <h2 id="export-heading" className="text-xl font-semibold text-slate-800 mb-4">
+          {t('dashboardEmptyState.exportTitle')}
+        </h2>
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-slate-200">
+          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <HiDownload className="w-8 h-8 text-slate-400" aria-hidden="true" />
+          </div>
+          <p className="text-slate-500 mb-6 max-w-md">{t('dashboardEmptyState.exportDescription')}</p>
+          <Button
+            color="amber"
+            onClick={onAddChild}
+            className="shadow-md hover:shadow-lg transition-shadow"
+          >
+            <HiPlus className="mr-2 h-5 w-5" aria-hidden="true" />
+            {t('dashboardEmptyState.addChildButton')}
+          </Button>
+        </div>
+      </section>
+    );
+  }
   return <ExportDataPanel childFirstName={childFirstName} />;
 }
 
-function DeleteTab({ childFirstName, childId, deletionPending }) {
+function DeleteTab({ childFirstName, childId, deletionPending, hasChildren, onAddChild }) {
+  const { t } = useTranslation('auth');
+
+  if (hasChildren === false) {
+    return (
+      <section aria-labelledby="delete-heading" data-testid="delete-empty-tab">
+        <h2 id="delete-heading" className="text-xl font-semibold text-slate-800 mb-4">
+          {t('dashboardEmptyState.deleteTitle')}
+        </h2>
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-slate-200">
+          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <HiTrash className="w-8 h-8 text-slate-400" aria-hidden="true" />
+          </div>
+          <p className="text-slate-500 mb-6 max-w-md">{t('dashboardEmptyState.deleteDescription')}</p>
+          <Button
+            color="amber"
+            onClick={onAddChild}
+            className="shadow-md hover:shadow-lg transition-shadow"
+          >
+            <HiPlus className="mr-2 h-5 w-5" aria-hidden="true" />
+            {t('dashboardEmptyState.addChildButton')}
+          </Button>
+        </div>
+      </section>
+    );
+  }
   return (
     <DeleteAccountPanel
       childFirstName={childFirstName}
@@ -218,32 +293,6 @@ function ChildList({ children: childrenList }) {
   );
 }
 
-function EmptyState({ onAddChild }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center" data-testid="dashboard-empty-state">
-      <div className="w-28 h-28 bg-amber-50 rounded-full flex items-center justify-center mb-6 ring-4 ring-amber-100">
-        <span className="text-5xl" aria-hidden="true">&#127775;</span>
-      </div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-2">
-        Bem-vindo ao painel dos pais!
-      </h2>
-      <p className="text-slate-500 mb-8 max-w-md">
-        Você ainda não cadastrou nenhum filho.
-      </p>
-      <Button
-        color="amber"
-        size="lg"
-        onClick={onAddChild}
-        className="shadow-md hover:shadow-lg transition-shadow"
-        aria-label="Adicionar primeiro filho"
-      >
-        <HiPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-        Adicionar primeiro filho
-      </Button>
-    </div>
-  );
-}
-
 function ParentDashboardLayout() {
   const { isIdle, idleTime, continueParentSession, logout, sessionExpiring, sessionExpiringSeconds } = useParentAuth();
   const parentUser = useParentAuthStore((s) => s.parentUser);
@@ -256,10 +305,12 @@ function ParentDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const deletionPending = deletionStatusData?.data?.hasPendingDeletion ?? false;
-  const childFirstName = parentUser?.childFirstName || '';
-  const childId = parentUser?.childId || '';
-
   const children = dashboardData?.data?.children || [];
+  // STORY-063: Derive childFirstName/childId from children[0] (multi-child aware),
+  // falling back to parentUser for legacy single-child accounts.
+  const childFirstName = children[0]?.firstName || parentUser?.childFirstName || '';
+  const childId = children[0]?.childId || parentUser?.childId || '';
+
   const parentEmail = dashboardData?.data?.email || parentUser?.email || '';
   const hasChildren = children.length > 0;
 
@@ -286,7 +337,8 @@ function ParentDashboardLayout() {
   );
 
   const handleAddChild = useCallback(() => {
-    navigate('/register');
+    // STORY-062: Navigate to the dedicated add-child page within the protected dashboard scope.
+    navigate('/parent/dashboard/add-child');
   }, [navigate]);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
@@ -420,17 +472,13 @@ function ParentDashboardLayout() {
             secondsRemaining={sessionExpiringSeconds}
           />
           {deletionPending && <DeletionLockedBanner />}
-          {hasChildren ? (
-            <Routes>
-              <Route index element={<ActivityTab />} />
-              <Route path="export" element={<ExportTab childFirstName={childFirstName} />} />
-              <Route path="delete" element={<DeleteTab childFirstName={childFirstName} childId={childId} deletionPending={deletionPending} />} />
-              <Route path="privacy" element={<PrivacyPolicyPage />} />
-              <Route path="*" element={<Navigate to="/parent/dashboard" replace />} />
-            </Routes>
-          ) : (
-            <EmptyState onAddChild={handleAddChild} />
-          )}
+          <Routes>
+            <Route index element={<ActivityTab hasChildren={hasChildren} onAddChild={handleAddChild} />} />
+            <Route path="export" element={<ExportTab childFirstName={childFirstName} hasChildren={hasChildren} onAddChild={handleAddChild} />} />
+            <Route path="delete" element={<DeleteTab childFirstName={childFirstName} childId={childId} deletionPending={deletionPending} hasChildren={hasChildren} onAddChild={handleAddChild} />} />
+            <Route path="privacy" element={<PrivacyPolicyPage />} />
+            <Route path="*" element={<Navigate to="/parent/dashboard" replace />} />
+          </Routes>
         </main>
 
         <footer className="border-t border-slate-200 py-4 text-center text-xs text-slate-400">

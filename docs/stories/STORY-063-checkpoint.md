@@ -12,13 +12,13 @@
 - [x] schema: `createChildSchema` — align validation with frontend (firstName 1-40 chars, dateOfBirth optional YYYY-MM-DD, avatarSeed optional enum)
 
 ## FRONTEND
-- [ ] page: `AddChildPage.jsx` — harden validation, fix focus/ref wiring, add avatar preview, ensure a11y (labels, aria-live, keyboard nav)
-- [ ] hook: `useAddChild.js` — forward `dateOfBirth`, invalidate parent dashboard cache, redirect to `/parent/dashboard`
-- [ ] page: `ParentDashboardPage.jsx` — derive `childFirstName`/`childId` from `children[]`, reconcile single vs multi-child, refresh `/me` after add
-- [ ] tab: `ExportTab.jsx` + `DeleteTab.jsx` — verify empty-state CTA wiring, support multi-child data panel
-- [ ] i18n: `auth.json` pt-BR/en — ensure all AddChildPage and dashboard empty-state strings exist and are translated
-- [ ] tests: `AddChildPage.test.jsx` — validation scenarios, server errors, avatar selection, navigation
-- [ ] tests: `ParentDashboardPage.test.jsx` — full flow: empty state CTA → add child → dashboard refresh → child visible, multi-child support
+- [x] page: `AddChildPage.jsx` — harden validation, fix focus/ref wiring, add avatar preview, ensure a11y (labels, aria-live, keyboard nav)
+- [x] hook: `useAddChild.js` — forward `dateOfBirth`, invalidate parent dashboard cache, redirect to `/parent/dashboard`
+- [x] page: `ParentDashboardPage.jsx` — derive `childFirstName`/`childId` from `children[]`, reconcile single vs multi-child, refresh `/me` after add
+- [x] tab: `ExportTab.jsx` + `DeleteTab.jsx` — verify empty-state CTA wiring, support multi-child data panel
+- [x] i18n: `auth.json` pt-BR/en — ensure all AddChildPage and dashboard empty-state strings exist and are translated
+- [x] tests: `AddChildPage.test.jsx` — validation scenarios, server errors, avatar selection, navigation
+- [x] tests: `ParentDashboardPage.test.jsx` — full flow: empty state CTA → add child → dashboard refresh → child visible, multi-child support
 
 ## QUALITY AND DELIVERY
 - [ ] TESTS
