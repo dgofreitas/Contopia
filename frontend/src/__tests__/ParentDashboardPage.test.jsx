@@ -91,6 +91,22 @@ function createWrapper(initialRoute = '/parent/dashboard') {
   };
 }
 
+/** Helper: mock API to return empty dashboard (no children) for all tabs. */
+function mockEmptyDashboard(parentApiClient) {
+  parentApiClient.get.mockImplementation((url) => {
+    if (url === '/dashboard') return Promise.resolve({ data: mockDashboardEmpty });
+    if (url === '/activity/summary')
+      return Promise.resolve({ data: { data: { hasActivity: false, childFirstName: '', childId: '' } } });
+    if (url === '/activity/books')
+      return Promise.resolve({ data: { data: { books: [], total: 0, limit: 20, offset: 0 } } });
+    if (url === '/deletion-request/status')
+      return Promise.resolve({ data: { data: { hasPendingDeletion: false } } });
+    if (url === '/privacy-policy')
+      return Promise.resolve({ data: { data: { sections: [] } } });
+    return Promise.resolve({ data: {} });
+  });
+}
+
 describe('ParentDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,7 +122,6 @@ describe('ParentDashboardPage', () => {
   it('renders child name in child list', async () => {
     render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
     await waitFor(() => {
-      // Child name appears in the sidebar child list
       const juliaElements = screen.getAllByText('Julia');
       expect(juliaElements.length).toBeGreaterThanOrEqual(1);
     });
@@ -119,141 +134,156 @@ describe('ParentDashboardPage', () => {
     });
   });
 
-  it('shows empty state Activity tab with add-child CTA when no children exist', async () => {
+  // ── STORY-065: Empty state Activity tab ────────────────────────────────
+
+  it('shows empty state Activity tab with distinct amber empty state when no children exist', async () => {
     const { default: parentApiClient } = await import('../lib/parent-api-client');
-    parentApiClient.get.mockImplementation((url) => {
-      if (url === '/dashboard') {
-        return Promise.resolve({ data: mockDashboardEmpty });
-      }
-      if (url === '/activity/summary') {
-        return Promise.resolve({ data: { data: { hasActivity: false, childFirstName: '', childId: '' } } });
-      }
-      if (url === '/activity/books') {
-        return Promise.resolve({ data: { data: { books: [], total: 0, limit: 20, offset: 0 } } });
-      }
-      if (url === '/deletion-request/status') {
-        return Promise.resolve({ data: { data: { hasPendingDeletion: false } } });
-      }
-      return Promise.resolve({ data: {} });
-    });
+    mockEmptyDashboard(parentApiClient);
 
     render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
     await waitFor(() => {
       expect(screen.getByTestId('activity-empty-tab')).toBeInTheDocument();
     });
-    // The empty-state Activity tab shows the add-child CTA
-    expect(screen.getByText('dashboardEmptyState.addChildButton')).toBeInTheDocument();
+    // Activity tab uses the new activityCta key (amber outline)
+    expect(screen.getByText('dashboardEmptyState.activityCta')).toBeInTheDocument();
+    // Activity heading
+    expect(screen.getByText('dashboardEmptyState.activityTitle')).toBeInTheDocument();
+    // Second paragraph exists
+    expect(screen.getByText('dashboardEmptyState.activitySecondParagraph')).toBeInTheDocument();
   });
 
   it('shows CTA button in empty state Activity tab', async () => {
     const { default: parentApiClient } = await import('../lib/parent-api-client');
-    parentApiClient.get.mockImplementation((url) => {
-      if (url === '/dashboard') {
-        return Promise.resolve({ data: mockDashboardEmpty });
-      }
-      if (url === '/activity/summary') {
-        return Promise.resolve({ data: { data: { hasActivity: false, childFirstName: '', childId: '' } } });
-      }
-      if (url === '/activity/books') {
-        return Promise.resolve({ data: { data: { books: [], total: 0, limit: 20, offset: 0 } } });
-      }
-      if (url === '/deletion-request/status') {
-        return Promise.resolve({ data: { data: { hasPendingDeletion: false } } });
-      }
-      return Promise.resolve({ data: {} });
-    });
+    mockEmptyDashboard(parentApiClient);
 
     render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
-    const cta = await waitFor(() => screen.getByText('dashboardEmptyState.addChildButton'));
+    const cta = await waitFor(() => screen.getByText('dashboardEmptyState.activityCta'));
     expect(cta).toBeInTheDocument();
   });
 
-  it('renders Export empty-state tab when navigating to /parent/dashboard/export with no children', async () => {
+  // ── STORY-065: Export empty state ──────────────────────────────────────
+
+  it('renders Export empty-state tab with blue accent and second paragraph', async () => {
     const { default: parentApiClient } = await import('../lib/parent-api-client');
-    parentApiClient.get.mockImplementation((url) => {
-      if (url === '/dashboard') return Promise.resolve({ data: mockDashboardEmpty });
-      if (url === '/activity/summary')
-        return Promise.resolve({ data: { data: { hasActivity: false, childFirstName: '', childId: '' } } });
-      if (url === '/activity/books')
-        return Promise.resolve({ data: { data: { books: [], total: 0, limit: 20, offset: 0 } } });
-      if (url === '/deletion-request/status')
-        return Promise.resolve({ data: { data: { hasPendingDeletion: false } } });
-      return Promise.resolve({ data: {} });
-    });
+    mockEmptyDashboard(parentApiClient);
 
     render(createElement(ParentDashboardPage), { wrapper: createWrapper('/parent/dashboard/export') });
     await waitFor(() => {
       expect(screen.getByTestId('export-empty-tab')).toBeInTheDocument();
     });
+    // Distinct heading
     expect(screen.getByText('dashboardEmptyState.exportTitle')).toBeInTheDocument();
+    // First paragraph
+    expect(screen.getByText('dashboardEmptyState.exportDescription')).toBeInTheDocument();
+    // Second paragraph (data-export expectation)
+    expect(screen.getByText('dashboardEmptyState.exportSecondParagraph')).toBeInTheDocument();
+    // Distinct CTA
+    expect(screen.getByText('dashboardEmptyState.exportCta')).toBeInTheDocument();
   });
 
-  it('renders Delete empty-state tab when navigating to /parent/dashboard/delete with no children', async () => {
+  // ── STORY-065: Delete empty state ─────────────────────────────────────
+
+  it('renders Delete empty-state tab with gray/red accent and second paragraph', async () => {
     const { default: parentApiClient } = await import('../lib/parent-api-client');
-    parentApiClient.get.mockImplementation((url) => {
-      if (url === '/dashboard') return Promise.resolve({ data: mockDashboardEmpty });
-      if (url === '/activity/summary')
-        return Promise.resolve({ data: { data: { hasActivity: false, childFirstName: '', childId: '' } } });
-      if (url === '/activity/books')
-        return Promise.resolve({ data: { data: { books: [], total: 0, limit: 20, offset: 0 } } });
-      if (url === '/deletion-request/status')
-        return Promise.resolve({ data: { data: { hasPendingDeletion: false } } });
-      return Promise.resolve({ data: {} });
-    });
+    mockEmptyDashboard(parentApiClient);
 
     render(createElement(ParentDashboardPage), { wrapper: createWrapper('/parent/dashboard/delete') });
     await waitFor(() => {
       expect(screen.getByTestId('delete-empty-tab')).toBeInTheDocument();
     });
+    // Distinct heading
     expect(screen.getByText('dashboardEmptyState.deleteTitle')).toBeInTheDocument();
+    // First paragraph
+    expect(screen.getByText('dashboardEmptyState.deleteDescription')).toBeInTheDocument();
+    // Second paragraph (GDPR/LGPD rights)
+    expect(screen.getByText('dashboardEmptyState.deleteSecondParagraph')).toBeInTheDocument();
+    // Distinct CTA
+    expect(screen.getByText('dashboardEmptyState.deleteCta')).toBeInTheDocument();
   });
+
+  // ── STORY-065: Privacy tab (no empty state) ────────────────────────────
 
   it('renders Privacy tab (PrivacyPolicyPage) even with no children', async () => {
     const { default: parentApiClient } = await import('../lib/parent-api-client');
-    parentApiClient.get.mockImplementation((url) => {
-      if (url === '/dashboard') return Promise.resolve({ data: mockDashboardEmpty });
-      if (url === '/activity/summary')
-        return Promise.resolve({ data: { data: { hasActivity: false, childFirstName: '', childId: '' } } });
-      if (url === '/activity/books')
-        return Promise.resolve({ data: { data: { books: [], total: 0, limit: 20, offset: 0 } } });
-      if (url === '/deletion-request/status')
-        return Promise.resolve({ data: { data: { hasPendingDeletion: false } } });
-      if (url === '/privacy-policy')
-        return Promise.resolve({ data: { data: { sections: [] } } });
-      return Promise.resolve({ data: {} });
-    });
+    mockEmptyDashboard(parentApiClient);
 
     render(createElement(ParentDashboardPage), { wrapper: createWrapper('/parent/dashboard/privacy') });
-    // PrivacyPolicyPage renders — just confirm no empty-state crash
     await waitFor(() => {
       expect(screen.queryByTestId('activity-empty-tab')).not.toBeInTheDocument();
     });
   });
 
-  it('REGRESSION: clicking add-child CTA navigates to /parent/dashboard/add-child', async () => {
+  // ── STORY-065: Tab navigation renders distinct content ────────────────
+
+  it('tab navigation renders visually distinct content for Activity, Export, Delete, Privacy', async () => {
     const user = userEvent.setup();
     const { default: parentApiClient } = await import('../lib/parent-api-client');
-    parentApiClient.get.mockImplementation((url) => {
-      if (url === '/dashboard') {
-        return Promise.resolve({ data: mockDashboardEmpty });
-      }
-      if (url === '/activity/summary') {
-        return Promise.resolve({ data: { data: { hasActivity: false, childFirstName: '', childId: '' } } });
-      }
-      if (url === '/activity/books') {
-        return Promise.resolve({ data: { data: { books: [], total: 0, limit: 20, offset: 0 } } });
-      }
-      if (url === '/deletion-request/status') {
-        return Promise.resolve({ data: { data: { hasPendingDeletion: false } } });
-      }
-      return Promise.resolve({ data: {} });
-    });
+    mockEmptyDashboard(parentApiClient);
 
     render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
-    const addChildButton = await waitFor(() => screen.getByText('dashboardEmptyState.addChildButton'));
+
+    // Start on Activity tab
+    await waitFor(() => {
+      expect(screen.getByTestId('activity-empty-tab')).toBeInTheDocument();
+    });
+
+    // Navigate to Export
+    const exportBtn = screen.getByRole('button', { name: /export/i });
+    await user.click(exportBtn);
+    await waitFor(() => {
+      expect(screen.getByTestId('export-empty-tab')).toBeInTheDocument();
+    });
+    expect(screen.getByText('dashboardEmptyState.exportTitle')).toBeInTheDocument();
+
+    // Navigate to Delete
+    const deleteBtn = screen.getByRole('button', { name: /delete/i });
+    await user.click(deleteBtn);
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-empty-tab')).toBeInTheDocument();
+    });
+    expect(screen.getByText('dashboardEmptyState.deleteTitle')).toBeInTheDocument();
+
+    // Navigate to Privacy
+    const privacyBtn = screen.getByRole('button', { name: /privacy/i });
+    await user.click(privacyBtn);
+    await waitFor(() => {
+      expect(screen.queryByTestId('activity-empty-tab')).not.toBeInTheDocument();
+    });
+
+    // Navigate back to Activity
+    const activityBtn = screen.getByRole('button', { name: /activity/i });
+    await user.click(activityBtn);
+    await waitFor(() => {
+      expect(screen.getByTestId('activity-empty-tab')).toBeInTheDocument();
+    });
+  });
+
+  // ── STORY-065: aria-live region ────────────────────────────────────────
+
+  it('has aria-live polite region for screen reader announcements', async () => {
+    const { default: parentApiClient } = await import('../lib/parent-api-client');
+    mockEmptyDashboard(parentApiClient);
+
+    render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
+    await waitFor(() => {
+      const liveRegion = screen.getByTestId('tab-content-live-region');
+      expect(liveRegion).toBeInTheDocument();
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+      expect(liveRegion).toHaveAttribute('aria-atomic', 'true');
+    });
+  });
+
+  // ── STORY-065: CTA navigation from any empty state ─────────────────────
+
+  it('REGRESSION: clicking add-child CTA from Activity tab navigates to /parent/dashboard/add-child', async () => {
+    const user = userEvent.setup();
+    const { default: parentApiClient } = await import('../lib/parent-api-client');
+    mockEmptyDashboard(parentApiClient);
+
+    render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
+    const addChildButton = await waitFor(() => screen.getByText('dashboardEmptyState.activityCta'));
     await user.click(addChildButton);
 
-    // Must land on the add-child page, not on /parent or /register
     await waitFor(() => {
       expect(screen.getByTestId('add-child-page')).toBeInTheDocument();
     });
@@ -261,11 +291,58 @@ describe('ParentDashboardPage', () => {
     expect(screen.queryByTestId('register-page')).not.toBeInTheDocument();
   });
 
+  it('CTA from Export empty state navigates to /parent/dashboard/add-child', async () => {
+    const user = userEvent.setup();
+    const { default: parentApiClient } = await import('../lib/parent-api-client');
+    mockEmptyDashboard(parentApiClient);
+
+    render(createElement(ParentDashboardPage), { wrapper: createWrapper('/parent/dashboard/export') });
+    const cta = await waitFor(() => screen.getByText('dashboardEmptyState.exportCta'));
+    await user.click(cta);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('add-child-page')).toBeInTheDocument();
+    });
+  });
+
+  it('CTA from Delete empty state navigates to /parent/dashboard/add-child', async () => {
+    const user = userEvent.setup();
+    const { default: parentApiClient } = await import('../lib/parent-api-client');
+    mockEmptyDashboard(parentApiClient);
+
+    render(createElement(ParentDashboardPage), { wrapper: createWrapper('/parent/dashboard/delete') });
+    const cta = await waitFor(() => screen.getByText('dashboardEmptyState.deleteCta'));
+    await user.click(cta);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('add-child-page')).toBeInTheDocument();
+    });
+  });
+
+  // ── STORY-065: Mobile responsive attributes ────────────────────────────
+
+  it('empty state CTAs have full-width and min-height 44px for mobile tap targets', async () => {
+    const { default: parentApiClient } = await import('../lib/parent-api-client');
+    mockEmptyDashboard(parentApiClient);
+
+    render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(screen.getByTestId('activity-empty-tab')).toBeInTheDocument();
+    });
+
+    const cta = screen.getByTestId('activity-add-child-cta');
+    // The CTA button should have min-h-[44px] for mobile tap targets
+    expect(cta.className).toContain('min-h-[44px]');
+    // The CTA should be full-width on mobile (w-full) and auto on larger screens
+    expect(cta.className).toContain('w-full');
+    expect(cta.className).toContain('sm:w-auto');
+  });
+
+  // ── Existing tests (unchanged) ─────────────────────────────────────────
+
   it('renders sidebar navigation with ARIA labels', async () => {
     render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
     await waitFor(() => {
-      // The <aside> has aria-label "Parent dashboard sidebar" and the <nav> has
-      // aria-label "Parent dashboard navigation". The sidebar is the complementary region.
       expect(screen.getByLabelText('Parent dashboard sidebar')).toBeInTheDocument();
     });
   });
@@ -335,14 +412,12 @@ describe('ParentDashboardPage', () => {
 
     render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
 
-    // Both children appear in the sidebar child list
     await waitFor(() => {
       const sidebar = screen.getByLabelText('Parent dashboard sidebar');
       expect(within(sidebar).getByText('Julia')).toBeInTheDocument();
       expect(within(sidebar).getByText('Lucas')).toBeInTheDocument();
     });
 
-    // Both children appear in the Activity tab child session list
     await waitFor(() => {
       const main = screen.getByRole('main');
       expect(within(main).getByText('Julia')).toBeInTheDocument();
@@ -355,19 +430,19 @@ describe('ParentDashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Resumo de Atividade')).toBeInTheDocument();
     });
-    // No empty-state tab should be visible
     expect(screen.queryByTestId('activity-empty-tab')).not.toBeInTheDocument();
     expect(screen.queryByTestId('export-empty-tab')).not.toBeInTheDocument();
     expect(screen.queryByTestId('delete-empty-tab')).not.toBeInTheDocument();
-    // The add-child CTA button should not appear when children exist
+    // The old addChildButton key should not appear
     expect(screen.queryByText('dashboardEmptyState.addChildButton')).not.toBeInTheDocument();
+    // The new activityCta key should not appear either
+    expect(screen.queryByText('dashboardEmptyState.activityCta')).not.toBeInTheDocument();
   });
 
   it('full flow: empty state CTA → add child form → submit → POST called → navigate back', async () => {
     const user = userEvent.setup();
     const { default: parentApiClient } = await import('../lib/parent-api-client');
 
-    // Start with empty dashboard
     const emptyDashboard = { data: { email: 'parent@test.com', children: [] } };
     const emptySummary = { data: { data: { hasActivity: false, childFirstName: '', childId: '' } } };
 
@@ -385,10 +460,6 @@ describe('ParentDashboardPage', () => {
       data: { data: { childId: 'c-new', firstName: 'Emma', avatarSeed: 'fox' } },
     });
 
-    // Wrapper that renders both ParentDashboardPage and AddChildPage.
-    // Use staleTime: 0 and gcTime: Infinity so the dashboard query keeps its
-    // cached data across remounts, allowing the component to render immediately
-    // on navigation back (instead of showing a loading spinner).
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: Infinity } },
     });
@@ -411,8 +482,8 @@ describe('ParentDashboardPage', () => {
 
     render(createElement(ParentDashboardPage), { wrapper: FlowWrapper });
 
-    // 1. Empty state — CTA visible
-    const cta = await waitFor(() => screen.getByText('dashboardEmptyState.addChildButton'));
+    // 1. Empty state — CTA visible (new key)
+    const cta = await waitFor(() => screen.getByText('dashboardEmptyState.activityCta'));
     expect(screen.getByTestId('activity-empty-tab')).toBeInTheDocument();
 
     // 2. Click CTA → navigate to add-child page
@@ -432,11 +503,35 @@ describe('ParentDashboardPage', () => {
       expect(parentApiClient.post).toHaveBeenCalledWith('/children', { firstName: 'Emma' });
     });
 
-    // 5. Verify navigation back to dashboard (the dashboard heading reappears).
-    // With gcTime: Infinity, the cached empty dashboard data is still available,
-    // so the component renders immediately (showing the empty state again).
+    // 5. Verify navigation back to dashboard
     await waitFor(() => {
       expect(screen.getByTestId('activity-empty-tab')).toBeInTheDocument();
     });
   });
 });
+
+  // ── STORY-065: Mobile sidebar toggle ──────────────────────────────────
+
+  it('toggles mobile sidebar overlay when hamburger is clicked', async () => {
+    const user = userEvent.setup();
+    render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
+
+    // Hamburger button exists
+    const hamburger = await waitFor(() => screen.getByLabelText('Open sidebar navigation'));
+    expect(hamburger).toBeInTheDocument();
+
+    // Click to open sidebar
+    await user.click(hamburger);
+
+    // The sidebar should now be visible (translate-x-0 class applied)
+    const sidebar = screen.getByLabelText('Parent dashboard sidebar');
+    expect(sidebar.className).toContain('translate-x-0');
+
+    // Close button should be visible
+    const closeBtn = screen.getByLabelText('Close sidebar');
+    expect(closeBtn).toBeInTheDocument();
+
+    // Click close button
+    await user.click(closeBtn);
+    expect(sidebar.className).toContain('-translate-x-full');
+  });

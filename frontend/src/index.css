@@ -79,3 +79,20 @@
     animation: none !important;
   }
 }
+
+/* STORY-065: Subtle fade transition when switching dashboard sidebar tabs.
+   The key on the container changes per route, retriggering the animation. */
+@keyframes tab-content-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tab-content-fade {
+  animation: tab-content-fade 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-content-fade {
+    animation: none;
+  }
+}
