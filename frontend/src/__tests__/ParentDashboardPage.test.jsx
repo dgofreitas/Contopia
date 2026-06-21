@@ -509,3 +509,29 @@ describe('ParentDashboardPage', () => {
     });
   });
 });
+
+  // ── STORY-065: Mobile sidebar toggle ──────────────────────────────────
+
+  it('toggles mobile sidebar overlay when hamburger is clicked', async () => {
+    const user = userEvent.setup();
+    render(createElement(ParentDashboardPage), { wrapper: createWrapper() });
+
+    // Hamburger button exists
+    const hamburger = await waitFor(() => screen.getByLabelText('Open sidebar navigation'));
+    expect(hamburger).toBeInTheDocument();
+
+    // Click to open sidebar
+    await user.click(hamburger);
+
+    // The sidebar should now be visible (translate-x-0 class applied)
+    const sidebar = screen.getByLabelText('Parent dashboard sidebar');
+    expect(sidebar.className).toContain('translate-x-0');
+
+    // Close button should be visible
+    const closeBtn = screen.getByLabelText('Close sidebar');
+    expect(closeBtn).toBeInTheDocument();
+
+    // Click close button
+    await user.click(closeBtn);
+    expect(sidebar.className).toContain('-translate-x-full');
+  });
