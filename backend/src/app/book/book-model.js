@@ -419,7 +419,7 @@ const activityLogSchema = new Schema(
     },
     targetType: {
       type: String,
-      enum: ['book', 'chapter', 'asset', 'user', 'system'],
+      enum: ['book', 'chapter', 'asset', 'user', 'system', 'child'],
       default: null,
     },
     metadata: {

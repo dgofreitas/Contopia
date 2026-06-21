@@ -457,18 +457,19 @@ parentAuthRouter.post('/children', createChildLimiter, parentAuthMiddleware, asy
       return res.status(400).json(fail('VALIDATION_ERROR', parsed.error.issues.map((i) => i.message).join('; '), { requestId }));
     }
 
-    const { firstName, avatarSeed } = parsed.data;
+    const { firstName, avatarSeed, dateOfBirth } = parsed.data;
     const parentId = req.parentId;
     const ip = req.ip;
     const deviceHint = sanitizeUserAgent(req);
 
-    const result = await authManager.createChildProfile({ parentId, firstName, avatarSeed });
+    const result = await authManager.createChildProfile({ parentId, firstName, avatarSeed, dateOfBirth });
 
     logger.info({ requestId, parentId, childId: result.child._id }, 'Child profile created via /api/parent/children');
 
     return res.status(201).json(ok({
       childId: result.child._id.toString(),
       firstName: result.child.firstName,
+      dateOfBirth: result.child.dateOfBirth || null,
       avatarSeed: result.child.avatarSeed || null,
     }, { requestId }));
   } catch (err) {

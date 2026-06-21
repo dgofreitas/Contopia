@@ -368,7 +368,7 @@ describe('Parent Auth Router (STORY-060)', () => {
     });
   });
 
-  // ── POST /children (STORY-062) ───────────────────────────────────────────
+  // ── POST /children (STORY-062 / STORY-063) ──────────────────────────────
 
   describe('POST /api/parent/children', () => {
     it('should return 201 and child data on successful creation', async () => {
@@ -377,6 +377,7 @@ describe('Parent Auth Router (STORY-060)', () => {
           _id: '64abc123def4567890123456',
           firstName: 'Julia',
           avatarSeed: 'julia-seed',
+          dateOfBirth: null,
         },
       });
 
@@ -389,8 +390,39 @@ describe('Parent Auth Router (STORY-060)', () => {
       expect(res.body.data.childId).toBe('64abc123def4567890123456');
       expect(res.body.data.firstName).toBe('Julia');
       expect(res.body.data.avatarSeed).toBe('julia-seed');
+      expect(res.body.data.dateOfBirth).toBeNull();
       expect(mockAuthManager.createChildProfile).toHaveBeenCalledWith(
         expect.objectContaining({ parentId: 'parent123', firstName: 'Julia' })
+      );
+    });
+
+    it('should pass dateOfBirth to createChildProfile and return it in response (STORY-063)', async () => {
+      mockAuthManager.createChildProfile.mockResolvedValue({
+        child: {
+          _id: '64abc123def4567890123456',
+          firstName: 'Julia',
+          avatarSeed: 'julia-seed',
+          dateOfBirth: '2018-05-12',
+        },
+      });
+
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/parent/children')
+        .send({ firstName: 'Julia', dateOfBirth: '2018-05-12', avatarSeed: 'julia-seed' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.childId).toBe('64abc123def4567890123456');
+      expect(res.body.data.firstName).toBe('Julia');
+      expect(res.body.data.dateOfBirth).toBe('2018-05-12');
+      expect(res.body.data.avatarSeed).toBe('julia-seed');
+      expect(mockAuthManager.createChildProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parentId: 'parent123',
+          firstName: 'Julia',
+          dateOfBirth: '2018-05-12',
+          avatarSeed: 'julia-seed',
+        })
       );
     });
 
