@@ -1,8 +1,11 @@
 // Contopia — useParentAuth Hook
 // Idle timer for parent session: tracks last activity via mouse move / keypress
 // NFR-SEC-03: 25min idle → show warning; 30min idle → auto logout
+// STORY-064 (G7): visibilitychange listener re-validates the session when the tab
+// regains focus (handles OS sleep/wake where client timers may be stale).
 import { useState, useEffect, useCallback, useRef } from 'react';
 import useParentAuthStore from '../stores/parent-auth-store';
+import parentApiClient from '../lib/parent-api-client';
 
 const IDLE_WARNING_MS = 25 * 60 * 1000; // 25 minutes
 const IDLE_EXPIRE_MS = 30 * 60 * 1000; // 30 minutes
@@ -97,6 +100,25 @@ export default function useParentAuth() {
       }, 60000);
     }
   }, [sessionExpiring, isAuthenticated]);
+
+  // STORY-064 (G7): Re-validate session when the tab regains focus.
+  // Handles OS sleep/wake — when the tab becomes visible again, the client timer
+  // may be stale. If the client thinks the session expired, call /me to let the
+  // server decide (a 401 triggers the refresh flow). Otherwise just bump activity.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      const expiresAt = useParentAuthStore.getState().parentSessionExpiresAt;
+      if (expiresAt && Date.now() > expiresAt) {
+        parentApiClient.get('/me').catch(() => {});
+      } else {
+        updateParentActivity();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isAuthenticated, updateParentActivity]);
 
   // Setup activity listeners and timers when authenticated
   useEffect(() => {

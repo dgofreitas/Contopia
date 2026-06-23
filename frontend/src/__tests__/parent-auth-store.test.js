@@ -11,6 +11,7 @@ vi.mock('../lib/parent-api-client', () => ({
 
 describe('parent-auth-store', () => {
   beforeEach(() => {
+    localStorage.clear();
     useParentAuthStore.getState().parentClearAll();
   });
 
@@ -186,5 +187,94 @@ describe('parent-auth-store', () => {
 
     // Clean up child store
     childAuthStore.getState().clearAll();
+  });
+
+  // ── STORY-064: parentUser persistence ──
+
+  it('persists parentUser to localStorage on setParentUser', () => {
+    const user = { parentId: 'p1', email: 'persist@test.com', children: [] };
+    useParentAuthStore.getState().setParentUser(user);
+    expect(JSON.parse(localStorage.getItem('contopia_parent_user'))).toEqual(user);
+  });
+
+  it('clears parentUser from localStorage when set to null', () => {
+    useParentAuthStore.getState().setParentUser({ parentId: 'p1' });
+    useParentAuthStore.getState().setParentUser(null);
+    expect(localStorage.getItem('contopia_parent_user')).toBe(null);
+  });
+
+  it('persists parentUser to localStorage on register', () => {
+    useParentAuthStore.getState().register({
+      accessToken: 'jwt-reg',
+      parentId: 'p2',
+      email: 'reg@test.com',
+      children: [{ childId: 'c1', firstName: 'Julia' }],
+    });
+    expect(localStorage.getItem('contopia_parent_token')).toBe('jwt-reg');
+    expect(JSON.parse(localStorage.getItem('contopia_parent_user'))).toEqual({
+      parentId: 'p2',
+      email: 'reg@test.com',
+      children: [{ childId: 'c1', firstName: 'Julia' }],
+    });
+  });
+
+  it('clears parentUser from localStorage on parentClearAll', () => {
+    useParentAuthStore.getState().register({
+      accessToken: 'jwt-clear',
+      parentId: 'p3',
+      email: 'clear@test.com',
+      children: [],
+    });
+    useParentAuthStore.getState().parentClearAll();
+    expect(localStorage.getItem('contopia_parent_token')).toBe(null);
+    expect(localStorage.getItem('contopia_parent_user')).toBe(null);
+  });
+
+  it('clears parentUser from localStorage on parentLogout', async () => {
+    useParentAuthStore.getState().register({
+      accessToken: 'jwt-logout',
+      parentId: 'p4',
+      email: 'logout@test.com',
+      children: [],
+    });
+    await useParentAuthStore.getState().parentLogout();
+    expect(localStorage.getItem('contopia_parent_token')).toBe(null);
+    expect(localStorage.getItem('contopia_parent_user')).toBe(null);
+  });
+
+  it('hydrates parentUser from localStorage on store creation', () => {
+    // Write to localStorage, then simulate hydration by setting state from storage.
+    localStorage.setItem(
+      'contopia_parent_user',
+      JSON.stringify({ parentId: 'p5', email: 'hydrate@test.com', children: [] }),
+    );
+    useParentAuthStore.setState({
+      parentUser: JSON.parse(localStorage.getItem('contopia_parent_user')),
+    });
+    expect(useParentAuthStore.getState().parentUser).toEqual({
+      parentId: 'p5',
+      email: 'hydrate@test.com',
+      children: [],
+    });
+  });
+
+  it('does not crash when localStorage is unavailable (private mode)', () => {
+    // Simulate private mode by making localStorage throw.
+    const original = globalThis.localStorage;
+    const throwingStorage = {
+      getItem: () => { throw new Error('unavailable'); },
+      setItem: () => { throw new Error('unavailable'); },
+      removeItem: () => { throw new Error('unavailable'); },
+    };
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: throwingStorage,
+    });
+    // These should not throw despite storage being unavailable.
+    expect(() => useParentAuthStore.getState().setParentToken('jwt')).not.toThrow();
+    expect(() => useParentAuthStore.getState().setParentUser({ parentId: 'p6' })).not.toThrow();
+    expect(() => useParentAuthStore.getState().parentClearAll()).not.toThrow();
+    // Restore
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: original });
   });
 });

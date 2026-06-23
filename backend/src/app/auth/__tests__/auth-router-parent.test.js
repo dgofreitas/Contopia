@@ -334,6 +334,55 @@ describe('Parent Auth Router (STORY-060)', () => {
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe('INVALID_REFRESH_TOKEN');
     });
+
+    // STORY-064 (G8): refresh with valid cookie but deactivated parent → 401 UNAUTHORIZED
+    it('should return 401 UNAUTHORIZED when parent account is deactivated', async () => {
+      mockAuthManager.parentRefreshSession.mockRejectedValue(
+        Object.assign(new Error('Parent account not found or deactivated'), {
+          status: 401,
+          code: 'UNAUTHORIZED',
+        })
+      );
+
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/parent/refresh')
+        .set('Cookie', 'parentRefreshToken=valid-but-parent-deactivated');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('UNAUTHORIZED');
+      expect(mockAuthManager.parentRefreshSession).toHaveBeenCalledWith(
+        expect.objectContaining({ refreshToken: 'valid-but-parent-deactivated' })
+      );
+    });
+
+    // STORY-064 (G9/NFR-OBS-04): refresh delegates to parentRefreshSession which
+    // is responsible for hashing the parentId in its audit log. This test verifies
+    // the router correctly forwards the refresh token + request context to the
+    // manager; the hashed-audit assertion itself lives in the integration test
+    // (parent-refresh-hardening.integration.test.js) where the real manager runs.
+    it('should forward ip and deviceHint to parentRefreshSession for audit logging', async () => {
+      mockAuthManager.parentRefreshSession.mockResolvedValue({
+        accessToken: 'new-jwt',
+        refreshToken: 'new-refresh',
+        parentId: 'parent123',
+      });
+
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/parent/refresh')
+        .set('Cookie', 'parentRefreshToken=valid-refresh')
+        .set('User-Agent', 'Mozilla/5.0 (Test Browser)');
+
+      expect(res.status).toBe(200);
+      expect(mockAuthManager.parentRefreshSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          refreshToken: 'valid-refresh',
+          ip: expect.any(String),
+          deviceHint: expect.any(String),
+        })
+      );
+    });
   });
 
   // ── GET /me ──────────────────────────────────────────────────────────────

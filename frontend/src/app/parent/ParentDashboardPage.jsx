@@ -22,6 +22,12 @@ import { Button, Spinner, Alert } from 'flowbite-react';
 import { HiMenu, HiX, HiChartBar, HiDownload, HiTrash, HiShieldCheck, HiLogout, HiPlus, HiUser, HiPlay } from 'react-icons/hi';
 import { useTranslation } from 'react-i18next';
 
+// Tailwind classes for the secondary outline CTAs (amber/blue/gray) used in the
+// empty states. Outlined, not solid, to signal an informational state.
+const CTA_AMBER_OUTLINE = 'border border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 focus:ring-amber-400';
+const CTA_BLUE_OUTLINE = 'border border-blue-400 text-blue-700 bg-blue-50 hover:bg-blue-100 focus:ring-blue-400';
+const CTA_GRAY_OUTLINE = 'border border-slate-400 text-slate-700 bg-slate-50 hover:bg-slate-100 focus:ring-slate-400';
+
 const NAV_ITEMS = [
   { path: '/parent/dashboard', label: 'Activity', icon: HiChartBar },
   { path: '/parent/dashboard/export', label: 'Export', icon: HiDownload },
@@ -80,25 +86,27 @@ function ActivityTab({ hasChildren, onAddChild }) {
   const children = summaryData?.data?.children || (childFirstName ? [{ childId: parentUser?.childId, firstName: childFirstName }] : []);
   const hasChildrenLocal = hasChildren !== undefined ? hasChildren : children.length > 0;
 
-  // Empty state: no children registered yet — guide parent to add a dependent
+  // Empty state: no children registered yet — guide parent to add a dependent.
+  // Warm/amber accent for a welcoming, action-oriented feel.
   if (!hasChildrenLocal && !isLoading) {
     return (
       <section aria-labelledby="activity-heading" data-testid="activity-empty-tab">
         <h2 id="activity-heading" className="text-xl font-semibold text-slate-800 mb-4">
           {t('dashboardEmptyState.activityTitle')}
         </h2>
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-slate-200">
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border-2 border-amber-200">
           <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-4 ring-4 ring-amber-100">
             <span className="text-4xl" aria-hidden="true">&#128218;</span>
           </div>
-          <p className="text-slate-500 mb-6 max-w-md">{t('dashboardEmptyState.activityDescription')}</p>
+          <p className="text-slate-600 mb-3 max-w-md">{t('dashboardEmptyState.activityDescription')}</p>
+          <p className="text-slate-500 mb-6 max-w-md text-sm">{t('dashboardEmptyState.activitySecondParagraph')}</p>
           <Button
-            color="amber"
             onClick={onAddChild}
-            className="shadow-md hover:shadow-lg transition-shadow"
+            className={`${CTA_AMBER_OUTLINE} w-full sm:w-auto min-h-[44px] transition-colors focus:outline-none focus:ring-2`}
+            data-testid="activity-add-child-cta"
           >
             <HiPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-            {t('dashboardEmptyState.addChildButton')}
+            {t('dashboardEmptyState.activityCta')}
           </Button>
         </div>
       </section>
@@ -173,18 +181,19 @@ function ExportTab({ childFirstName, hasChildren, onAddChild }) {
         <h2 id="export-heading" className="text-xl font-semibold text-slate-800 mb-4">
           {t('dashboardEmptyState.exportTitle')}
         </h2>
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-slate-200">
-          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-            <HiDownload className="w-8 h-8 text-slate-400" aria-hidden="true" />
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border-2 border-blue-200">
+          <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 ring-4 ring-blue-100">
+            <HiDownload className="w-8 h-8 text-blue-500" aria-hidden="true" />
           </div>
-          <p className="text-slate-500 mb-6 max-w-md">{t('dashboardEmptyState.exportDescription')}</p>
+          <p className="text-slate-600 mb-3 max-w-md">{t('dashboardEmptyState.exportDescription')}</p>
+          <p className="text-slate-500 mb-6 max-w-md text-sm">{t('dashboardEmptyState.exportSecondParagraph')}</p>
           <Button
-            color="amber"
             onClick={onAddChild}
-            className="shadow-md hover:shadow-lg transition-shadow"
+            className={`${CTA_BLUE_OUTLINE} w-full sm:w-auto min-h-[44px] transition-colors focus:outline-none focus:ring-2`}
+            data-testid="export-add-child-cta"
           >
             <HiPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-            {t('dashboardEmptyState.addChildButton')}
+            {t('dashboardEmptyState.exportCta')}
           </Button>
         </div>
       </section>
@@ -202,18 +211,19 @@ function DeleteTab({ childFirstName, childId, deletionPending, hasChildren, onAd
         <h2 id="delete-heading" className="text-xl font-semibold text-slate-800 mb-4">
           {t('dashboardEmptyState.deleteTitle')}
         </h2>
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-slate-200">
-          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-            <HiTrash className="w-8 h-8 text-slate-400" aria-hidden="true" />
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border-2 border-slate-300">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 ring-4 ring-slate-200">
+            <HiShieldCheck className="w-8 h-8 text-slate-500" aria-hidden="true" />
           </div>
-          <p className="text-slate-500 mb-6 max-w-md">{t('dashboardEmptyState.deleteDescription')}</p>
+          <p className="text-slate-600 mb-3 max-w-md">{t('dashboardEmptyState.deleteDescription')}</p>
+          <p className="text-slate-500 mb-6 max-w-md text-sm">{t('dashboardEmptyState.deleteSecondParagraph')}</p>
           <Button
-            color="amber"
             onClick={onAddChild}
-            className="shadow-md hover:shadow-lg transition-shadow"
+            className={`${CTA_GRAY_OUTLINE} w-full sm:w-auto min-h-[44px] transition-colors focus:outline-none focus:ring-2`}
+            data-testid="delete-add-child-cta"
           >
             <HiPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-            {t('dashboardEmptyState.addChildButton')}
+            {t('dashboardEmptyState.deleteCta')}
           </Button>
         </div>
       </section>
@@ -462,7 +472,11 @@ function ParentDashboardLayout() {
           </span>
         </header>
 
-        {/* Main scrollable content */}
+        {/* Main scrollable content.
+            The tab content region is wrapped in an aria-live="polite" container so
+            screen readers announce the new tab heading when the route changes.
+            A subtle opacity fade makes the content change perceptible to sighted
+            users and respects prefers-reduced-motion. */}
         <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8" id="parent-dashboard-main">
           <IdleWarningBanner
             isIdle={isIdle}
@@ -472,13 +486,21 @@ function ParentDashboardLayout() {
             secondsRemaining={sessionExpiringSeconds}
           />
           {deletionPending && <DeletionLockedBanner />}
-          <Routes>
-            <Route index element={<ActivityTab hasChildren={hasChildren} onAddChild={handleAddChild} />} />
-            <Route path="export" element={<ExportTab childFirstName={childFirstName} hasChildren={hasChildren} onAddChild={handleAddChild} />} />
-            <Route path="delete" element={<DeleteTab childFirstName={childFirstName} childId={childId} deletionPending={deletionPending} hasChildren={hasChildren} onAddChild={handleAddChild} />} />
-            <Route path="privacy" element={<PrivacyPolicyPage />} />
-            <Route path="*" element={<Navigate to="/parent/dashboard" replace />} />
-          </Routes>
+          <div
+            aria-live="polite"
+            aria-atomic="true"
+            data-testid="tab-content-live-region"
+            className="tab-content-fade"
+            key={location.pathname}
+          >
+            <Routes>
+              <Route index element={<ActivityTab hasChildren={hasChildren} onAddChild={handleAddChild} />} />
+              <Route path="export" element={<ExportTab childFirstName={childFirstName} hasChildren={hasChildren} onAddChild={handleAddChild} />} />
+              <Route path="delete" element={<DeleteTab childFirstName={childFirstName} childId={childId} deletionPending={deletionPending} hasChildren={hasChildren} onAddChild={handleAddChild} />} />
+              <Route path="privacy" element={<PrivacyPolicyPage />} />
+              <Route path="*" element={<Navigate to="/parent/dashboard" replace />} />
+            </Routes>
+          </div>
         </main>
 
         <footer className="border-t border-slate-200 py-4 text-center text-xs text-slate-400">
