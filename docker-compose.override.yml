@@ -1,17 +1,26 @@
-# Contopia — Dev Override (Two-Target Pattern)
+# Contopia — Dev Override (Two-Target Pattern, dev/prod isolated)
 # Docker Compose auto-loads this alongside docker-compose.yml
 # Uses pre-built :dev images. If missing, `docker compose up --build` builds
 # them via build.target override (development stage).
+#
+# Isolamento dev↔prod: container names, networks e volumes com sufixo _dev.
+# Dev e prod não compartilham dados nem nomes (mas a porta 8090 do nginx é
+# compartilhada com prod — para rodar ambos simultaneamente, altere a porta
+# do nginx neste override).
 #
 # Build dev images explicitly:
 #   docker build --target development -t contopia/frontend:dev -f frontend/Dockerfile .
 #   docker build --target development -t contopia/backend:dev  -f backend/Dockerfile .
 
 services:
+  nginx:
+    container_name: contopia-nginx-dev
+
   frontend:
-    image: contopia/frontend:dev # ← swap to dev image (node + vite)
+    image: contopia/frontend:dev
     build:
-      target: development # ← build dev target if image missing
+      target: development
+    container_name: contopia-frontend-dev
     volumes:
       - ./frontend/src:/app/src:delegated
       - ./frontend/public:/app/public:delegated
@@ -20,7 +29,7 @@ services:
       - ./shared:/app/shared:delegated
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=${VITE_API_URL:-/api} # Vite dev server lê process.env em runtime
+      - VITE_API_URL=${VITE_API_URL:-/api}
     command: ['npm', 'run', 'dev', '--', '--host', '--port', '80']
     healthcheck:
       test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1/']
@@ -30,9 +39,10 @@ services:
       start_period: 10s
 
   backend:
-    image: contopia/backend:dev # ← swap to dev image (node + devDeps)
+    image: contopia/backend:dev
     build:
       target: development
+    container_name: contopia-backend-dev
     volumes:
       - ./backend/src:/app/src:delegated
       - ./shared:/shared:delegated
@@ -41,5 +51,27 @@ services:
     command: ['npm', 'run', 'dev', '--', '--legacy-watch']
 
   mongodb:
+    container_name: contopia-mongodb-dev
     ports:
-      - '27017:27017' # Expose for local tools (MongoDB Compass, mongosh)
+      - '27017:27017'
+
+  redis:
+    container_name: contopia-redis-dev
+
+  minio:
+    container_name: contopia-minio-dev
+
+# Networks com nome _dev — isoladas das redes de prod
+networks:
+  frontend:
+    name: contopia_frontend_dev
+  backend:
+    name: contopia_backend_dev
+    internal: true
+
+# Volumes com nome _dev — dados de dev separados dos de prod
+volumes:
+  mongodb_data:
+    name: contopia_mongodb_data_dev
+  minio_data:
+    name: contopia_minio_data_dev
