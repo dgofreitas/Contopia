@@ -8,6 +8,12 @@
 # compartilhada com prod — para rodar ambos simultaneamente, altere a porta
 # do nginx neste override).
 #
+# Bind mount da pasta inteira + volume anônimo /app/node_modules:
+# - Qualquer arquivo editado no host reflete no container (HMR, configs, etc.)
+# - /app/node_modules anônimo protege os deps do container (não shadora host)
+# - Dev roda como root (stage development sem USER) — Vite .timestamp funciona
+# - Adicionar .vite/ e .timestamp-* ao .gitignore do frontend
+#
 # Build dev images explicitly:
 #   docker build --target development -t contopia/frontend:dev -f frontend/Dockerfile .
 #   docker build --target development -t contopia/backend:dev  -f backend/Dockerfile .
@@ -22,11 +28,9 @@ services:
       target: development
     container_name: contopia-frontend-dev
     volumes:
-      - ./frontend/src:/app/src:delegated
-      - ./frontend/public:/app/public:delegated
-      - ./frontend/index.html:/app/index.html:delegated
-      # NÃO montar vite.config.js — Vite grava .timestamp ao lado e quebra com user non-root
-      - ./shared:/app/shared:delegated
+      - ./frontend:/app
+      - ./shared:/app/shared
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - VITE_API_URL=${VITE_API_URL:-/api}
@@ -44,8 +48,9 @@ services:
       target: development
     container_name: contopia-backend-dev
     volumes:
-      - ./backend/src:/app/src:delegated
-      - ./shared:/shared:delegated
+      - ./backend:/app
+      - ./shared:/shared
+      - /app/node_modules
     environment:
       - NODE_ENV=development
     command: ['npm', 'run', 'dev', '--', '--legacy-watch']

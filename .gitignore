@@ -49,3 +49,7 @@ e2e/report/
 
 # OpenCode workflow
 .opencode/node_modules/
+
+# Vite dev artifacts (bind-mounted whole dir)
+.vite/
+.timestamp-*
