@@ -1,9 +1,9 @@
 name: CI
 
-# Só em pull request: o push na main já dispara o release.yml.
+# Só em pull request (inclusive PRs empilhados sobre outro branch):
+# o push na main já dispara o release.yml.
 on:
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
