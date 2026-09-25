@@ -8,7 +8,7 @@
 # servidor. O nginx do Contopia entra na rede desse Caddy (EDGE_NETWORK) e o
 # Caddyfile de lá ganha um bloco:
 #
-#   contopia.duckdns.org {
+#   contopia-app.duckdns.org {
 #       encode zstd gzip
 #       reverse_proxy contopia-nginx:80 { header_up X-Forwarded-Proto https }
 #   }

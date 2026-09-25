@@ -46,12 +46,12 @@ Commits `chore:`, `docs:` e afins não geram versão nem deploy.
 
 ### Preparação única
 
-1. **DuckDNS:** criar o subdomínio `contopia` apontando para o IP do servidor.
+1. **DuckDNS:** criar o subdomínio `contopia-app` apontando para o IP do servidor.
 2. **Secrets do repositório** (Settings > Secrets and variables > Actions):
    `SSH_HOST`, `SSH_USER` e `SSH_PRIVATE_KEY`, os mesmos do moneyTrackr.
 3. **No servidor**, criar `~/contopia/.env` a partir do `.env.example` com
    `NODE_ENV=production`, senhas novas para Mongo e Redis, um `JWT_SECRET`
-   (`openssl rand -base64 64`) e `FRONTEND_URL=https://contopia.duckdns.org`.
+   (`openssl rand -base64 64`) e `FRONTEND_URL=https://contopia-app.duckdns.org`.
 4. **HTTPS:** o Caddy do moneyTrackr já usa as portas 80 e 443. O nginx do
    Contopia entra na rede dele (`moneytrackr_frontend`) e o Caddyfile do
-   moneyTrackr ganha um bloco para `contopia.duckdns.org`.
+   moneyTrackr ganha um bloco para `contopia-app.duckdns.org`.
