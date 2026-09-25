@@ -9,7 +9,7 @@ async function main() {
   await mongoose.connect(config.mongodbUri);
   const redis = new Redis(config.redisUrl, { maxRetriesPerRequest: 3 });
 
-  const app = createApp({ mongoose, redis });
+  const app = createApp({ mongoose, redis, config });
   const server = app.listen(config.port, () => {
     console.log(`Contopia API ouvindo na porta ${config.port}`);
   });
