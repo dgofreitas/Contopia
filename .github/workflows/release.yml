@@ -1,0 +1,74 @@
+name: Release
+
+# Entry point for main. semantic-release reads the commits, decides whether a
+# release is warranted, and only then hands the version to the build/deploy
+# workflow. Commits that warrant no release produce no image and no deploy.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.semantic.outputs.new_release_published }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # semantic-release walks the tag history to find the last release.
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run semantic-release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/git
+            @semantic-release/exec
+            conventional-changelog-conventionalcommits
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    # A called workflow cannot request more than the calling job holds, so this
+    # has to cover what deploy.yml's own jobs ask for — otherwise the run fails
+    # at startup, before any job begins.
+    permissions:
+      contents: read
+      packages: write
+    # Called directly rather than triggered by the tag: tags pushed with
+    # GITHUB_TOKEN do not start workflows, so a `on: push: tags` deploy would
+    # simply never run without a PAT.
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: v${{ needs.release.outputs.version }}
+    secrets: inherit
+
+  skipped:
+    needs: release
+    if: needs.release.outputs.published != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "No release from these commits — nothing built, nothing deployed."
+          echo "Only feat, fix, perf, revert and BREAKING CHANGE cut a version."
+          echo "If this change affects what runs in production, commit it as fix:."

@@ -1,0 +1,54 @@
+# Contopia - ajustes de PRODUÇÃO
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Liga autenticação no Mongo e no Redis e limita memória (o servidor é dividido
+# com o moneyTrackr).
+
+services:
+  contopia-nginx:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  frontend:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  backend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGODB_DATABASE:-contopia}?authSource=admin
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  mongodb:
+    restart: always
+    command: ["mongod", "--auth", "--bind_ip_all"]
+    environment:
+      # Só cria o usuário root no primeiro boot (volume vazio).
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    restart: always
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD}"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping"]
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 160M
