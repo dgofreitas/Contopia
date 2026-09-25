@@ -60,7 +60,7 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.deploy.yml config --quiet
       - name: Nginx config
         run: |
-          docker run --rm --add-host frontend:127.0.0.1 --add-host backend:127.0.0.1 \
+          docker run --rm --add-host contopia_frontend:127.0.0.1 --add-host contopia_backend:127.0.0.1 \
             -v "$PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:alpine nginx -t
       # Garante que as imagens de produção constroem antes de chegar ao release.
       - uses: docker/setup-buildx-action@v3

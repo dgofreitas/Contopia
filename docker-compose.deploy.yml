@@ -5,18 +5,22 @@
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.deploy.yml up -d
 #
 # O HTTPS não é feito aqui: o Caddy do moneyTrackr já ocupa as portas 80/443 do
-# servidor. O nginx do Contopia entra na rede desse Caddy (EDGE_NETWORK) com o
-# nome "contopia_nginx", e o Caddyfile de lá ganha um bloco:
+# servidor. O nginx do Contopia entra na rede desse Caddy (EDGE_NETWORK) e o
+# Caddyfile de lá ganha um bloco:
 #
 #   contopia.duckdns.org {
 #       encode zstd gzip
-#       reverse_proxy contopia_nginx:80 { header_up X-Forwarded-Proto https }
+#       reverse_proxy contopia-nginx:80 { header_up X-Forwarded-Proto https }
 #   }
+#
+# O serviço se chama "contopia-nginx", e não "nginx", porque o nome do serviço
+# vira um nome de DNS na rede compartilhada: com "nginx" o Caddy do moneyTrackr
+# poderia mandar o tráfego dele para o Contopia.
 #
 # Requer Compose v2.24+ (tags !reset / !override).
 
 services:
-  nginx:
+  contopia-nginx:
     # Sem porta no host: só o Caddy chega aqui.
     ports: !override []
     networks:

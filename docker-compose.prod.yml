@@ -4,7 +4,7 @@
 # com o moneyTrackr).
 
 services:
-  nginx:
+  contopia-nginx:
     restart: always
     deploy:
       resources:
