@@ -1,63 +1,48 @@
-import { useState } from 'react';
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
-import { Bookshelf } from './components/Bookshelf';
-import { BookOverlay } from './components/BookOverlay';
-import { THEMES } from './themes';
-import { SAMPLE_BOOKS } from './sampleBooks';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider, RequireChild, RequireParent, useAuth, Loading } from './lib/auth';
+import { Welcome } from './pages/Welcome';
+import { ParentAuth } from './pages/ParentAuth';
+import { Family } from './pages/Family';
+import { ChildLogin } from './pages/ChildLogin';
+import { ShelfPage } from './pages/ShelfPage';
+
+// O editor traz o TipTap, que é pesado: só carrega quando a criança vai escrever.
+const Editor = lazy(() => import('./pages/Editor').then((m) => ({ default: m.Editor })));
+const Reader = lazy(() => import('./pages/Reader').then((m) => ({ default: m.Reader })));
+
+function Home() {
+  const { me } = useAuth();
+  if (me === undefined) return <Loading />;
+  if (me?.child) return <Navigate to="/estante" replace />;
+  if (me?.role === 'parent') return <Navigate to="/familia" replace />;
+  return <Welcome />;
+}
+
+export function AppRoutes() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<ParentAuth mode="login" />} />
+        <Route path="/cadastro" element={<ParentAuth mode="register" />} />
+        <Route path="/entrar" element={<ChildLogin />} />
+        <Route path="/familia" element={<RequireParent><Family /></RequireParent>} />
+        <Route path="/estante" element={<RequireChild><ShelfPage /></RequireChild>} />
+        <Route path="/livro/:id/escrever" element={<RequireChild><Editor /></RequireChild>} />
+        <Route path="/livro/:id/ler" element={<RequireChild><Reader /></RequireChild>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}
 
 export default function App() {
-  const [themeId, setThemeId] = useState(THEMES[0].id);
-  const [selectedId, setSelectedId] = useState(null);
-  const theme = THEMES.find((item) => item.id === themeId);
-  const selected = SAMPLE_BOOKS.find((book) => book.id === selectedId);
-
   return (
-    <main className="room" style={{ '--ink': theme.ink, '--glow': theme.glow }}>
-      {/* Gradientes não são animáveis: o céu novo entra por cima do antigo com fade */}
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={theme.id}
-          className="room__sky"
-          style={{ background: theme.sky }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
-          aria-hidden="true"
-        />
-      </AnimatePresence>
-
-      <header className="room__header">
-        <h1 className="logo">Contopia</h1>
-        <p className="tagline">A estante mágica de quem escreve</p>
-      </header>
-
-      <nav className="themes" aria-label="Tema da estante">
-        {THEMES.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className="theme-chip"
-            aria-pressed={item.id === themeId}
-            onClick={() => setThemeId(item.id)}
-          >
-            <span aria-hidden="true">{item.icon}</span> {item.name}
-          </button>
-        ))}
-      </nav>
-
-      <LayoutGroup>
-        <section className="room__shelf" aria-label={`Estante com tema ${theme.name}`}>
-          <span className="sparkle" aria-hidden="true">{theme.sparkle}</span>
-          <Bookshelf books={SAMPLE_BOOKS} theme={theme} selectedId={selectedId} onSelect={setSelectedId} />
-        </section>
-
-        <AnimatePresence>
-          {selected && <BookOverlay key={selected.id} book={selected} onClose={() => setSelectedId(null)} />}
-        </AnimatePresence>
-      </LayoutGroup>
-
-      <p className="hint">Toque em um livro para tirar da estante.</p>
-    </main>
+    <AuthProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

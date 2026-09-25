@@ -5,5 +5,5 @@ module.exports = {
   settings: { react: { version: 'detect' } },
   extends: ['eslint:recommended', 'plugin:react/recommended', 'plugin:react/jsx-runtime', 'plugin:react-hooks/recommended'],
   rules: { 'react/prop-types': 'off' },
-  overrides: [{ files: ['**/*.test.jsx', 'src/test/**'], env: { node: true }, globals: { vi: 'readonly', describe: 'readonly', it: 'readonly', expect: 'readonly' } }],
+  overrides: [{ files: ['**/*.test.jsx', 'src/test/**', 'src/__tests__/**'], env: { node: true }, globals: { vi: 'readonly', describe: 'readonly', it: 'readonly', expect: 'readonly' } }],
 };
