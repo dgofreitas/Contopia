@@ -1,0 +1,151 @@
+# Contopia - arquitetura em containers (mesma receita do moneyTrackr)
+#
+#   nginx (proxy) -> frontend (React/Vite servido por nginx)
+#                 -> backend  (Node/Express) -> mongodb, redis
+#
+# Desenvolvimento local:  docker compose up -d --build   ->  http://localhost:8089
+
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: contopia_nginx
+    restart: unless-stopped
+    ports:
+      - "8089:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - frontend
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging: *logging
+
+  frontend:
+    image: contopia/frontend:dev
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: production
+    container_name: contopia_frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging: *logging
+
+  backend:
+    image: contopia/backend:dev
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: production
+    container_name: contopia_backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    networks:
+      - frontend
+      - backend
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=8000
+      - MONGODB_URI=mongodb://mongodb:27017/${MONGODB_DATABASE:-contopia}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-15m}
+      - REFRESH_TOKEN_EXPIRES_IN=${REFRESH_TOKEN_EXPIRES_IN:-7d}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8089}
+      - UPLOADS_DIR=/data/uploads
+    volumes:
+      # Capas e figuras dos livros
+      - uploads_data:/data/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    logging: *logging
+
+  mongodb:
+    image: mongo:7.0
+    container_name: contopia_mongodb
+    restart: unless-stopped
+    expose:
+      - "27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - backend
+    environment:
+      - MONGO_INITDB_DATABASE=${MONGODB_DATABASE:-contopia}
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    logging: *logging
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: contopia_redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - backend
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging: *logging
+
+networks:
+  frontend:
+    name: contopia_frontend
+  backend:
+    name: contopia_backend
+    internal: true  # mongo e redis sem acesso externo
+
+volumes:
+  mongodb_data:
+    name: contopia_mongodb_data
+  redis_data:
+    name: contopia_redis_data
+  uploads_data:
+    name: contopia_uploads_data

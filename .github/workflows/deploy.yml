@@ -1,0 +1,171 @@
+name: Build and deploy
+
+# Builds both images and ships them to the OCI host. Not triggered by pushes:
+# release.yml calls it once semantic-release has cut a version, so every image
+# that exists corresponds to a release.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Release tag to build and deploy, e.g. v1.2.3
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing tag to redeploy, e.g. v1.2.3
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/contopia-backend
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/contopia-frontend
+
+jobs:
+  build-backend:
+    # Native aarch64: the backend installs and runs its dependencies on the
+    # target arch, so QEMU emulation would only make `npm ci` slower.
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: production
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_BACKEND }}:${{ inputs.version }}
+            ${{ env.IMAGE_BACKEND }}:latest
+          # The commit lives in a label rather than a second tag: it answers
+          # "which source built this" without adding a tag to reason about.
+          labels: |
+            org.opencontainers.image.version=${{ inputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+  build-frontend:
+    # amd64 on purpose. The Dockerfile's build stage is pinned to
+    # $BUILDPLATFORM, so npm and vite run natively here and never touch arm64 —
+    # where npm ci aborts with "Exit handler never called!" (npm/cli#7666).
+    # The image is still linux/arm64: its final stage only COPYs the built
+    # assets into nginx:alpine, which executes nothing, so no QEMU is involved.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          target: production
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_FRONTEND }}:${{ inputs.version }}
+            ${{ env.IMAGE_FRONTEND }}:latest
+          labels: |
+            org.opencontainers.image.version=${{ inputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  deploy:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      # The server runs no source tree and no git. The application lives in the
+      # images; these are only the compose files and the configs that the
+      # compose files bind-mount into nginx / mongo / redis. HTTPS is served by
+      # the moneyTrackr Caddy on the same host (see docker-compose.deploy.yml).
+      - name: Ship compose files and mounted configs
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.yml,docker-compose.prod.yml,docker-compose.deploy.yml,nginx/nginx.conf,mongo/mongo-init.js,redis/redis.conf"
+          target: "~/contopia"
+          overwrite: true
+
+      - name: Pull and restart on the server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd ~/contopia
+
+            # GHCR needs auth even to pull, since the packages are private.
+            # GITHUB_TOKEN is valid for the duration of this run and the pull
+            # happens now, so no long-lived PAT has to live on the server.
+            # Pulling by hand later needs your own `docker login ghcr.io`.
+            echo "${{ secrets.GITHUB_TOKEN }}" \
+              | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            # Recorded in .env so a manual `up -d` on the box lands on the same
+            # release the pipeline last deployed, instead of a stale pin.
+            if grep -q '^IMAGE_TAG=' .env; then
+              sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${{ inputs.version }}|" .env
+            else
+              echo "IMAGE_TAG=${{ inputs.version }}" >> .env
+            fi
+
+            export IMAGE_TAG="${{ inputs.version }}"
+            FILES="-f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.deploy.yml"
+            docker compose $FILES pull
+            docker compose $FILES up -d --remove-orphans
+            docker image prune -f
+
+            docker compose $FILES ps

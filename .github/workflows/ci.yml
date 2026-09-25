@@ -1,0 +1,70 @@
+name: CI
+
+# Só em pull request: o push na main já dispara o release.yml.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  compose:
+    name: Compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Valida que os três arquivos se combinam sem erro, como no servidor.
+      - run: |
+          cp .env.example .env
+          docker network create moneytrackr_frontend
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.deploy.yml config --quiet
+      - name: Nginx config
+        run: |
+          docker run --rm --add-host frontend:127.0.0.1 --add-host backend:127.0.0.1 \
+            -v "$PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:alpine nginx -t
+      # Garante que as imagens de produção constroem antes de chegar ao release.
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        run: docker buildx build --target production -f backend/Dockerfile .
+      - name: Build frontend image
+        run: docker buildx build --target production -f frontend/Dockerfile .
