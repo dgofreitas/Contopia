@@ -51,7 +51,9 @@ p { margin: 0; }
 .room--center { justify-content: center; }
 .scene { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: #2B1D3F; }
 .scene__layer { position: absolute; inset: 0; }
-.scene__layer svg { width: 100%; height: 100%; display: block; }
+.scene__paint, .scene__layer svg { width: 100%; height: 100%; display: block; }
+.scene__character { position: absolute; width: auto; max-width: 40vw; filter: drop-shadow(0 6px 10px rgba(74, 31, 61, 0.28)); }
+.scene__credit { position: fixed; right: 8px; bottom: 6px; z-index: 1; margin: 0; max-width: calc(100% - 16px); padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.78); color: #4A1F3D; font-size: 0.72rem; text-align: right; pointer-events: none; }
 .twinkle { animation: twinkle 2.6s ease-in-out infinite; }
 .float { animation: float 5s ease-in-out infinite; }
 .flap { animation: flap 4s ease-in-out infinite; }

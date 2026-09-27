@@ -19,6 +19,10 @@ export const THEMES = {
     id: 'princesa', name: 'Princesa', icon: '👑',
     sky: ['#FFD9E6', '#FFE6EE', '#FFF1DC'], far: '#F6C3D8', mid: '#EFA6C6', near: '#DD86B0', ground: '#C0679A',
     glow: '#FFF0B8', wood: ['#F4C6DA', '#E394B8', '#BC6892'], gold: '#FFD86B', ink: '#4A1F3D', inkSoft: '#7A4A6B',
+    // Personagens oficiais de "O Diário de uma Princesa Desastrada", baixados só
+    // do site oficial (uso não comercial autorizado). Ficam em public/temas/princesa.
+    characters: [],
+    credit: 'Personagens de "O Diário de uma Princesa Desastrada" © autora e editora. Uso autorizado, não comercial.',
   },
 };
 
