@@ -9,6 +9,7 @@ import { THEME_LIST, themeFor } from '../scene/themes';
 import { Shelf } from '../components/Shelf';
 import { BookCover } from '../components/BookCover';
 import { TopBar } from '../components/TopBar';
+import { Emoji } from '../components/Emoji';
 
 export function ShelfPage() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export function ShelfPage() {
       <nav className="themes" aria-label="Tema da estante">
         {THEME_LIST.map((item) => (
           <button key={item.id} type="button" className="theme-chip" aria-pressed={item.id === theme.id} onClick={() => changeTheme(item.id)}>
-            <span aria-hidden="true">{item.icon}</span> {item.name}
+            <Emoji char={item.icon} /> {item.name}
           </button>
         ))}
       </nav>
@@ -174,7 +175,7 @@ function NewBook({ author, gold, onClose, onCreated }) {
             <div className="stickers">
               {STICKERS.map((s) => (
                 <button key={s || 'nenhuma'} type="button" className="sticker" aria-pressed={s === sticker} onClick={() => setSticker(s)} aria-label={s ? `Figurinha ${s}` : 'Sem figurinha'}>
-                  {s || '∅'}
+                  {s ? <Emoji char={s} /> : '∅'}
                 </button>
               ))}
             </div>

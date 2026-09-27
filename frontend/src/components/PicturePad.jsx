@@ -1,4 +1,5 @@
 import { PICTURES, PICTURE_PASSWORD_LENGTH } from '../lib/constants';
+import { Emoji } from './Emoji';
 
 // Teclado de figuras: a criança toca uma sequência de 4 figuras.
 export function PicturePad({ value, onChange, disabled }) {
@@ -11,7 +12,7 @@ export function PicturePad({ value, onChange, disabled }) {
       <div className="pad__slots" aria-live="polite" aria-label={`${value.length} de ${PICTURE_PASSWORD_LENGTH} figuras escolhidas`}>
         {Array.from({ length: PICTURE_PASSWORD_LENGTH }, (_, i) => (
           <span key={i} className={`pad__slot${value[i] !== undefined ? ' pad__slot--on' : ''}`}>
-            {value[i] !== undefined ? PICTURES[value[i]] : ''}
+            {value[i] !== undefined && <Emoji char={PICTURES[value[i]]} />}
           </span>
         ))}
       </div>
@@ -25,7 +26,7 @@ export function PicturePad({ value, onChange, disabled }) {
             disabled={disabled || value.length >= PICTURE_PASSWORD_LENGTH}
             aria-label={`Figura ${index + 1}`}
           >
-            {emoji}
+            <Emoji char={emoji} />
           </button>
         ))}
       </div>

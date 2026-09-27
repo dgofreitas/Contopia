@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { Emoji } from './Emoji';
 
 // Barra da criança: quem está usando e como sair.
 export function TopBar({ children }) {
@@ -21,7 +22,7 @@ export function TopBar({ children }) {
   return (
     <header className="topbar">
       <span className="topbar__who">
-        <span className="topbar__avatar" aria-hidden="true">{me.child.avatar}</span>
+        <span className="topbar__avatar" aria-hidden="true"><Emoji char={me.child.avatar} /></span>
         {me.child.nickname}
       </span>
       <div className="row">
