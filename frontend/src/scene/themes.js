@@ -15,6 +15,11 @@ export const THEMES = {
     sky: ['#0F0B1C', '#261640', '#44215A'], far: '#2E1E45', mid: '#221536', near: '#170E26', ground: '#0E0819',
     glow: '#B8FFD0', wood: ['#4C4053', '#352C3A', '#211A25'], gold: '#9EF2B5', ink: '#EFE6FF', inkSoft: '#BFB2D9',
   },
+  princesa: {
+    id: 'princesa', name: 'Princesa', icon: '👑',
+    sky: ['#FFD9E6', '#FFE6EE', '#FFF1DC'], far: '#F6C3D8', mid: '#EFA6C6', near: '#DD86B0', ground: '#C0679A',
+    glow: '#FFF0B8', wood: ['#F4C6DA', '#E394B8', '#BC6892'], gold: '#FFD86B', ink: '#4A1F3D', inkSoft: '#7A4A6B',
+  },
 };
 
 export const THEME_LIST = Object.values(THEMES);

@@ -55,9 +55,13 @@ p { margin: 0; }
 .twinkle { animation: twinkle 2.6s ease-in-out infinite; }
 .float { animation: float 5s ease-in-out infinite; }
 .flap { animation: flap 4s ease-in-out infinite; }
-svg .twinkle, svg .float, svg .flap { transform-box: fill-box; transform-origin: center; }
+.wave { animation: wave 2.4s ease-in-out infinite; }
+.tumble { animation: tumble 6s ease-in-out infinite; }
+svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fill-box; transform-origin: center; }
 @keyframes twinkle { 50% { opacity: 0.25; } }
 @keyframes float { 50% { transform: translateY(-10px); } }
+@keyframes wave { 50% { transform: skewY(8deg) scaleX(0.9); } }
+@keyframes tumble { 0%, 100% { transform: translateY(0) rotate(-14deg); } 50% { transform: translateY(-14px) rotate(16deg); } }
 @keyframes flap { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(18px, -10px); } }
 
 /* Papel (cartões sobre o cenário) */
@@ -266,6 +270,6 @@ svg .twinkle, svg .float, svg .flap { transform-box: fill-box; transform-origin:
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .twinkle, .float, .flap, .loading__book { animation: none; }
+  .twinkle, .float, .flap, .wave, .tumble, .loading__book { animation: none; }
   .book-open__flow { transition: none; }
 }
