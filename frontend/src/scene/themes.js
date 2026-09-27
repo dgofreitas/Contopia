@@ -16,15 +16,32 @@ export const THEMES = {
     glow: '#B8FFD0', wood: ['#4C4053', '#352C3A', '#211A25'], gold: '#9EF2B5', ink: '#EFE6FF', inkSoft: '#BFB2D9',
   },
   princesa: {
-    id: 'princesa', name: 'Princesa', icon: '👑',
+    id: 'princesa', name: 'Princesa Desastrada', icon: '👑',
     sky: ['#FFD9E6', '#FFE6EE', '#FFF1DC'], far: '#F6C3D8', mid: '#EFA6C6', near: '#DD86B0', ground: '#C0679A',
     glow: '#FFF0B8', wood: ['#F4C6DA', '#E394B8', '#BC6892'], gold: '#FFD86B', ink: '#4A1F3D', inkSoft: '#7A4A6B',
-    // Personagens oficiais de "O Diário de uma Princesa Desastrada", baixados só
-    // do site oficial (uso não comercial autorizado). Ficam em public/temas/princesa.
-    characters: [],
-    credit: 'Personagens de "O Diário de uma Princesa Desastrada" © autora e editora. Uso autorizado, não comercial.',
+    // Personagens e mapa de Florentia de "O Diário de uma Princesa Desastrada",
+    // tirados só do site oficial (uso não comercial autorizado).
+    // A Amora fica sempre; do outro lado aparece um amigo diferente a cada visita.
+    backdrop: '/temas/princesa/mapa-florentia.jpg',
+    characters: {
+      always: [{ id: 'amora', src: '/temas/princesa/amora.webp', side: 'left' }],
+      guests: [
+        { id: 'olivia', src: '/temas/princesa/olivia.webp', side: 'right' },
+        { id: 'lila', src: '/temas/princesa/lila.webp', side: 'right' },
+        { id: 'stena', src: '/temas/princesa/stena.webp', side: 'right' },
+        { id: 'scorpio', src: '/temas/princesa/scorpio.webp', side: 'right' },
+      ],
+    },
+    credit: 'Personagens e mapa de O Diário de uma Princesa Desastrada®. Todos os direitos reservados. Uso autorizado, não comercial.',
   },
 };
 
 export const THEME_LIST = Object.values(THEMES);
+// Personagens que entram no cenário agora: os fixos e um convidado sorteado.
+export function pickCharacters(theme, random = Math.random) {
+  const { always = [], guests = [] } = theme.characters || {};
+  const guest = guests.length ? [guests[Math.floor(random() * guests.length)]] : [];
+  return [...always, ...guest];
+}
+
 export const themeFor = (id) => THEMES[id] || THEMES.fadas;
