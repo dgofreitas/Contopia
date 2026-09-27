@@ -25,7 +25,9 @@ export function Reader() {
   const [chapter, setChapter] = useState(0);
   const [page, setPage] = useState(0);
   const [pageCount, setPageCount] = useState(1);
-  const [layout, setLayout] = useState({ width: 0, spread: 1 });
+  const [layout, setLayout] = useState({ width: 0, height: 0, spread: 1 });
+  // Muda quando uma imagem termina de carregar, para recontar as páginas.
+  const [loadedImages, setLoadedImages] = useState(0);
   const [flip, setFlip] = useState(null);
   const viewport = useRef(null);
   const flow = useRef(null);
@@ -51,13 +53,24 @@ export function Reader() {
     const measure = () => {
       const total = viewport.current.clientWidth;
       const spread = total >= 900 ? 2 : 1;
-      setLayout({ width: (total - GAP * (spread - 1)) / spread, spread });
+      setLayout({ width: (total - GAP * (spread - 1)) / spread, height: viewport.current.clientHeight, spread });
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(viewport.current);
     return () => observer.disconnect();
   }, [opened]);
+
+  // Imagens chegam depois do texto e empurram o resto para as próximas páginas.
+  useEffect(() => {
+    const node = flow.current;
+    if (!node) return undefined;
+    const onLoad = (e) => {
+      if (e.target.tagName === 'IMG') setLoadedImages((n) => n + 1);
+    };
+    node.addEventListener('load', onLoad, true);
+    return () => node.removeEventListener('load', onLoad, true);
+  }, [opened, layout.width]);
 
   // Conta quantas páginas o capítulo ocupou.
   useLayoutEffect(() => {
@@ -66,7 +79,7 @@ export function Reader() {
     setPageCount(count);
     // Em duas páginas, o livro sempre abre numa página par (esquerda).
     setPage((p) => Math.floor(Math.min(p, count - 1) / layout.spread) * layout.spread);
-  }, [layout, chapter, book]);
+  }, [layout, chapter, book, loadedImages]);
 
   const saveProgress = useCallback(
     (nextChapter, nextPage) => {
@@ -155,6 +168,7 @@ export function Reader() {
               style={{
                 columnWidth: `${layout.width}px`,
                 columnGap: `${GAP}px`,
+                '--page-h': `${layout.height}px`,
                 transform: `translateX(-${page * (layout.width + GAP)}px)`,
               }}
             >

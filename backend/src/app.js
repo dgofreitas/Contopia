@@ -7,6 +7,7 @@ const { createChildrenRouter } = require('./app/children/children-router');
 const { createBooksRouter } = require('./app/books/books-router');
 const { createSessionStore } = require('./lib/sessions');
 const { HttpError } = require('./lib/errors');
+const { IMAGE_TYPES, createImageStore } = require('./lib/images');
 
 /**
  * Monta o app Express sem abrir porta nem conexões, para os testes poderem
@@ -31,11 +32,12 @@ function createApp({ mongoose, redis, config = {} }) {
   api.use(sessions.middleware());
 
   // Proteção contra CSRF: além do cookie SameSite=Lax, toda escrita precisa ser
-  // JSON, o que um formulário de outro site não consegue enviar.
+  // JSON (ou o arquivo de uma imagem), o que um formulário de outro site não
+  // consegue enviar.
   api.use((req, res, next) => {
     const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
     const hasBody = Number(req.headers['content-length'] || 0) > 0 || Boolean(req.headers['transfer-encoding']);
-    if (isWrite && hasBody && !req.is('application/json')) {
+    if (isWrite && hasBody && !req.is('application/json') && !req.is(IMAGE_TYPES)) {
       return res.status(415).json({ error: { code: 'JSON_REQUIRED' } });
     }
     next();
@@ -44,7 +46,7 @@ function createApp({ mongoose, redis, config = {} }) {
   api.get('/', (req, res) => res.json({ name: 'contopia', status: 'ok' }));
   api.use('/auth', createAuthRouter({ sessions, redis }));
   api.use('/children', createChildrenRouter());
-  api.use('/books', createBooksRouter());
+  api.use('/books', createBooksRouter({ images: createImageStore(config.uploadsDir || '/data/uploads') }));
   app.use('/api/v1', api);
 
   app.use((req, res) => {

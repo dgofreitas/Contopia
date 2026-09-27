@@ -8,13 +8,17 @@ export class ApiError extends Error {
   }
 }
 
-async function request(method, path, body) {
-  const res = await fetch(`/api/v1${path}`, {
-    method,
-    credentials: 'same-origin',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+async function request(method, path, body, file) {
+  let headers;
+  let payload;
+  if (file) {
+    headers = { 'Content-Type': file.type };
+    payload = file;
+  } else if (body !== undefined) {
+    headers = { 'Content-Type': 'application/json' };
+    payload = JSON.stringify(body);
+  }
+  const res = await fetch(`/api/v1${path}`, { method, credentials: 'same-origin', headers, body: payload });
   if (res.status === 204) return null;
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(res.status, data.error?.code || 'UNKNOWN', data.error?.details);
@@ -27,6 +31,8 @@ export const api = {
   patch: (path, body) => request('PATCH', path, body),
   put: (path, body) => request('PUT', path, body),
   del: (path) => request('DELETE', path),
+  // Envia um arquivo cru; o Content-Type é o tipo dele (image/png etc.).
+  upload: (path, file) => request('POST', path, undefined, file),
 };
 
 // Mensagens para as crianças e os pais, a partir dos códigos da API.
@@ -40,6 +46,10 @@ const MESSAGES = {
   FAMILY_NOT_FOUND: 'Não achamos esse código. Confira com um adulto.',
   TOO_MANY_CHILDREN: 'Cada família pode ter até 6 perfis.',
   VALIDATION_ERROR: 'Confira os campos e tente de novo.',
+  IMAGE_TYPE: 'Essa imagem não dá. Use uma foto ou desenho em PNG, JPG, WebP ou GIF.',
+  IMAGE_INVALID: 'Não consegui abrir essa imagem. Tente outra.',
+  TOO_LARGE: 'Essa imagem é grande demais. O limite é 5 MB.',
+  TOO_MANY_IMAGES: 'Este livro já tem 100 imagens. Tire alguma para colocar outra.',
 };
 
 export function messageFor(error) {
