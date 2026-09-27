@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { EDITOR_FONTS, TEXT_COLORS } from '../lib/constants';
-import { IMAGE_SIZES } from './BookImage';
+import { ImageTools } from './ImageTools';
 
 const SIZES = [
   { label: 'Pequena', value: '14px' },
@@ -104,14 +104,10 @@ export function Toolbar({ editor, onPickImages, imageNote }) {
               e.target.value = '';
             }}
           />
-          {editor.isActive('image') &&
-            IMAGE_SIZES.map((s) => (
-              <Tool key={s.value} label={`Imagem ${s.label.toLowerCase()}`} active={editor.isActive('image', { size: s.value })} onClick={() => chain().updateAttributes('image', { size: s.value }).run()}>
-                <span className={`tool-size tool-size--${s.value}`}>{s.label[0]}</span>
-              </Tool>
-            ))}
         </div>
       )}
+
+      {onPickImages && editor.isActive('image') && <ImageTools editor={editor} Tool={Tool} />}
 
       <div className="toolbar__group">
         <Tool label="Desfazer" onClick={() => chain().undo().run()}>↶</Tool>

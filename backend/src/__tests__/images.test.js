@@ -28,8 +28,18 @@ describe('imagens no HTML do capítulo', () => {
   const own = `/api/v1/books/${BOOK}/images/${IMAGE}`;
 
   it('mantém só imagens enviadas para o próprio livro', () => {
-    const html = `<img src="${own}" alt="gato" data-size="small" onerror="alert(1)"><img src="https://x.com/a.png"><img src="data:image/png;base64,AAAA"><img src="${own}" data-size="gigante">`;
+    const html = `<img src="${own}" alt="gato" data-size="small" onerror="alert(1)"><img src="https://x.com/a.png"><img src="data:image/png;base64,AAAA">`;
     expect(sanitizeChapterHtml(html, { bookId: BOOK })).toBe(`<img src="${own}" alt="gato" data-size="small" />`);
+  });
+
+  it('mantém largura, posição e texto em volta válidos', () => {
+    const html = `<img src="${own}" data-align="left" data-wrap="column" style="width: 40%">`;
+    expect(sanitizeChapterHtml(html, { bookId: BOOK })).toBe(`<img src="${own}" data-align="left" data-wrap="column" style="width:40%" />`);
+  });
+
+  it('tira valores estranhos sem perder a imagem', () => {
+    const html = `<img src="${own}" data-size="gigante" data-align="top" data-wrap="x" style="width: 400%; position: fixed">`;
+    expect(sanitizeChapterHtml(html, { bookId: BOOK })).toBe(`<img src="${own}" />`);
   });
 
   it('sem livro, nenhuma imagem passa', () => {
