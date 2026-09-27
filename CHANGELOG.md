@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/dgofreitas/Contopia/compare/v1.0.1...v1.1.0) (2026-09-27)
+
+### Features
+
+* usa o logo do Contopia como ícone do site ([06b1807](https://github.com/dgofreitas/Contopia/commit/06b1807ae04b79a7644c105ecf5bd7197de1df07))
+
 ## [1.0.1](https://github.com/dgofreitas/Contopia/compare/v1.0.0...v1.0.1) (2026-09-27)
 
 ### Bug Fixes
