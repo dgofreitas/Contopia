@@ -21,15 +21,16 @@ export const THEMES = {
     glow: '#FFF0B8', wood: ['#F4C6DA', '#E394B8', '#BC6892'], gold: '#FFD86B', ink: '#4A1F3D', inkSoft: '#7A4A6B',
     // Personagens e mapa de Florentia de "O Diário de uma Princesa Desastrada",
     // tirados só do site oficial (uso não comercial autorizado).
-    // A Amora fica sempre; do outro lado aparece um amigo diferente a cada visita.
-    backdrop: '/temas/princesa/mapa-florentia.jpg',
+    // O mapa foi recortado da foto do site, endireitado e sem o brilho e as dobras.
+    // A Amora fica sempre; do outro lado os amigos se revezam, começando pelo Scorpio.
+    backdrop: '/temas/princesa/mapa-florentia.webp',
     characters: {
       always: [{ id: 'amora', src: '/temas/princesa/amora.webp', side: 'left' }],
       guests: [
+        { id: 'scorpio', src: '/temas/princesa/scorpio.webp', side: 'right' },
         { id: 'olivia', src: '/temas/princesa/olivia.webp', side: 'right' },
         { id: 'lila', src: '/temas/princesa/lila.webp', side: 'right' },
         { id: 'stena', src: '/temas/princesa/stena.webp', side: 'right' },
-        { id: 'scorpio', src: '/temas/princesa/scorpio.webp', side: 'right' },
       ],
     },
     credit: 'Personagens e mapa de O Diário de uma Princesa Desastrada®. Todos os direitos reservados. Uso autorizado, não comercial.',
@@ -37,10 +38,10 @@ export const THEMES = {
 };
 
 export const THEME_LIST = Object.values(THEMES);
-// Personagens que entram no cenário agora: os fixos e um convidado sorteado.
-export function pickCharacters(theme, random = Math.random) {
+// Personagens em cena na vez `turn`: os fixos e o amigo da vez.
+export function charactersAt(theme, turn = 0) {
   const { always = [], guests = [] } = theme.characters || {};
-  const guest = guests.length ? [guests[Math.floor(random() * guests.length)]] : [];
+  const guest = guests.length ? [guests[turn % guests.length]] : [];
   return [...always, ...guest];
 }
 
