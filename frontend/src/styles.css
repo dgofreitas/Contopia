@@ -241,6 +241,12 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .page-sheet__chapter:focus { outline: none; border-bottom: 2px dashed var(--paper-edge); }
 .page-sheet__text { flex: 1; font-size: 1.15rem; line-height: 1.75; }
 .page-sheet__text .ProseMirror { min-height: 50vh; outline: none; }
+/* Imagens no texto: três larguras, centralizadas, com cantinho arredondado. */
+.page-sheet__text img, .book-open__text img { display: block; margin: 0.6em auto 1em; max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); }
+.page-sheet__text img[data-size='small'], .book-open__text img[data-size='small'] { width: 35%; }
+.page-sheet__text img[data-size='medium'], .book-open__text img[data-size='medium'] { width: 65%; }
+.page-sheet__text img[data-size='large'], .book-open__text img[data-size='large'] { width: 100%; }
+.page-sheet__text img.ProseMirror-selectednode { outline: 3px solid var(--accent); outline-offset: 3px; }
 .page-sheet__text .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: #BFAE9A; float: left; height: 0; pointer-events: none; font-style: italic; }
 .page-sheet__count { font-size: 0.85rem; color: var(--text-soft); text-align: right; font-variant-numeric: tabular-nums; }
 .toolbar { position: sticky; top: 64px; z-index: 3; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; background: #fff; border-radius: 12px; box-shadow: 0 0 0 1px var(--paper-edge), 0 6px 14px rgba(0, 0, 0, 0.06); }
@@ -252,6 +258,12 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .tool--color { min-width: 26px; width: 26px; height: 26px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6); }
 .tool--color:hover { background: var(--swatch); }
 .tool--color[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--text); background: var(--swatch); }
+.tool svg { display: block; margin: auto; }
+.tool-size { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 5px; font-size: 0.7rem; font-weight: 800; }
+.tool-size--small { transform: scale(0.75); }
+.tool-size--large { transform: scale(1.2); }
+.toolbar__note { flex-basis: 100%; margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.toolbar__note--error { color: #B3261E; }
 .tool-select { height: 36px; border: 1px solid var(--paper-edge); border-radius: 8px; background: #fff; padding: 0 8px; font-weight: 700; }
 
 /* Leitura */
@@ -272,6 +284,8 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .book-open__flow { height: 100%; column-fill: auto; transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1); color: var(--text); font-size: 1.2rem; line-height: 1.8; }
 .book-open__chapter { font-family: var(--font-story); font-weight: 800; color: var(--accent); font-size: 1.7rem; margin-bottom: 18px; break-after: avoid; }
 .book-open__text p { margin: 0 0 0.9em; }
+/* Imagem nunca passa da altura de uma página nem é cortada entre duas. */
+.book-open__text img { max-height: calc(var(--page-h, 60vh) - 2em); object-fit: contain; break-inside: avoid; }
 .book-open__text h2, .book-open__text h3 { font-family: var(--font-story); color: #5B2A86; margin: 0.6em 0 0.4em; }
 .book-open__end { font-family: var(--font-story); font-weight: 800; text-align: center; font-size: 1.4rem; color: var(--accent); margin-top: 1.5em; }
 .book-open__nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--ink); font-weight: 800; }

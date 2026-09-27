@@ -8,16 +8,21 @@ import FontFamily from '@tiptap/extension-font-family';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
-import { api, messageFor } from '../lib/api';
+import { api, ApiError, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { COVER_COLORS, STICKERS } from '../lib/constants';
 import { themeFor } from '../scene/themes';
 import { FontSize } from '../editor/FontSize';
 import { Toolbar } from '../editor/Toolbar';
+import { BookImage } from '../editor/BookImage';
 import { BookCover } from '../components/BookCover';
 import { Emoji } from '../components/Emoji';
 
 const AUTOSAVE_MS = 1200;
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const imageFiles = (list) => Array.from(list || []).filter((f) => f.type.startsWith('image/'));
 
 const escapeHtml = (text) => text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -33,11 +38,14 @@ export function Editor() {
   const [status, setStatus] = useState('saved');
   const [showCover, setShowCover] = useState(false);
   const [error, setError] = useState('');
+  const [imageNote, setImageNote] = useState(null);
 
   // O livro em edição mora num ref para o autosave sempre mandar a versão mais nova.
   const draft = useRef(null);
   const timer = useRef(null);
   const indexRef = useRef(0);
+  // O editor é criado uma vez; colar e soltar imagem chamam a versão mais nova daqui.
+  const uploadRef = useRef(null);
 
   const save = useCallback(async () => {
     clearTimeout(timer.current);
@@ -69,8 +77,24 @@ export function Editor() {
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: 'Era uma vez...' }),
+      BookImage,
     ],
     content: '',
+    editorProps: {
+      handlePaste: (view, event) => {
+        const files = imageFiles(event.clipboardData?.files);
+        if (files.length === 0) return false;
+        uploadRef.current?.(files);
+        return true;
+      },
+      handleDrop: (view, event, slice, moved) => {
+        const files = moved ? [] : imageFiles(event.dataTransfer?.files);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        uploadRef.current?.(files, view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos);
+        return true;
+      },
+    },
     onUpdate: ({ editor: ed }) => {
       if (!draft.current) return;
       draft.current.chapters[indexRef.current].html = ed.getHTML();
@@ -104,6 +128,35 @@ export function Editor() {
       save();
     }
   }, [save]);
+
+  // Manda as imagens para o servidor e coloca cada uma no texto.
+  const uploadImages = async (files, at) => {
+    for (const file of files) {
+      if (!IMAGE_TYPES.includes(file.type)) {
+        setImageNote({ error: true, text: messageFor(new ApiError(415, 'IMAGE_TYPE')) });
+        continue;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        setImageNote({ error: true, text: messageFor(new ApiError(413, 'TOO_LARGE')) });
+        continue;
+      }
+      setImageNote({ text: 'Colocando a imagem...' });
+      try {
+        const { image } = await api.upload(`/books/${id}/images`, file);
+        const chain = editor.chain().focus();
+        if (typeof at === 'number') chain.setTextSelection(at);
+        chain.setImage({ src: image.url, alt: file.name.replace(/\.[^.]+$/, '').slice(0, 80) }).run();
+        // A imagem fica selecionada; sem isto, a próxima letra digitada a apagaria.
+        const after = editor.state.selection.to;
+        if (editor.state.doc.resolve(after).nodeAfter?.isTextblock) editor.commands.setTextSelection(after + 1);
+        else editor.commands.createParagraphNear();
+        setImageNote(null);
+      } catch (err) {
+        setImageNote({ error: true, text: messageFor(err) });
+      }
+    }
+  };
+  uploadRef.current = uploadImages;
 
   const update = (changes) => {
     draft.current = { ...draft.current, ...changes };
@@ -195,7 +248,7 @@ export function Editor() {
         <div className="writing__body writing__body--single">
           <button type="button" className="btn btn--small writing__mode" onClick={splitIntoChapters}>📑 Dividir em capítulos</button>
           <section className="page-sheet">
-            <Toolbar editor={editor} />
+            <Toolbar editor={editor} onPickImages={uploadImages} imageNote={imageNote} />
             <EditorContent editor={editor} className="page-sheet__text" />
             <p className="page-sheet__count">{words === 1 ? '1 palavra' : `${words} palavras`}</p>
           </section>
@@ -229,7 +282,7 @@ export function Editor() {
               value={book.chapters[chapterIndex]?.title || ''}
               onChange={(e) => renameChapter(chapterIndex, e.target.value)}
             />
-            <Toolbar editor={editor} />
+            <Toolbar editor={editor} onPickImages={uploadImages} imageNote={imageNote} />
             <EditorContent editor={editor} className="page-sheet__text" />
             <p className="page-sheet__count">{words === 1 ? '1 palavra' : `${words} palavras`} neste capítulo</p>
           </section>

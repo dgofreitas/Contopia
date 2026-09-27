@@ -5,6 +5,10 @@
 const mongoose = require('mongoose');
 const Redis = require('ioredis');
 const request = require('supertest');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const sharp = require('sharp');
 const { createApp } = require('../app');
 
 const MONGODB_URI = process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/contopia_test';
@@ -12,11 +16,13 @@ const REDIS_URL = process.env.TEST_REDIS_URL || 'redis://127.0.0.1:6379/15';
 
 let redis;
 let app;
+let uploadsDir;
 
 beforeAll(async () => {
   await mongoose.connect(MONGODB_URI);
   redis = new Redis(REDIS_URL);
-  app = createApp({ mongoose, redis, config: {} });
+  uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'contopia-uploads-'));
+  app = createApp({ mongoose, redis, config: { uploadsDir } });
 });
 
 beforeEach(async () => {
@@ -29,6 +35,7 @@ afterAll(async () => {
   await mongoose.connection.db.dropDatabase();
   await mongoose.disconnect();
   await redis.quit();
+  fs.rmSync(uploadsDir, { recursive: true, force: true });
 });
 
 const PICTURE = [0, 3, 5, 8];
@@ -222,5 +229,60 @@ describe('livros', () => {
   it('exige um perfil de criança ativo', async () => {
     const { agent } = await registerParent();
     expect((await agent.get('/api/v1/books')).status).toBe(403);
+  });
+});
+
+describe('imagens no texto', () => {
+  async function bookAgent() {
+    const { agent, child } = await withChild();
+    await agent.post('/api/v1/auth/switch').send({ childId: child.id });
+    const { body } = await agent.post('/api/v1/books').send({ title: 'Com figuras', cover: { color: '#7C5CFF' } });
+    return { agent, bookId: body.book.id };
+  }
+
+  const png = (width, height) => sharp({ create: { width, height, channels: 3, background: '#e8559a' } }).png().toBuffer();
+
+  it('envia, reduz, mostra no texto e só para o dono', async () => {
+    const { agent, bookId } = await bookAgent();
+    const sent = await agent.post(`/api/v1/books/${bookId}/images`).set('Content-Type', 'image/png').send(await png(3000, 1500));
+    expect(sent.status).toBe(201);
+    expect(sent.body.image).toMatchObject({ width: 1200, height: 600 });
+    const { url } = sent.body.image;
+    expect(url).toMatch(new RegExp(`^/api/v1/books/${bookId}/images/[a-f0-9]{24}$`));
+
+    const shown = await agent.get(url).buffer(true).parse((res, cb) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(shown.status).toBe(200);
+    expect(shown.headers['content-type']).toBe('image/webp');
+    expect((await sharp(shown.body).metadata()).format).toBe('webp');
+
+    const html = `<p>oi</p><img src="${url}" alt="dragão" data-size="medium"><img src="https://exemplo.com/x.png"><img src="/api/v1/books/${'a'.repeat(24)}/images/${'b'.repeat(24)}">`;
+    const saved = await agent.patch(`/api/v1/books/${bookId}`).send({ chapters: [{ title: '', html }] });
+    expect(saved.body.book.chapters[0].html).toBe(`<p>oi</p><img src="${url}" alt="dragão" data-size="medium" />`);
+
+    expect((await request(app).get(url)).status).toBe(401);
+    const second = await agent.post('/api/v1/children').send({ nickname: 'Leo', avatar: '🐼', picture: PICTURE });
+    await agent.post('/api/v1/auth/switch').send({ childId: second.body.child.id });
+    expect((await agent.get(url)).status).toBe(404);
+  });
+
+  it('recusa arquivo que não é imagem', async () => {
+    const { agent, bookId } = await bookAgent();
+    const fake = await agent.post(`/api/v1/books/${bookId}/images`).set('Content-Type', 'image/png').send(Buffer.from('não sou imagem'));
+    expect(fake.status).toBe(400);
+    expect(fake.body.error.code).toBe('IMAGE_INVALID');
+    const pdf = await agent.post(`/api/v1/books/${bookId}/images`).set('Content-Type', 'application/pdf').send(Buffer.from('%PDF'));
+    expect(pdf.status).toBe(415);
+  });
+
+  it('apaga as imagens junto com o livro', async () => {
+    const { agent, bookId } = await bookAgent();
+    await agent.post(`/api/v1/books/${bookId}/images`).set('Content-Type', 'image/png').send(await png(10, 10));
+    expect(fs.readdirSync(path.join(uploadsDir, 'books', bookId))).toHaveLength(1);
+    await agent.delete(`/api/v1/books/${bookId}`);
+    expect(fs.existsSync(path.join(uploadsDir, 'books', bookId))).toBe(false);
   });
 });

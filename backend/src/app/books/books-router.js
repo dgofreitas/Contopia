@@ -1,13 +1,19 @@
 const express = require('express');
 const { z } = require('zod');
 const Book = require('../../models/book');
+const BookImage = require('../../models/book-image');
+const { IMAGE_TYPES, MAX_UPLOAD_BYTES, processImage } = require('../../lib/images');
 const { COVER_COLORS } = require('../../lib/constants');
 const { wrap, parse, notFound, badRequest } = require('../../lib/errors');
 const { requireChild } = require('../../lib/guards');
-const { sanitizeChapterHtml } = require('../../lib/sanitize');
+const { sanitizeChapterHtml, imageIdsIn } = require('../../lib/sanitize');
 
 const MAX_CHAPTERS = 60;
 const MAX_CHAPTER_HTML = 200_000;
+const MAX_IMAGES_PER_BOOK = 100;
+// Imagem que saiu do texto só é apagada depois de um tempo, para o "desfazer"
+// do editor ainda conseguir trazê-la de volta.
+const ORPHAN_GRACE_MS = 24 * 60 * 60 * 1000;
 const idParam = z.string().regex(/^[a-f0-9]{24}$/);
 
 const coverSchema = z.object({
@@ -41,7 +47,7 @@ function full(book) {
 
 // Livros da criança ativa. Cada consulta filtra por childId, então uma criança
 // nunca enxerga nem altera o livro de outra.
-function createBooksRouter() {
+function createBooksRouter({ images }) {
   const router = express.Router();
   router.use(requireChild);
 
@@ -50,6 +56,15 @@ function createBooksRouter() {
     const book = await Book.findOne({ _id: id, childId: req.session.childId });
     if (!book) throw notFound('BOOK_NOT_FOUND');
     return book;
+  };
+
+  // Apaga as imagens que não aparecem mais em nenhum capítulo.
+  const removeOrphanImages = async (book) => {
+    const used = new Set(book.chapters.flatMap((c) => imageIdsIn(c.html)));
+    const old = await BookImage.find({ bookId: book._id, createdAt: { $lt: new Date(Date.now() - ORPHAN_GRACE_MS) } });
+    const orphans = old.filter((image) => !used.has(String(image._id)));
+    await Promise.all(orphans.map((image) => images.remove(book._id, image.file)));
+    if (orphans.length > 0) await BookImage.deleteMany({ _id: { $in: orphans.map((image) => image._id) } });
   };
 
   router.get(
@@ -106,12 +121,13 @@ function createBooksRouter() {
       // Livro sem capítulos guarda o texto todo num capítulo só.
       if (!book.chaptered && (body.chapters || book.chapters).length > 1) throw badRequest('CHAPTERLESS_SINGLE_TEXT');
       if (body.chapters) {
-        book.chapters = body.chapters.map((c) => ({ title: c.title, html: sanitizeChapterHtml(c.html) }));
+        book.chapters = body.chapters.map((c) => ({ title: c.title, html: sanitizeChapterHtml(c.html, { bookId: book._id }) }));
         const last = book.chapters.length - 1;
         if (book.progress.chapter > last) book.progress.chapter = last;
       }
       if (!book.chaptered) book.chapters[0].title = '';
       await book.save();
+      if (body.chapters) await removeOrphanImages(book);
       res.json({ book: full(book) });
     }),
   );
@@ -131,11 +147,46 @@ function createBooksRouter() {
     }),
   );
 
+  // Imagem para o texto do livro. O corpo é o próprio arquivo (image/png etc.).
+  router.post(
+    '/:id/images',
+    express.raw({ type: IMAGE_TYPES, limit: MAX_UPLOAD_BYTES }),
+    wrap(async (req, res) => {
+      const book = await findOwn(req);
+      if (!req.is(IMAGE_TYPES)) throw badRequest('IMAGE_TYPE');
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) throw badRequest('IMAGE_INVALID');
+      if ((await BookImage.countDocuments({ bookId: book._id })) >= MAX_IMAGES_PER_BOOK) throw badRequest('TOO_MANY_IMAGES');
+
+      const { data, width, height } = await processImage(req.body);
+      const file = await images.save(book._id, data);
+      const image = await BookImage.create({ bookId: book._id, childId: book.childId, file, width, height, bytes: data.length });
+      res.status(201).json({ image: { id: String(image._id), url: `/api/v1/books/${book._id}/images/${image._id}`, width, height } });
+    }),
+  );
+
+  // Só quem pode abrir o livro vê as imagens dele.
+  router.get(
+    '/:id/images/:imageId',
+    wrap(async (req, res) => {
+      const book = await findOwn(req);
+      const imageId = parse(idParam, req.params.imageId);
+      const image = await BookImage.findOne({ _id: imageId, bookId: book._id });
+      if (!image) throw notFound('IMAGE_NOT_FOUND');
+      res.set('Cache-Control', 'private, max-age=31536000, immutable');
+      res.type('image/webp');
+      res.sendFile(images.pathOf(book._id, image.file), (err) => {
+        if (err && !res.headersSent) res.status(404).json({ error: { code: 'IMAGE_NOT_FOUND' } });
+      });
+    }),
+  );
+
   router.delete(
     '/:id',
     wrap(async (req, res) => {
       const book = await findOwn(req);
       await book.deleteOne();
+      await BookImage.deleteMany({ bookId: book._id });
+      await images.removeBook(book._id);
       res.status(204).end();
     }),
   );

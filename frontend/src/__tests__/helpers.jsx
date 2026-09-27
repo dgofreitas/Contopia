@@ -9,9 +9,10 @@ export function mockApi(routes) {
   global.fetch = vi.fn(async (url, options = {}) => {
     const method = options.method || 'GET';
     const path = url.replace('/api/v1', '');
-    calls.push({ method, path, body: options.body ? JSON.parse(options.body) : undefined });
+    const json = typeof options.body === 'string';
+    calls.push({ method, path, body: json ? JSON.parse(options.body) : options.body });
     const handler = routes[`${method} ${path}`];
-    const [status, body] = typeof handler === 'function' ? handler(JSON.parse(options.body || '{}')) : handler || [404, { error: { code: 'NOT_FOUND' } }];
+    const [status, body] = typeof handler === 'function' ? handler(json ? JSON.parse(options.body) : options.body || {}) : handler || [404, { error: { code: 'NOT_FOUND' } }];
     return { ok: status < 400, status, json: async () => body };
   });
   return calls;
