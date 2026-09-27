@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/dgofreitas/Contopia/compare/v1.3.0...v1.4.0) (2026-09-27)
+
+### Features
+
+* imagens no texto do livro ([ba26a7c](https://github.com/dgofreitas/Contopia/commit/ba26a7c23bed92438ef1002cb47f5c9f066190eb))
+
 ## [1.3.0](https://github.com/dgofreitas/Contopia/compare/v1.2.0...v1.3.0) (2026-09-27)
 
 ### Features
