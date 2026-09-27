@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/dgofreitas/Contopia/compare/v1.4.0...v1.5.0) (2026-09-27)
+
+### Features
+
+* posição, tamanho e texto em volta das imagens ([12455d4](https://github.com/dgofreitas/Contopia/commit/12455d4e744de514689fd8c65e7b7602e514b45f))
+
 ## [1.4.0](https://github.com/dgofreitas/Contopia/compare/v1.3.0...v1.4.0) (2026-09-27)
 
 ### Features
