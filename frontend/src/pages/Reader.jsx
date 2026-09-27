@@ -158,9 +158,9 @@ export function Reader() {
                 transform: `translateX(-${page * (layout.width + GAP)}px)`,
               }}
             >
-              <h2 className="book-open__chapter">{current.title || `Capítulo ${chapter + 1}`}</h2>
+              {book.chaptered && <h2 className="book-open__chapter">{current.title || `Capítulo ${chapter + 1}`}</h2>}
               {isEmpty ? (
-                <p className="muted">Este capítulo ainda está em branco. Que tal escrever?</p>
+                <p className="muted">{book.chaptered ? 'Este capítulo ainda está em branco.' : 'Este livro ainda está em branco.'} Que tal escrever?</p>
               ) : (
                 // HTML limpo pelo servidor (sanitize-html) antes de ser salvo
                 <div className="book-open__text" dangerouslySetInnerHTML={{ __html: current.html }} />

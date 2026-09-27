@@ -1,3 +1,15 @@
+## [1.1.0](https://github.com/dgofreitas/Contopia/compare/v1.0.1...v1.1.0) (2026-09-27)
+
+### Features
+
+* usa o logo do Contopia como ícone do site ([06b1807](https://github.com/dgofreitas/Contopia/commit/06b1807ae04b79a7644c105ecf5bd7197de1df07))
+
+## [1.0.1](https://github.com/dgofreitas/Contopia/compare/v1.0.0...v1.0.1) (2026-09-27)
+
+### Bug Fixes
+
+* figuras que aparecem em qualquer aparelho e senha normal para a criança ([e69036e](https://github.com/dgofreitas/Contopia/commit/e69036e3e1398f66eefa9778e72b413737753842))
+
 ## 1.0.0 (2026-09-25)
 
 ### Features

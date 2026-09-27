@@ -17,6 +17,9 @@ const bookSchema = new mongoose.Schema(
       color: { type: String, required: true },
       sticker: { type: String, default: '' },
     },
+    // Sem capítulos o livro é um texto corrido, guardado como um único capítulo sem título.
+    // Livros antigos não têm o campo e continuam com capítulos.
+    chaptered: { type: Boolean, default: true },
     chapters: { type: [chapterSchema], default: () => [{ title: 'Capítulo 1', html: '' }] },
     favorite: { type: Boolean, default: false },
     // Onde a criança parou de ler
