@@ -130,6 +130,7 @@ function NewBook({ author, gold, onClose, onCreated }) {
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COVER_COLORS[0]);
   const [sticker, setSticker] = useState(STICKERS[1]);
+  const [chaptered, setChaptered] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -137,7 +138,7 @@ function NewBook({ author, gold, onClose, onCreated }) {
     event.preventDefault();
     setBusy(true);
     try {
-      const { book } = await api.post('/books', { title: title.trim(), cover: { color, sticker } });
+      const { book } = await api.post('/books', { title: title.trim(), cover: { color, sticker }, chaptered });
       onCreated(book);
     } catch (err) {
       setError(messageFor(err));
@@ -178,6 +179,13 @@ function NewBook({ author, gold, onClose, onCreated }) {
                   {s ? <Emoji char={s} /> : '∅'}
                 </button>
               ))}
+            </div>
+          </fieldset>
+          <fieldset className="field">
+            <legend>Como vai ser o livro?</legend>
+            <div className="tabs tabs--start" role="group">
+              <button type="button" className="tab" aria-pressed={!chaptered} onClick={() => setChaptered(false)}>📜 Texto corrido</button>
+              <button type="button" className="tab" aria-pressed={chaptered} onClick={() => setChaptered(true)}>📑 Com capítulos</button>
             </div>
           </fieldset>
           {error && <p className="error" role="alert">{error}</p>}

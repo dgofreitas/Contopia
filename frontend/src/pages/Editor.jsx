@@ -19,6 +19,8 @@ import { Emoji } from '../components/Emoji';
 
 const AUTOSAVE_MS = 1200;
 
+const escapeHtml = (text) => text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
 // Estado do salvamento mostrado para a criança.
 const SAVE_LABEL = { saved: 'Tudo salvo ✓', dirty: 'Escrevendo...', saving: 'Salvando...', error: 'Não consegui salvar. Vou tentar de novo.' };
 
@@ -41,9 +43,9 @@ export function Editor() {
     clearTimeout(timer.current);
     if (!draft.current) return;
     setStatus('saving');
-    const { title, cover, chapters } = draft.current;
+    const { title, cover, chaptered, chapters } = draft.current;
     try {
-      await api.patch(`/books/${id}`, { title: title.trim() || 'Sem título', cover, chapters });
+      await api.patch(`/books/${id}`, { title: title.trim() || 'Sem título', cover, chaptered, chapters });
       setStatus((s) => (s === 'saving' ? 'saved' : s));
     } catch {
       setStatus('error');
@@ -80,18 +82,20 @@ export function Editor() {
     api
       .get(`/books/${id}`)
       .then(({ book: loaded }) => {
-        draft.current = { title: loaded.title, cover: loaded.cover, chapters: loaded.chapters };
+        draft.current = { title: loaded.title, cover: loaded.cover, chaptered: loaded.chaptered, chapters: loaded.chapters };
         setBook(loaded);
       })
       .catch((err) => setError(messageFor(err)));
   }, [id]);
 
-  // Troca o conteúdo do editor quando muda o capítulo.
+  // Troca o conteúdo do editor quando muda o capítulo (ou quando o livro vira texto corrido).
+  const chaptered = book?.chaptered;
   useEffect(() => {
     if (!editor || !book) return;
     indexRef.current = chapterIndex;
     editor.commands.setContent(draft.current.chapters[chapterIndex]?.html || '', false);
-  }, [editor, book, chapterIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, book?.id, chapterIndex, chaptered]);
 
   // Salva ao sair da página.
   useEffect(() => () => {
@@ -116,6 +120,25 @@ export function Editor() {
     const chapters = [...draft.current.chapters, { title: `Capítulo ${draft.current.chapters.length + 1}`, html: '' }];
     update({ chapters });
     setChapterIndex(chapters.length - 1);
+  };
+
+  // Texto corrido vira o Capítulo 1.
+  const splitIntoChapters = () => {
+    const [only] = draft.current.chapters;
+    update({ chaptered: true, chapters: [{ ...only, title: 'Capítulo 1' }] });
+    setChapterIndex(0);
+  };
+
+  // Junta tudo num texto só; o nome de cada capítulo vira um título dentro do texto.
+  const joinChapters = () => {
+    const { chapters } = draft.current;
+    if (chapters.length > 1 && !window.confirm('Juntar todos os capítulos num texto só? Os nomes dos capítulos viram títulos dentro do texto.')) return;
+    const html =
+      chapters.length === 1
+        ? chapters[0].html
+        : chapters.map((c, i) => `<h2>${escapeHtml(c.title || `Capítulo ${i + 1}`)}</h2>${c.html}`).join('');
+    update({ chaptered: false, chapters: [{ title: '', html }] });
+    setChapterIndex(0);
   };
 
   const removeChapter = (index) => {
@@ -168,38 +191,50 @@ export function Editor() {
         </section>
       )}
 
-      <div className="writing__body">
-        <nav className="chapters" aria-label="Capítulos">
-          <ol>
-            {book.chapters.map((chapter, index) => (
-              <li key={index} className={index === chapterIndex ? 'chapters__item chapters__item--on' : 'chapters__item'}>
-                <button type="button" className="chapters__open" onClick={() => setChapterIndex(index)} aria-current={index === chapterIndex}>
-                  {chapter.title || `Capítulo ${index + 1}`}
-                </button>
-                {book.chapters.length > 1 && (
-                  <button type="button" className="chapters__remove" aria-label={`Apagar ${chapter.title || `capítulo ${index + 1}`}`} onClick={() => removeChapter(index)}>×</button>
-                )}
-              </li>
-            ))}
-          </ol>
-          <button type="button" className="btn btn--small" onClick={addChapter} disabled={book.chapters.length >= 60}>+ Capítulo</button>
-        </nav>
+      {!book.chaptered ? (
+        <div className="writing__body writing__body--single">
+          <button type="button" className="btn btn--small writing__mode" onClick={splitIntoChapters}>📑 Dividir em capítulos</button>
+          <section className="page-sheet">
+            <Toolbar editor={editor} />
+            <EditorContent editor={editor} className="page-sheet__text" />
+            <p className="page-sheet__count">{words === 1 ? '1 palavra' : `${words} palavras`}</p>
+          </section>
+        </div>
+      ) : (
+        <div className="writing__body">
+          <nav className="chapters" aria-label="Capítulos">
+            <ol>
+              {book.chapters.map((chapter, index) => (
+                <li key={index} className={index === chapterIndex ? 'chapters__item chapters__item--on' : 'chapters__item'}>
+                  <button type="button" className="chapters__open" onClick={() => setChapterIndex(index)} aria-current={index === chapterIndex}>
+                    {chapter.title || `Capítulo ${index + 1}`}
+                  </button>
+                  {book.chapters.length > 1 && (
+                    <button type="button" className="chapters__remove" aria-label={`Apagar ${chapter.title || `capítulo ${index + 1}`}`} onClick={() => removeChapter(index)}>×</button>
+                  )}
+                </li>
+              ))}
+            </ol>
+            <button type="button" className="btn btn--small" onClick={addChapter} disabled={book.chapters.length >= 60}>+ Capítulo</button>
+            <button type="button" className="btn btn--small btn--ghost" onClick={joinChapters}>📜 Tirar os capítulos</button>
+          </nav>
 
-        <section className="page-sheet">
-          <label className="visually-hidden" htmlFor="chapter-title">Nome do capítulo</label>
-          <input
-            id="chapter-title"
-            className="page-sheet__chapter"
-            placeholder={`Capítulo ${chapterIndex + 1}`}
-            maxLength={120}
-            value={book.chapters[chapterIndex]?.title || ''}
-            onChange={(e) => renameChapter(chapterIndex, e.target.value)}
-          />
-          <Toolbar editor={editor} />
-          <EditorContent editor={editor} className="page-sheet__text" />
-          <p className="page-sheet__count">{words === 1 ? '1 palavra' : `${words} palavras`} neste capítulo</p>
-        </section>
-      </div>
+          <section className="page-sheet">
+            <label className="visually-hidden" htmlFor="chapter-title">Nome do capítulo</label>
+            <input
+              id="chapter-title"
+              className="page-sheet__chapter"
+              placeholder={`Capítulo ${chapterIndex + 1}`}
+              maxLength={120}
+              value={book.chapters[chapterIndex]?.title || ''}
+              onChange={(e) => renameChapter(chapterIndex, e.target.value)}
+            />
+            <Toolbar editor={editor} />
+            <EditorContent editor={editor} className="page-sheet__text" />
+            <p className="page-sheet__count">{words === 1 ? '1 palavra' : `${words} palavras`} neste capítulo</p>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
