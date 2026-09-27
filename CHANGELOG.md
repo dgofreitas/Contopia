@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/dgofreitas/Contopia/compare/v1.0.0...v1.0.1) (2026-09-27)
+
+### Bug Fixes
+
+* figuras que aparecem em qualquer aparelho e senha normal para a criança ([e69036e](https://github.com/dgofreitas/Contopia/commit/e69036e3e1398f66eefa9778e72b413737753842))
+
 ## 1.0.0 (2026-09-25)
 
 ### Features
