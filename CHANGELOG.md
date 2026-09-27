@@ -1,3 +1,11 @@
+## [1.3.0](https://github.com/dgofreitas/Contopia/compare/v1.2.0...v1.3.0) (2026-09-27)
+
+### Features
+
+* mapa de Florentia sem cara de foto e o Scorpio no revezamento ([82fabe6](https://github.com/dgofreitas/Contopia/commit/82fabe60527edef831bad62c9293556bac8201ff))
+* personagens e mapa de Florentia no tema Princesa Desastrada ([a459a53](https://github.com/dgofreitas/Contopia/commit/a459a5322347e51f04391f25f4fe9e4277a2bf70))
+* personagens oficiais e crédito no tema Princesa (estrutura) ([61132a0](https://github.com/dgofreitas/Contopia/commit/61132a0510d47ab912401b6795984a03375b6e43))
+
 ## [1.2.0](https://github.com/dgofreitas/Contopia/compare/v1.1.0...v1.2.0) (2026-09-27)
 
 ### Features
