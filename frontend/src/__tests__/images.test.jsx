@@ -25,7 +25,14 @@ describe('imagens no texto', () => {
     fireEvent.change(screen.getByTestId('image-input'), { target: { files: [file] } });
 
     await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toBe(file));
-    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body.chapters[0].html).toContain(`<img src="${URL}" alt="gato" data-size="medium">`), { timeout: 3000 });
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')).toBeTruthy(), { timeout: 3000 });
+    const saved = document.createElement('div');
+    saved.innerHTML = calls.find((c) => c.method === 'PATCH').body.chapters[0].html;
+    const img = saved.querySelector('img');
+    expect(img.getAttribute('src')).toBe(URL);
+    expect(img.getAttribute('alt')).toBe('gato');
+    expect(img.style.width).toBe('60%');
+    expect(img.dataset).toMatchObject({ align: 'center', wrap: 'around' });
   });
 
   it('avisa quando o arquivo não é uma imagem aceita', async () => {

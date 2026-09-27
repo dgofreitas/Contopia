@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth';
 import { themeFor } from '../scene/themes';
 import { Scene } from '../scene/Scene';
 import { BookCover } from '../components/BookCover';
+import { markColumnText } from '../editor/imageLayout';
 
 const GAP = 48;
 
@@ -75,6 +76,7 @@ export function Reader() {
   // Conta quantas páginas o capítulo ocupou.
   useLayoutEffect(() => {
     if (!flow.current || !layout.width) return;
+    markColumnText(flow.current.querySelector('.book-open__text'));
     const count = Math.max(1, Math.round((flow.current.scrollWidth + GAP) / (layout.width + GAP)));
     setPageCount(count);
     // Em duas páginas, o livro sempre abre numa página par (esquerda).

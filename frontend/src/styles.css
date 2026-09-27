@@ -241,12 +241,24 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .page-sheet__chapter:focus { outline: none; border-bottom: 2px dashed var(--paper-edge); }
 .page-sheet__text { flex: 1; font-size: 1.15rem; line-height: 1.75; }
 .page-sheet__text .ProseMirror { min-height: 50vh; outline: none; }
-/* Imagens no texto: três larguras, centralizadas, com cantinho arredondado. */
-.page-sheet__text img, .book-open__text img { display: block; margin: 0.6em auto 1em; max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); }
-.page-sheet__text img[data-size='small'], .book-open__text img[data-size='small'] { width: 35%; }
-.page-sheet__text img[data-size='medium'], .book-open__text img[data-size='medium'] { width: 65%; }
-.page-sheet__text img[data-size='large'], .book-open__text img[data-size='large'] { width: 100%; }
-.page-sheet__text img.ProseMirror-selectednode { outline: 3px solid var(--accent); outline-offset: 3px; }
+/* Imagens no texto: largura em % da página, no meio ou de um lado com o texto em volta. */
+.page-sheet__text img, .book-open__text img { display: block; max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); }
+.image-node { position: relative; margin: 0.6em auto 1em; max-width: 100%; touch-action: none; }
+.image-node img { width: 100%; }
+.image-node[data-align='center'], .book-open__text img[data-align='center'], .book-open__text img:not([data-align]) { clear: both; margin: 0.6em auto 1em; }
+.image-node[data-align='left'], .book-open__text img[data-align='left'] { float: left; margin: 0.3em 1.2em 0.8em 0; }
+.image-node[data-align='right'], .book-open__text img[data-align='right'] { float: right; margin: 0.3em 0 0.8em 1.2em; }
+/* Texto ao lado de uma imagem em coluna: fica ao lado dela, sem passar por baixo. */
+.beside-column { display: flow-root; }
+/* Imagens antigas, de antes da largura livre */
+.book-open__text img[data-size='small'] { width: 35%; }
+.book-open__text img[data-size='medium'] { width: 65%; }
+.book-open__text img[data-size='large'] { width: 100%; }
+.image-node--selected img { outline: 3px solid var(--accent); outline-offset: 3px; }
+.image-node__handle { position: absolute; bottom: -9px; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); touch-action: none; }
+.image-node__handle--left { left: -11px; cursor: nesw-resize; }
+.image-node__handle--right { right: -11px; cursor: nwse-resize; }
+.image-node__size { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); padding: 2px 10px; border-radius: 99px; background: rgba(0, 0, 0, 0.65); color: #fff; font-size: 0.85rem; font-weight: 700; }
 .page-sheet__text .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: #BFAE9A; float: left; height: 0; pointer-events: none; font-style: italic; }
 .page-sheet__count { font-size: 0.85rem; color: var(--text-soft); text-align: right; font-variant-numeric: tabular-nums; }
 .toolbar { position: sticky; top: 64px; z-index: 3; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; background: #fff; border-radius: 12px; box-shadow: 0 0 0 1px var(--paper-edge), 0 6px 14px rgba(0, 0, 0, 0.06); }
@@ -259,9 +271,6 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .tool--color:hover { background: var(--swatch); }
 .tool--color[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--text); background: var(--swatch); }
 .tool svg { display: block; margin: auto; }
-.tool-size { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 5px; font-size: 0.7rem; font-weight: 800; }
-.tool-size--small { transform: scale(0.75); }
-.tool-size--large { transform: scale(1.2); }
 .toolbar__note { flex-basis: 100%; margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text); }
 .toolbar__note--error { color: #B3261E; }
 .tool-select { height: 36px; border: 1px solid var(--paper-edge); border-radius: 8px; background: #fff; padding: 0 8px; font-weight: 700; }
