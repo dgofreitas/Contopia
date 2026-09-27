@@ -16,11 +16,33 @@ export const THEMES = {
     glow: '#B8FFD0', wood: ['#4C4053', '#352C3A', '#211A25'], gold: '#9EF2B5', ink: '#EFE6FF', inkSoft: '#BFB2D9',
   },
   princesa: {
-    id: 'princesa', name: 'Princesa', icon: '👑',
+    id: 'princesa', name: 'Princesa Desastrada', icon: '👑',
     sky: ['#FFD9E6', '#FFE6EE', '#FFF1DC'], far: '#F6C3D8', mid: '#EFA6C6', near: '#DD86B0', ground: '#C0679A',
     glow: '#FFF0B8', wood: ['#F4C6DA', '#E394B8', '#BC6892'], gold: '#FFD86B', ink: '#4A1F3D', inkSoft: '#7A4A6B',
+    // Personagens e mapa de Florentia de "O Diário de uma Princesa Desastrada",
+    // tirados só do site oficial (uso não comercial autorizado).
+    // O mapa foi recortado da foto do site, endireitado e sem o brilho e as dobras.
+    // A Amora fica sempre; do outro lado os amigos se revezam, começando pelo Scorpio.
+    backdrop: '/temas/princesa/mapa-florentia.webp',
+    characters: {
+      always: [{ id: 'amora', src: '/temas/princesa/amora.webp', side: 'left' }],
+      guests: [
+        { id: 'scorpio', src: '/temas/princesa/scorpio.webp', side: 'right' },
+        { id: 'olivia', src: '/temas/princesa/olivia.webp', side: 'right' },
+        { id: 'lila', src: '/temas/princesa/lila.webp', side: 'right' },
+        { id: 'stena', src: '/temas/princesa/stena.webp', side: 'right' },
+      ],
+    },
+    credit: 'Personagens e mapa de O Diário de uma Princesa Desastrada®. Todos os direitos reservados. Uso autorizado, não comercial.',
   },
 };
 
 export const THEME_LIST = Object.values(THEMES);
+// Personagens em cena na vez `turn`: os fixos e o amigo da vez.
+export function charactersAt(theme, turn = 0) {
+  const { always = [], guests = [] } = theme.characters || {};
+  const guest = guests.length ? [guests[turn % guests.length]] : [];
+  return [...always, ...guest];
+}
+
 export const themeFor = (id) => THEMES[id] || THEMES.fadas;
