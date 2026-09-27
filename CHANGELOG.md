@@ -1,3 +1,10 @@
+## [1.2.0](https://github.com/dgofreitas/Contopia/compare/v1.1.0...v1.2.0) (2026-09-27)
+
+### Features
+
+* livros sem capítulos (texto corrido) ([5c9dec8](https://github.com/dgofreitas/Contopia/commit/5c9dec8275fa25cc0f2a9848c0a1303a87d7b48f))
+* tema Princesa na estante ([1d12869](https://github.com/dgofreitas/Contopia/commit/1d12869782ad0660a89eab569b1dea79c82dfaf0))
+
 ## [1.1.0](https://github.com/dgofreitas/Contopia/compare/v1.0.1...v1.1.0) (2026-09-27)
 
 ### Features
