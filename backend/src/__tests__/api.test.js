@@ -159,10 +159,10 @@ describe('livros', () => {
 
   it('cria, escreve, favorita e marca o progresso', async () => {
     const { agent } = await childAgent();
-    const created = await agent.post('/api/v1/books').send({ title: 'O Dragão Tímido', cover: { color: '#E8559A', sticker: '🐉' } });
+    const created = await agent.post('/api/v1/books').send({ title: 'O Dragão Tímido', cover: { color: '#E8559A', sticker: '🐉' }, chaptered: true });
     expect(created.status).toBe(201);
     const id = created.body.book.id;
-    expect(created.body.book.chapters).toEqual([{ title: 'Capítulo 1', html: '' }]);
+    expect(created.body.book).toMatchObject({ chaptered: true, chapters: [{ title: 'Capítulo 1', html: '' }] });
 
     const saved = await agent.patch(`/api/v1/books/${id}`).send({
       favorite: true,
@@ -175,6 +175,26 @@ describe('livros', () => {
     await agent.put(`/api/v1/books/${id}/progress`).send({ chapter: 0, page: 2 });
     const list = await agent.get('/api/v1/books');
     expect(list.body.books[0]).toMatchObject({ title: 'O Dragão Tímido', favorite: true, progress: { chapter: 0, page: 2 } });
+  });
+
+  it('cria livro sem capítulos e troca entre os dois jeitos', async () => {
+    const { agent } = await childAgent();
+    const created = await agent.post('/api/v1/books').send({ title: 'Diário de férias', cover: { color: '#7C5CFF' } });
+    expect(created.body.book).toMatchObject({ chaptered: false, chapters: [{ title: '', html: '' }] });
+    const id = created.body.book.id;
+
+    const tooMany = await agent.patch(`/api/v1/books/${id}`).send({ chapters: [{ html: '<p>a</p>' }, { html: '<p>b</p>' }] });
+    expect(tooMany.status).toBe(400);
+    expect(tooMany.body.error.code).toBe('CHAPTERLESS_SINGLE_TEXT');
+
+    const split = await agent.patch(`/api/v1/books/${id}`).send({
+      chaptered: true,
+      chapters: [{ title: 'Um', html: '<p>a</p>' }, { title: 'Dois', html: '<p>b</p>' }],
+    });
+    expect(split.body.book).toMatchObject({ chaptered: true, chapters: [{ title: 'Um' }, { title: 'Dois' }] });
+
+    const joined = await agent.patch(`/api/v1/books/${id}`).send({ chaptered: false, chapters: [{ title: 'Um', html: '<p>a</p><p>b</p>' }] });
+    expect(joined.body.book).toMatchObject({ chaptered: false, chapters: [{ title: '', html: '<p>a</p><p>b</p>' }] });
   });
 
   it('mantém cores e estilos permitidos do editor', async () => {

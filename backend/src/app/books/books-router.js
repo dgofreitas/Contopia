@@ -2,7 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const Book = require('../../models/book');
 const { COVER_COLORS } = require('../../lib/constants');
-const { wrap, parse, notFound } = require('../../lib/errors');
+const { wrap, parse, notFound, badRequest } = require('../../lib/errors');
 const { requireChild } = require('../../lib/guards');
 const { sanitizeChapterHtml } = require('../../lib/sanitize');
 
@@ -28,6 +28,7 @@ function summary(book) {
     cover: { color: book.cover.color, sticker: book.cover.sticker },
     favorite: book.favorite,
     visibility: book.visibility,
+    chaptered: book.chaptered,
     chapters: book.chapters.length,
     progress: book.progress?.updatedAt ? { chapter: book.progress.chapter, page: book.progress.page, updatedAt: book.progress.updatedAt } : null,
     updatedAt: book.updatedAt,
@@ -62,8 +63,17 @@ function createBooksRouter() {
   router.post(
     '/',
     wrap(async (req, res) => {
-      const body = parse(z.object({ title: z.string().trim().min(1).max(80), cover: coverSchema }), req.body);
-      const book = await Book.create({ childId: req.session.childId, title: body.title, cover: body.cover });
+      const body = parse(
+        z.object({ title: z.string().trim().min(1).max(80), cover: coverSchema, chaptered: z.boolean().default(false) }),
+        req.body,
+      );
+      const book = await Book.create({
+        childId: req.session.childId,
+        title: body.title,
+        cover: body.cover,
+        chaptered: body.chaptered,
+        chapters: [{ title: body.chaptered ? 'Capítulo 1' : '', html: '' }],
+      });
       res.status(201).json({ book: full(book) });
     }),
   );
@@ -84,6 +94,7 @@ function createBooksRouter() {
           title: z.string().trim().min(1).max(80).optional(),
           cover: coverSchema.optional(),
           favorite: z.boolean().optional(),
+          chaptered: z.boolean().optional(),
           chapters: z.array(chapterSchema).min(1).max(MAX_CHAPTERS).optional(),
         }),
         req.body,
@@ -91,11 +102,15 @@ function createBooksRouter() {
       if (body.title !== undefined) book.title = body.title;
       if (body.cover) book.cover = body.cover;
       if (body.favorite !== undefined) book.favorite = body.favorite;
+      if (body.chaptered !== undefined) book.chaptered = body.chaptered;
+      // Livro sem capítulos guarda o texto todo num capítulo só.
+      if (!book.chaptered && (body.chapters || book.chapters).length > 1) throw badRequest('CHAPTERLESS_SINGLE_TEXT');
       if (body.chapters) {
         book.chapters = body.chapters.map((c) => ({ title: c.title, html: sanitizeChapterHtml(c.html) }));
         const last = book.chapters.length - 1;
         if (book.progress.chapter > last) book.progress.chapter = last;
       }
+      if (!book.chaptered) book.chapters[0].title = '';
       await book.save();
       res.json({ book: full(book) });
     }),
