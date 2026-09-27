@@ -15,6 +15,7 @@ import { themeFor } from '../scene/themes';
 import { FontSize } from '../editor/FontSize';
 import { Toolbar } from '../editor/Toolbar';
 import { BookCover } from '../components/BookCover';
+import { Emoji } from '../components/Emoji';
 
 const AUTOSAVE_MS = 1200;
 
@@ -159,7 +160,7 @@ export function Editor() {
             <div className="stickers">
               {STICKERS.map((s) => (
                 <button key={s || 'nenhuma'} type="button" className="sticker" aria-pressed={s === book.cover.sticker} aria-label={s ? `Figurinha ${s}` : 'Sem figurinha'} onClick={() => update({ cover: { ...book.cover, sticker: s } })}>
-                  {s || '∅'}
+                  {s ? <Emoji char={s} /> : '∅'}
                 </button>
               ))}
             </div>

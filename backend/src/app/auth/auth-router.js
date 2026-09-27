@@ -26,12 +26,22 @@ const pictureSchema = z
 
 const pictureKey = (picture) => picture.join('-');
 
+// Senha normal da criança: curta o bastante para ela lembrar.
+const textPasswordSchema = z.string().min(4).max(64);
+
+function loginMethods(child) {
+  const methods = [];
+  if (child.picturePasswordHash) methods.push('picture');
+  if (child.textPasswordHash) methods.push('text');
+  return methods;
+}
+
 function publicParent(parent) {
   return { id: String(parent._id), email: parent.email, familyCode: parent.familyCode };
 }
 
 function publicChild(child) {
-  return { id: String(child._id), nickname: child.nickname, avatar: child.avatar, theme: child.theme };
+  return { id: String(child._id), nickname: child.nickname, avatar: child.avatar, theme: child.theme, methods: loginMethods(child) };
 }
 
 function createAuthRouter({ sessions, redis }) {
@@ -117,7 +127,9 @@ function createAuthRouter({ sessions, redis }) {
       const parent = await Parent.findOne({ familyCode: code });
       if (!parent) throw notFound('FAMILY_NOT_FOUND');
       const children = await Child.find({ parentId: parent._id }).sort({ createdAt: 1 });
-      res.json({ children: children.map((c) => ({ id: String(c._id), nickname: c.nickname, avatar: c.avatar })) });
+      res.json({
+        children: children.map((c) => ({ id: String(c._id), nickname: c.nickname, avatar: c.avatar, methods: loginMethods(c) })),
+      });
     }),
   );
 
@@ -125,7 +137,14 @@ function createAuthRouter({ sessions, redis }) {
     '/child/login',
     wrap(async (req, res) => {
       const body = parse(
-        z.object({ familyCode: z.string().min(4).max(12), childId: z.string().regex(/^[a-f0-9]{24}$/), picture: pictureSchema }),
+        z
+          .object({
+            familyCode: z.string().min(4).max(12),
+            childId: z.string().regex(/^[a-f0-9]{24}$/),
+            picture: pictureSchema.optional(),
+            password: z.string().min(1).max(64).optional(),
+          })
+          .refine((b) => (b.picture === undefined) !== (b.password === undefined), 'picture ou password'),
         req.body,
       );
 
@@ -137,11 +156,14 @@ function createAuthRouter({ sessions, redis }) {
       const child = parent ? await Child.findOne({ _id: body.childId, parentId: parent._id }) : null;
       if (!child) throw notFound('CHILD_NOT_FOUND');
 
-      const ok = await bcrypt.compare(pictureKey(body.picture), child.picturePasswordHash);
+      const [secret, hash, failCode] = body.picture
+        ? [pictureKey(body.picture), child.picturePasswordHash, 'INVALID_PICTURE_PASSWORD']
+        : [body.password, child.textPasswordHash, 'INVALID_TEXT_PASSWORD'];
+      const ok = hash ? await bcrypt.compare(secret, hash) : false;
       if (!ok) {
         const count = await redis.incr(lockKey);
         if (count === 1) await redis.expire(lockKey, CHILD_LOCK_SECONDS);
-        throw unauthorized('INVALID_PICTURE_PASSWORD');
+        throw unauthorized(failCode);
       }
       await redis.del(lockKey);
 
@@ -182,4 +204,4 @@ function createAuthRouter({ sessions, redis }) {
   return router;
 }
 
-module.exports = { createAuthRouter, pictureSchema, pictureKey, publicChild, BCRYPT_COST };
+module.exports = { createAuthRouter, pictureSchema, pictureKey, textPasswordSchema, publicChild, BCRYPT_COST };

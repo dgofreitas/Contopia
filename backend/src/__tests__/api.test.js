@@ -86,7 +86,7 @@ describe('entrada da criança com senha de figuras', () => {
   it('encontra a família e entra com a sequência certa', async () => {
     const { parent, child } = await withChild();
     const family = await request(app).get(`/api/v1/auth/family/${parent.familyCode.toLowerCase()}`);
-    expect(family.body.children).toEqual([{ id: child.id, nickname: 'Lia', avatar: '🦊' }]);
+    expect(family.body.children).toEqual([{ id: child.id, nickname: 'Lia', avatar: '🦊', methods: ['picture'] }]);
 
     const kid = request.agent(app);
     const res = await kid.post('/api/v1/auth/child/login').send({ familyCode: parent.familyCode, childId: child.id, picture: PICTURE });
@@ -108,6 +108,45 @@ describe('entrada da criança com senha de figuras', () => {
     const kid = request.agent(app);
     await kid.post('/api/v1/auth/child/login').send({ familyCode: parent.familyCode, childId: child.id, picture: PICTURE });
     expect((await kid.get('/api/v1/children')).status).toBe(403);
+  });
+});
+
+describe('entrada da criança com senha normal', () => {
+  it('cria o perfil só com senha e entra com ela', async () => {
+    const { agent, parent } = await registerParent();
+    const created = await agent.post('/api/v1/children').send({ nickname: 'Leo', avatar: '🐼', password: 'leo123' });
+    expect(created.status).toBe(201);
+    expect(created.body.child.methods).toEqual(['text']);
+
+    const login = (body) =>
+      request(app).post('/api/v1/auth/child/login').send({ familyCode: parent.familyCode, childId: created.body.child.id, ...body });
+    expect((await login({ password: 'errada' })).body.error.code).toBe('INVALID_TEXT_PASSWORD');
+    expect((await login({ picture: PICTURE })).status).toBe(401);
+    expect((await login({ password: 'leo123' })).status).toBe(200);
+  });
+
+  it('o responsável acrescenta a senha normal e não pode tirar os dois jeitos', async () => {
+    const { agent, parent, child } = await withChild();
+    const added = await agent.patch(`/api/v1/children/${child.id}`).send({ password: 'lia2024' });
+    expect(added.body.child.methods).toEqual(['picture', 'text']);
+
+    const res = await request(app)
+      .post('/api/v1/auth/child/login')
+      .send({ familyCode: parent.familyCode, childId: child.id, password: 'lia2024' });
+    expect(res.status).toBe(200);
+
+    expect((await agent.patch(`/api/v1/children/${child.id}`).send({ picture: null })).status).toBe(200);
+    const none = await agent.patch(`/api/v1/children/${child.id}`).send({ password: null });
+    expect(none.body.error.code).toBe('LOGIN_METHOD_REQUIRED');
+  });
+
+  it('recusa perfil sem nenhum jeito de entrar e login com os dois ao mesmo tempo', async () => {
+    const { agent, parent, child } = await withChild();
+    expect((await agent.post('/api/v1/children').send({ nickname: 'Bia', avatar: '🐼' })).status).toBe(400);
+    const both = await request(app)
+      .post('/api/v1/auth/child/login')
+      .send({ familyCode: parent.familyCode, childId: child.id, picture: PICTURE, password: 'x' });
+    expect(both.status).toBe(400);
   });
 });
 

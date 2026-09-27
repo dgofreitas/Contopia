@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react';
+import { Emoji } from './Emoji';
 
 // Altura da lombada varia um pouco por livro, para a estante não parecer uma régua.
 const heightFor = (id) => 176 + (parseInt(id.slice(-4), 16) % 40);
@@ -33,7 +34,7 @@ export function Shelf({ books, theme, selectedId, onSelect, onNew }) {
                   whileTap={{ scale: 0.97 }}
                 >
                   <span className="spine__title">{book.title}</span>
-                  {book.cover.sticker && <span className="spine__sticker" aria-hidden="true">{book.cover.sticker}</span>}
+                  {book.cover.sticker && <span className="spine__sticker" aria-hidden="true"><Emoji char={book.cover.sticker} /></span>}
                   {book.progress && <i className="spine__ribbon" aria-hidden="true" />}
                   {book.favorite && <i className="spine__star" aria-hidden="true">★</i>}
                 </motion.button>

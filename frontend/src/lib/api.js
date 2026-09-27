@@ -34,6 +34,8 @@ const MESSAGES = {
   INVALID_CREDENTIALS: 'E-mail ou senha não conferem.',
   EMAIL_TAKEN: 'Já existe uma conta com esse e-mail. Tente entrar.',
   INVALID_PICTURE_PASSWORD: 'Hmm, essas não são as suas figuras. Tente de novo!',
+  INVALID_TEXT_PASSWORD: 'Hmm, essa não é a sua senha. Tente de novo!',
+  LOGIN_METHOD_REQUIRED: 'A criança precisa de pelo menos um jeito de entrar: figuras ou senha.',
   CHILD_LOCKED: 'Muitas tentativas. Peça ajuda a um adulto ou espere 15 minutos.',
   FAMILY_NOT_FOUND: 'Não achamos esse código. Confira com um adulto.',
   TOO_MANY_CHILDREN: 'Cada família pode ter até 6 perfis.',

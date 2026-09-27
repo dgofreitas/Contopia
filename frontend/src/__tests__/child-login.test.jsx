@@ -39,4 +39,38 @@ describe('entrada da criança', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('não são as suas figuras');
     expect(screen.getByLabelText('0 de 4 figuras escolhidas')).toBeInTheDocument();
   });
+
+  it('entra com a senha normal quando a criança tem os dois jeitos', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [401, {}],
+      'GET /auth/family/ABCD2345': [200, { children: [{ ...LIA, methods: ['picture', 'text'] }] }],
+      'POST /auth/child/login': [200, { role: 'child', parent: null, child: { ...LIA, theme: 'fadas' } }],
+      'GET /books': [200, { books: [] }],
+    });
+    renderAt('/entrar');
+    fireEvent.change(await screen.findByLabelText('Código'), { target: { value: 'ABCD2345' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Lia/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Senha' }));
+    fireEvent.change(screen.getByLabelText('Sua senha'), { target: { value: 'lia2024' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === '/auth/child/login')).toBe(true));
+    expect(calls.find((c) => c.path === '/auth/child/login').body).toEqual({ familyCode: 'ABCD2345', childId: LIA.id, password: 'lia2024' });
+  });
+
+  it('vai direto para a senha normal quando a criança não tem figuras', async () => {
+    mockApi({
+      'GET /auth/me': [401, {}],
+      'GET /auth/family/ABCD2345': [200, { children: [{ ...LIA, methods: ['text'] }] }],
+    });
+    renderAt('/entrar');
+    fireEvent.change(await screen.findByLabelText('Código'), { target: { value: 'ABCD2345' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Lia/ }));
+
+    expect(screen.getByLabelText('Sua senha')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Figura 1' })).not.toBeInTheDocument();
+  });
 });
