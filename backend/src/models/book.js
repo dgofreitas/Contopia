@@ -31,8 +31,9 @@ const bookSchema = new mongoose.Schema(
       page: { type: Number, default: 0 },
       updatedAt: { type: Date },
     },
-    // Fase 1: tudo privado. Público e compartilhado chegam na Fase 3.
-    visibility: { type: String, enum: ['private'], default: 'private' },
+    // Quem pode ler o livro publicado: só a criança ('private') ou também os
+    // irmãos, as outras crianças da mesma família ('family'). Público vem depois.
+    visibility: { type: String, enum: ['private', 'family'], default: 'private' },
   },
   { timestamps: true },
 );

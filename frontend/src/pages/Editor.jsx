@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextStyle from '@tiptap/extension-text-style';
@@ -17,6 +18,7 @@ import { Toolbar } from '../editor/Toolbar';
 import { BookImage } from '../editor/BookImage';
 import { BookCover } from '../components/BookCover';
 import { Emoji } from '../components/Emoji';
+import { PublishDialog } from '../components/PublishDialog';
 
 const AUTOSAVE_MS = 1200;
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
@@ -38,6 +40,7 @@ export function Editor() {
   const [chapterIndex, setChapterIndex] = useState(0);
   const [status, setStatus] = useState('saved');
   const [showCover, setShowCover] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
   const [imageNote, setImageNote] = useState(null);
 
@@ -203,10 +206,11 @@ export function Editor() {
   };
 
   // Terminou o livro: sai do ateliê e vai para a estante.
-  const publish = async () => {
+  const publish = async (visibility) => {
+    setPublishing(false);
     await save();
     try {
-      await api.patch(`/books/${id}`, { published: true });
+      await api.patch(`/books/${id}`, { published: true, visibility });
       navigate('/estante', { state: { published: draft.current.title.trim() || 'Sem título' } });
     } catch (err) {
       window.alert(messageFor(err));
@@ -238,8 +242,12 @@ export function Editor() {
         <span className={`save save--${status}`} role="status">{SAVE_LABEL[status]}</span>
         <button type="button" className="btn btn--small" onClick={() => setShowCover((v) => !v)} aria-expanded={showCover}>🎨 Capa</button>
         <Link to={`/livro/${id}/ler`} className="btn btn--small" onClick={() => save()}>📖 Ler</Link>
-        {!book.published && <button type="button" className="btn btn--small btn--primary" onClick={publish}>📚 Publicar</button>}
+        {!book.published && <button type="button" className="btn btn--small btn--primary" onClick={() => setPublishing(true)}>📚 Publicar</button>}
       </header>
+
+      <AnimatePresence>
+        {publishing && <PublishDialog title={book.title.trim() || 'Sem título'} onPublish={publish} onClose={() => setPublishing(false)} />}
+      </AnimatePresence>
 
       {showCover && (
         <section className="cover-panel" aria-label="Capa">
