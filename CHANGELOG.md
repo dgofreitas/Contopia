@@ -1,3 +1,10 @@
+## [1.7.0](https://github.com/dgofreitas/Contopia/compare/v1.6.0...v1.7.0) (2026-09-29)
+
+### Features
+
+* ateliê para os livros que ainda estão sendo escritos ([ee75676](https://github.com/dgofreitas/Contopia/commit/ee75676dc57c9621b043ffbf8d818c8d97171b71))
+* devolver livro publicado ao ateliê e apagar rascunhos ([05e3bbc](https://github.com/dgofreitas/Contopia/commit/05e3bbc9fd627ebc57c5b3045f83548385c93123))
+
 ## [1.6.0](https://github.com/dgofreitas/Contopia/compare/v1.5.0...v1.6.0) (2026-09-29)
 
 ### Features
