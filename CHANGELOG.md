@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/dgofreitas/Contopia/compare/v1.5.0...v1.6.0) (2026-09-29)
+
+### Features
+
+* livro sai da estante de verdade e estante com várias prateleiras ([f04bc80](https://github.com/dgofreitas/Contopia/commit/f04bc804098a850b5331d1ad5eec52e768d0c7a2))
+
 ## [1.5.0](https://github.com/dgofreitas/Contopia/compare/v1.4.0...v1.5.0) (2026-09-27)
 
 ### Features
