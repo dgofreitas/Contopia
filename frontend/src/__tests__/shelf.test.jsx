@@ -39,6 +39,33 @@ describe('estante', () => {
     await waitFor(() => expect(calls.some((c) => c.path === '/auth/me/theme')).toBe(true));
   });
 
+  it('guarda o livro de volta na estante', async () => {
+    mockApi({ 'GET /auth/me': [200, ME], 'GET /books': [200, { books: [BOOK] }] });
+    renderAt('/estante');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'O Dragão Tímido, lendo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Guardar na estante' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'O Dragão Tímido, lendo' })).toBeVisible();
+  });
+
+  it('com muitos livros usa várias prateleiras e filtros', async () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      ...BOOK, id: String(i).padStart(24, 'a'), title: `Livro ${i + 1}`, favorite: i < 2, progress: null,
+    }));
+    mockApi({ 'GET /auth/me': [200, ME], 'GET /books': [200, { books: many }] });
+    renderAt('/estante');
+
+    expect(await screen.findByRole('list', { name: 'Prateleira 2' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Livro \d+/ })).toHaveLength(20);
+
+    fireEvent.click(screen.getByRole('button', { name: '★ Favoritos' }));
+    expect(screen.getAllByRole('button', { name: /^Livro \d+/ })).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: /Lendo/ }));
+    expect(screen.getByText('Nenhum livro aqui ainda.')).toBeInTheDocument();
+  });
+
   it('manda para a página inicial quem não entrou', async () => {
     mockApi({ 'GET /auth/me': [401, {}] });
     renderAt('/estante');

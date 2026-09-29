@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { COVER_COLORS, STICKERS } from '../lib/constants';
@@ -8,8 +8,17 @@ import { Scene } from '../scene/Scene';
 import { THEME_LIST, themeFor } from '../scene/themes';
 import { Shelf } from '../components/Shelf';
 import { BookCover } from '../components/BookCover';
+import { FlyingBook } from '../components/FlyingBook';
 import { TopBar } from '../components/TopBar';
 import { Emoji } from '../components/Emoji';
+
+// Com muitos livros a estante ganha filtros, para achar os favoritos e os que está lendo.
+const MANY_BOOKS = 12;
+const FILTERS = [
+  ['all', 'Todos'],
+  ['favorites', <>★ Favoritos</>],
+  ['reading', <><Emoji char="📖" /> Lendo</>],
+];
 
 export function ShelfPage() {
   const navigate = useNavigate();
@@ -17,6 +26,9 @@ export function ShelfPage() {
   const theme = themeFor(me.child.theme);
   const [books, setBooks] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  // Livro voltando para a estante: a lombada só reaparece quando ele chega.
+  const [returningId, setReturningId] = useState(null);
+  const [filter, setFilter] = useState('all');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,6 +57,11 @@ export function ShelfPage() {
   };
 
   const selected = books?.find((b) => b.id === selectedId);
+  const shown = books?.filter((b) => filter === 'all' || (filter === 'favorites' ? b.favorite : b.progress));
+  const putBack = () => {
+    setReturningId(selectedId);
+    setSelectedId(null);
+  };
   const reading = books?.filter((b) => b.progress).sort((a, b) => new Date(b.progress.updatedAt) - new Date(a.progress.updatedAt))[0];
 
   return (
@@ -68,49 +85,60 @@ export function ShelfPage() {
 
       {error && <p className="error error--floating" role="alert">{error}</p>}
 
-      <LayoutGroup>
-        <section className="room__shelf" aria-label={`Estante de ${me.child.nickname}`}>
-          {books === null ? (
-            <p className="hint">Arrumando os livros...</p>
-          ) : (
-            <>
-              <Shelf books={books} theme={theme} selectedId={selectedId} onSelect={setSelectedId} onNew={() => setCreating(true)} />
-              {books.length === 0 && <p className="hint">Sua estante está vazia. Que tal escrever o primeiro livro?</p>}
-            </>
-          )}
-        </section>
-
-        <AnimatePresence>
-          {selected && (
-            <motion.div
-              key={selected.id}
-              className="overlay"
-              role="dialog"
-              aria-modal="true"
-              aria-label={selected.title}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedId(null)}
-              onKeyDown={(e) => e.key === 'Escape' && setSelectedId(null)}
-            >
-              <motion.div layoutId={`book-${selected.id}`} className="overlay__book" onClick={(e) => e.stopPropagation()} transition={{ type: 'spring', stiffness: 200, damping: 26 }}>
-                <BookCover title={selected.title} author={me.child.nickname} color={selected.cover.color} sticker={selected.cover.sticker} gold={theme.gold} size="lg" />
-              </motion.div>
-              <div className="overlay__actions" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="btn btn--primary" onClick={() => navigate(`/livro/${selected.id}/ler`)} autoFocus>
-                  📖 {selected.progress ? 'Continuar lendo' : 'Ler'}
-                </button>
-                <button type="button" className="btn" onClick={() => navigate(`/livro/${selected.id}/escrever`)}>✏️ Escrever</button>
-                <button type="button" className="btn" aria-pressed={selected.favorite} onClick={() => toggleFavorite(selected)}>
-                  {selected.favorite ? '★ Favorito' : '☆ Favoritar'}
-                </button>
-                <button type="button" className="btn btn--ghost-light" onClick={() => setSelectedId(null)}>Guardar na estante</button>
+      <section className="room__shelf" aria-label={`Estante de ${me.child.nickname}`}>
+        {books === null ? (
+          <p className="hint">Arrumando os livros...</p>
+        ) : (
+          <>
+            {books.length >= MANY_BOOKS && (
+              <div className="tabs shelf-filter" role="group" aria-label="Mostrar na estante">
+                {FILTERS.map(([id, label]) => (
+                  <button key={id} type="button" className="tab" aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}</button>
+                ))}
               </div>
+            )}
+            <Shelf books={shown} theme={theme} hiddenId={selectedId || returningId} onSelect={setSelectedId} onNew={() => setCreating(true)} />
+            {books.length === 0 && <p className="hint">Sua estante está vazia. Que tal escrever o primeiro livro?</p>}
+            {books.length > 0 && shown.length === 0 && <p className="hint">Nenhum livro aqui ainda.</p>}
+          </>
+        )}
+      </section>
+
+      <AnimatePresence onExitComplete={() => setReturningId(null)}>
+        {selected && (
+          <motion.div
+            key={selected.id}
+            className="overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={selected.title}
+            onClick={putBack}
+            onKeyDown={(e) => e.key === 'Escape' && putBack()}
+          >
+            {/* Só o fundo escurece com fade; o livro fica sempre visível enquanto voa */}
+            <motion.div className="overlay__backdrop" aria-hidden="true" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { delay: 0.35, duration: 0.5 } }} />
+            <div onClick={(e) => e.stopPropagation()}>
+              <FlyingBook book={selected} author={me.child.nickname} gold={theme.gold} />
+            </div>
+            <motion.div
+              className="overlay__actions"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0, transition: { delay: 0.75 } }}
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            >
+              <button type="button" className="btn btn--primary" onClick={() => navigate(`/livro/${selected.id}/ler`)} autoFocus>
+                📖 {selected.progress ? 'Continuar lendo' : 'Ler'}
+              </button>
+              <button type="button" className="btn" onClick={() => navigate(`/livro/${selected.id}/escrever`)}>✏️ Escrever</button>
+              <button type="button" className="btn" aria-pressed={selected.favorite} onClick={() => toggleFavorite(selected)}>
+                {selected.favorite ? '★ Favorito' : '☆ Favoritar'}
+              </button>
+              <button type="button" className="btn btn--ghost-light" onClick={putBack}>Guardar na estante</button>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </LayoutGroup>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {creating && (

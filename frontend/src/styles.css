@@ -163,9 +163,23 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .error--floating { background: #fff; padding: 8px 14px; border-radius: 10px; }
 .room__shelf { width: min(1000px, 100%); margin-top: auto; margin-bottom: 4vh; }
 
+.shelf-filter { width: fit-content; margin: 0 auto 6px; background: rgba(255, 255, 255, 0.85); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); }
+.bookcase { display: flex; flex-direction: column; gap: 34px; }
 .shelf { position: relative; padding: 0 3%; }
-.shelf__books { list-style: none; margin: 0; padding: 36px 12px 0; display: flex; align-items: flex-end; justify-content: safe center; gap: 8px; overflow-x: auto; min-height: 262px; }
+.shelf__books { list-style: none; margin: 0; padding: 36px 12px 0; display: flex; align-items: flex-end; justify-content: center; gap: 8px; min-height: 262px; }
+.shelf__books--full { justify-content: flex-start; width: calc(var(--per) * 58px + 20px); margin: 0 auto; }
+.bookcase--compact { gap: 26px; }
+.bookcase--compact .shelf__books { gap: 6px; padding: 30px 6px 0; min-height: 210px; }
+.bookcase--compact .shelf__books--full { width: calc(var(--per) * 44px + 20px); }
+.bookcase--compact .shelf__slot, .bookcase--compact .spine { width: 38px; }
+.bookcase--compact .spine { font-size: 0.7rem; padding: 18px 0; }
+.bookcase--compact .spine__plus { font-size: 1.4rem; }
+.bookcase--compact .spine__ribbon { width: 10px; height: 26px; margin-left: -5px; }
 .shelf__slot { flex: 0 0 auto; width: 50px; display: flex; align-items: flex-end; }
+/* Aparador de livros: segura a fila no fim da última prateleira */
+.shelf__bookend { flex: 0 0 auto; align-self: flex-end; width: 22px; height: 112px; margin-left: 2px; border-radius: 12px 12px 2px 2px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.18) 40%, rgba(0, 0, 0, 0.2)), linear-gradient(180deg, var(--gold), var(--wood-d) 30%, var(--wood-dd));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2), 4px 6px 10px rgba(0, 0, 0, 0.25); }
 .shelf__board {
   height: 30px; border-radius: 6px;
   background:
@@ -215,6 +229,17 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 
 /* Livro tirado da estante */
 .overlay { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 16px; background: rgba(20, 12, 32, 0.62); backdrop-filter: blur(4px); overflow-y: auto; }
+.overlay:has(> .overlay__backdrop) { background: none; backdrop-filter: none; }
+.overlay__backdrop { position: fixed; inset: 0; z-index: -1; background: rgba(20, 12, 32, 0.62); backdrop-filter: blur(4px); }
+
+/* O livro de verdade, em 3D: capa na frente, lombada do lado e as páginas do outro */
+.overlay__book { position: relative; z-index: 1; }
+.book3d { position: relative; transform-style: preserve-3d; --depth: 60px; }
+.book3d__face { backface-visibility: hidden; }
+.book3d__front { position: relative; transform: translateZ(calc(var(--depth) / 2)); }
+.book3d__front .cover { display: block; }
+.book3d__spine { position: absolute; left: 50%; top: 50%; width: var(--spine-w, 50px); height: var(--spine-h, 190px); margin: calc(var(--spine-h, 190px) / -2) 0 0 calc(var(--spine-w, 50px) / -2); transform: rotateY(-90deg) translateZ(calc(var(--w, 300px) / 2)) scale(var(--k, 2)); }
+.book3d__pages { position: absolute; top: 6px; bottom: 6px; left: 50%; width: var(--depth); margin-left: calc(var(--depth) / -2); transform: rotateY(90deg) translateZ(calc(var(--w, 300px) / 2 - 4px)); background: repeating-linear-gradient(90deg, #FFF8E7 0 2px, #E9DCC0 2px 3px); border-radius: 2px; }
 .overlay__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .new-book { width: min(720px, 100%); display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: center; }
 .new-book .stack { flex: 1; min-width: 240px; }
