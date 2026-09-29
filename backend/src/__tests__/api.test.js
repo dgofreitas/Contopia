@@ -204,6 +204,22 @@ describe('livros', () => {
     expect(joined.body.book).toMatchObject({ chaptered: false, chapters: [{ title: '', html: '<p>a</p><p>b</p>' }] });
   });
 
+  it('livro novo fica no ateliê até ser publicado', async () => {
+    const { agent, child } = await childAgent();
+    const { body } = await agent.post('/api/v1/books').send({ title: 'Rascunho', cover: { color: '#7C5CFF' } });
+    expect(body.book.published).toBe(false);
+
+    const published = await agent.patch(`/api/v1/books/${body.book.id}`).send({ published: true });
+    expect(published.body.book.published).toBe(true);
+
+    // Livro de antes do ateliê, sem o campo, continua na estante.
+    await mongoose.connection.db.collection('books').insertOne({
+      childId: new mongoose.Types.ObjectId(child.id), title: 'Antigo', cover: { color: '#7C5CFF' }, chapters: [{ title: '', html: '' }],
+    });
+    const list = await agent.get('/api/v1/books');
+    expect(list.body.books.find((b) => b.title === 'Antigo').published).toBe(true);
+  });
+
   it('mantém cores e estilos permitidos do editor', async () => {
     const { agent } = await childAgent();
     const { body } = await agent.post('/api/v1/books').send({ title: 'Cores', cover: { color: '#7C5CFF' } });

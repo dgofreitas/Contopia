@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextStyle from '@tiptap/extension-text-style';
@@ -31,6 +31,7 @@ const SAVE_LABEL = { saved: 'Tudo salvo ✓', dirty: 'Escrevendo...', saving: 'S
 
 export function Editor() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { me } = useAuth();
   const theme = themeFor(me.child.theme);
   const [book, setBook] = useState(null);
@@ -201,6 +202,17 @@ export function Editor() {
     setChapterIndex((current) => Math.max(0, Math.min(current >= index ? current - 1 : current, chapters.length - 1)));
   };
 
+  // Terminou o livro: sai do ateliê e vai para a estante.
+  const publish = async () => {
+    await save();
+    try {
+      await api.patch(`/books/${id}`, { published: true });
+      navigate('/estante', { state: { published: draft.current.title.trim() || 'Sem título' } });
+    } catch (err) {
+      window.alert(messageFor(err));
+    }
+  };
+
   if (error) {
     return (
       <main className="desk">
@@ -216,12 +228,17 @@ export function Editor() {
   return (
     <main className="writing" style={{ '--c': book.cover.color, '--gold': theme.gold }}>
       <header className="writing__header">
-        <Link to="/estante" className="btn btn--small" onClick={() => save()}>← Estante</Link>
+        {book.published ? (
+          <Link to="/estante" className="btn btn--small" onClick={() => save()}>← Estante</Link>
+        ) : (
+          <Link to="/atelie" className="btn btn--small" onClick={() => save()}>← Ateliê</Link>
+        )}
         <label className="visually-hidden" htmlFor="book-title">Título do livro</label>
         <input id="book-title" className="writing__title" maxLength={80} value={book.title} onChange={(e) => update({ title: e.target.value })} />
         <span className={`save save--${status}`} role="status">{SAVE_LABEL[status]}</span>
         <button type="button" className="btn btn--small" onClick={() => setShowCover((v) => !v)} aria-expanded={showCover}>🎨 Capa</button>
-        <Link to={`/livro/${id}/ler`} className="btn btn--small btn--primary" onClick={() => save()}>📖 Ler</Link>
+        <Link to={`/livro/${id}/ler`} className="btn btn--small" onClick={() => save()}>📖 Ler</Link>
+        {!book.published && <button type="button" className="btn btn--small btn--primary" onClick={publish}>📚 Publicar</button>}
       </header>
 
       {showCover && (

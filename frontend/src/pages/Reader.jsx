@@ -148,7 +148,11 @@ export function Reader() {
     <main className="room reading" style={{ '--ink': theme.ink, '--gold': theme.gold, '--c': book.cover.color }}>
       <Scene theme={theme} />
       <header className="topbar">
-        <Link to="/estante" className="btn btn--small">← Estante</Link>
+        {book.published ? (
+          <Link to="/estante" className="btn btn--small">← Estante</Link>
+        ) : (
+          <Link to="/atelie" className="btn btn--small">← Ateliê</Link>
+        )}
         <span className="reading__title">{book.title}</span>
         <Link to={`/livro/${id}/escrever`} className="btn btn--small">✏️ Escrever</Link>
       </header>

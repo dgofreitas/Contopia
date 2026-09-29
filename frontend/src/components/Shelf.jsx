@@ -36,18 +36,18 @@ function usePerShelf() {
 
 /**
  * Estante com prateleiras de madeira empilhadas: quando os livros não cabem numa
- * prateleira, começa outra embaixo. O "Livro novo" fica sempre no começo, para
- * ser fácil de achar mesmo com muitos livros. A lombada do livro que está fora
- * da estante (hiddenId) continua ocupando o lugar, invisível, para o livro
- * saber para onde voltar.
+ * prateleira, começa outra embaixo. Aqui só ficam os livros publicados: livro
+ * novo se cria no ateliê. A lombada do livro que está fora da estante (hiddenId)
+ * continua ocupando o lugar, invisível, para o livro saber para onde voltar.
  */
-export function Shelf({ books, theme, hiddenId, onSelect, onNew }) {
+export function Shelf({ books, theme, hiddenId, onSelect }) {
   const reduce = useReducedMotion();
   const [ref, { perShelf, size }] = usePerShelf();
 
-  const items = [{ id: 'new' }, ...books];
   const shelves = [];
-  for (let i = 0; i < items.length; i += perShelf) shelves.push(items.slice(i, i + perShelf));
+  for (let i = 0; i < books.length; i += perShelf) shelves.push(books.slice(i, i + perShelf));
+  // Estante vazia ainda mostra uma prateleira, esperando o primeiro livro.
+  if (shelves.length === 0) shelves.push([]);
 
   return (
     <div
@@ -60,16 +60,6 @@ export function Shelf({ books, theme, hiddenId, onSelect, onNew }) {
           <ul className={`shelf__books${shelves.length > 1 ? ' shelf__books--full' : ''}`} aria-label={shelves.length > 1 ? `Prateleira ${r + 1}` : 'Livros na estante'}>
             {row.map((book, i) => {
               const index = r * perShelf + i;
-              if (book.id === 'new') {
-                return (
-                  <li key="new" className="shelf__slot" style={{ height: 160 * size.scale }}>
-                    <motion.button type="button" className="spine spine--new" onClick={onNew} whileHover={reduce ? undefined : { y: -10 }} aria-label="Criar um livro novo">
-                      <span className="spine__plus" aria-hidden="true">+</span>
-                      <span className="spine__title">Livro novo</span>
-                    </motion.button>
-                  </li>
-                );
-              }
               const height = Math.round(heightFor(book.id) * size.scale);
               const out = hiddenId === book.id;
               return (

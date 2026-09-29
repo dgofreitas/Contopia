@@ -21,7 +21,7 @@ describe('entrada da criança', () => {
 
     await waitFor(() => expect(calls.some((c) => c.path === '/auth/child/login')).toBe(true));
     expect(calls.find((c) => c.path === '/auth/child/login').body).toEqual({ familyCode: 'ABCD2345', childId: LIA.id, picture: [0, 3, 5, 3] });
-    expect(await screen.findByRole('button', { name: 'Criar um livro novo' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /Ir para o ateliê/ })).toBeInTheDocument();
   });
 
   it('avisa quando as figuras estão erradas e limpa a sequência', async () => {
