@@ -48,6 +48,44 @@ describe('estante', () => {
     expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: true });
   });
 
+  it('devolve um livro publicado para o ateliê', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [200, ME],
+      'GET /books': [200, { books: [BOOK] }],
+      [`PATCH /books/${BOOK.id}`]: [200, { book: { ...BOOK, published: false } }],
+    });
+    renderAt('/estante');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'O Dragão Tímido, lendo' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Voltar para o ateliê/ }));
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument());
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: false });
+    expect(screen.getByRole('link', { name: /Ateliê, 1 livro sendo escrito/ })).toBeInTheDocument();
+  });
+
+  it('apaga um rascunho do ateliê depois de confirmar', async () => {
+    const DRAFT = { ...BOOK, published: false, progress: null };
+    const calls = mockApi({
+      'GET /auth/me': [200, ME],
+      'GET /books': [200, { books: [DRAFT] }],
+      [`DELETE /books/${DRAFT.id}`]: [204, null],
+    });
+    const confirm = vi.spyOn(window, 'confirm');
+    renderAt('/atelie');
+    const trash = await screen.findByRole('button', { name: 'Apagar O Dragão Tímido' });
+
+    confirm.mockReturnValueOnce(false);
+    fireEvent.click(trash);
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+
+    confirm.mockReturnValueOnce(true);
+    fireEvent.click(trash);
+    await waitFor(() => expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument());
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(true);
+    confirm.mockRestore();
+  });
+
   it('troca o tema e guarda a preferência', async () => {
     const calls = mockApi({
       'GET /auth/me': [200, ME],

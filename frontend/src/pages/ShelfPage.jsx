@@ -63,6 +63,18 @@ export function ShelfPage() {
     }
   };
 
+  // Publicou sem querer (ou quer mexer mais): o livro sai da estante e volta para o ateliê.
+  const unpublish = async (book) => {
+    try {
+      await api.patch(`/books/${book.id}`, { published: false });
+      setSelectedId(null);
+      setBooks((list) => list.filter((b) => b.id !== book.id));
+      setWriting((n) => n + 1);
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  };
+
   const selected = books?.find((b) => b.id === selectedId);
   const shown = books?.filter((b) => filter === 'all' || (filter === 'favorites' ? b.favorite : b.progress));
   const putBack = () => {
@@ -160,6 +172,7 @@ export function ShelfPage() {
               <button type="button" className="btn" aria-pressed={selected.favorite} onClick={() => toggleFavorite(selected)}>
                 {selected.favorite ? '★ Favorito' : '☆ Favoritar'}
               </button>
+              <button type="button" className="btn" onClick={() => unpublish(selected)}>↩️ Voltar para o ateliê</button>
               <button type="button" className="btn btn--ghost-light" onClick={putBack}>Guardar na estante</button>
             </motion.div>
           </motion.div>

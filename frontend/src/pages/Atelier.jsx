@@ -36,6 +36,17 @@ export function Atelier() {
     }
   };
 
+  const remove = async (book) => {
+    if (!window.confirm(`Apagar "${book.title}"? Depois não dá para trazer de volta.`)) return;
+    setError('');
+    try {
+      await api.del(`/books/${book.id}`);
+      setBooks((list) => list.filter((b) => b.id !== book.id));
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  };
+
   return (
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
@@ -61,6 +72,7 @@ export function Atelier() {
             {books.map((book, i) => (
               <motion.li
                 key={book.id}
+                layout={!reduce}
                 className="draft"
                 initial={reduce ? false : { y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -72,6 +84,7 @@ export function Atelier() {
                 <div className="draft__actions">
                   <button type="button" className="btn btn--small" onClick={() => navigate(`/livro/${book.id}/escrever`)}>✏️ Escrever</button>
                   <button type="button" className="btn btn--small btn--primary" onClick={() => publish(book)} aria-label={`Publicar ${book.title}`}>📚 Publicar</button>
+                  <button type="button" className="btn btn--small btn--ghost" onClick={() => remove(book)} aria-label={`Apagar ${book.title}`}>🗑️ Apagar</button>
                 </div>
               </motion.li>
             ))}

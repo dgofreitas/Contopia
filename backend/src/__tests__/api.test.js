@@ -211,6 +211,9 @@ describe('livros', () => {
 
     const published = await agent.patch(`/api/v1/books/${body.book.id}`).send({ published: true });
     expect(published.body.book.published).toBe(true);
+    const back = await agent.patch(`/api/v1/books/${body.book.id}`).send({ published: false });
+    expect(back.body.book.published).toBe(false);
+    await agent.patch(`/api/v1/books/${body.book.id}`).send({ published: true });
 
     // Livro de antes do ateliê, sem o campo, continua na estante.
     await mongoose.connection.db.collection('books').insertOne({
