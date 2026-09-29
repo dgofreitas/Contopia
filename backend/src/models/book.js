@@ -22,6 +22,9 @@ const bookSchema = new mongoose.Schema(
     chaptered: { type: Boolean, default: true },
     chapters: { type: [chapterSchema], default: () => [{ title: 'Capítulo 1', html: '' }] },
     favorite: { type: Boolean, default: false },
+    // Livro novo nasce no ateliê (sendo escrito) e vai para a estante quando a criança publica.
+    // Livros antigos não têm o campo e continuam na estante.
+    published: { type: Boolean, default: true },
     // Onde a criança parou de ler
     progress: {
       chapter: { type: Number, default: 0 },

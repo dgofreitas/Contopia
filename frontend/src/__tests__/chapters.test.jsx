@@ -16,8 +16,8 @@ describe('livros sem capítulos', () => {
       'POST /books': [201, { book: BOOK }],
       [`GET /books/${ID}`]: [200, { book: BOOK }],
     });
-    renderAt('/estante');
-    fireEvent.click(await screen.findByRole('button', { name: 'Criar um livro novo' }));
+    renderAt('/atelie');
+    fireEvent.click(await screen.findByRole('button', { name: /Livro novo/ }));
     expect(screen.getByRole('button', { name: /Texto corrido/ })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Diário de férias' } });
     fireEvent.click(screen.getByRole('button', { name: 'Começar a escrever' }));

@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { COVER_COLORS, STICKERS } from '../lib/constants';
 import { Scene } from '../scene/Scene';
 import { THEME_LIST, themeFor } from '../scene/themes';
 import { Shelf } from '../components/Shelf';
-import { BookCover } from '../components/BookCover';
 import { FlyingBook } from '../components/FlyingBook';
 import { TopBar } from '../components/TopBar';
 import { Emoji } from '../components/Emoji';
@@ -22,18 +20,27 @@ const FILTERS = [
 
 export function ShelfPage() {
   const navigate = useNavigate();
+  // Título do livro que acabou de ser publicado no ateliê.
+  const justPublished = useLocation().state?.published;
   const { me, setChild } = useAuth();
   const theme = themeFor(me.child.theme);
   const [books, setBooks] = useState(null);
+  const [writing, setWriting] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   // Livro voltando para a estante: a lombada só reaparece quando ele chega.
   const [returningId, setReturningId] = useState(null);
   const [filter, setFilter] = useState('all');
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/books').then((data) => setBooks(data.books)).catch((err) => setError(messageFor(err)));
+    // Na estante só ficam os livros publicados; os que estão sendo escritos moram no ateliê.
+    api
+      .get('/books')
+      .then((data) => {
+        setBooks(data.books.filter((b) => b.published));
+        setWriting(data.books.length - data.books.filter((b) => b.published).length);
+      })
+      .catch((err) => setError(messageFor(err)));
   }, []);
 
   const changeTheme = async (id) => {
@@ -56,6 +63,18 @@ export function ShelfPage() {
     }
   };
 
+  // Publicou sem querer (ou quer mexer mais): o livro sai da estante e volta para o ateliê.
+  const unpublish = async (book) => {
+    try {
+      await api.patch(`/books/${book.id}`, { published: false });
+      setSelectedId(null);
+      setBooks((list) => list.filter((b) => b.id !== book.id));
+      setWriting((n) => n + 1);
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  };
+
   const selected = books?.find((b) => b.id === selectedId);
   const shown = books?.filter((b) => filter === 'all' || (filter === 'favorites' ? b.favorite : b.progress));
   const putBack = () => {
@@ -67,7 +86,15 @@ export function ShelfPage() {
   return (
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
-      <TopBar />
+      <TopBar>
+        <Link
+          to="/atelie"
+          className="btn btn--small btn--primary"
+          aria-label={writing > 0 ? `Ateliê, ${writing === 1 ? '1 livro sendo escrito' : `${writing} livros sendo escritos`}` : undefined}
+        >
+          ✏️ Ateliê{writing > 0 && <span className="badge" aria-hidden="true">{writing}</span>}
+        </Link>
+      </TopBar>
 
       <nav className="themes" aria-label="Tema da estante">
         {THEME_LIST.map((item) => (
@@ -76,6 +103,10 @@ export function ShelfPage() {
           </button>
         ))}
       </nav>
+
+      {justPublished && !selectedId && (
+        <p className="continue" role="status">🎉 <strong>{justPublished}</strong> foi publicado e já está na estante!</p>
+      )}
 
       {reading && !selectedId && (
         <button type="button" className="continue" onClick={() => navigate(`/livro/${reading.id}/ler`)}>
@@ -97,8 +128,15 @@ export function ShelfPage() {
                 ))}
               </div>
             )}
-            <Shelf books={shown} theme={theme} hiddenId={selectedId || returningId} onSelect={setSelectedId} onNew={() => setCreating(true)} />
-            {books.length === 0 && <p className="hint">Sua estante está vazia. Que tal escrever o primeiro livro?</p>}
+            <Shelf books={shown} theme={theme} hiddenId={selectedId || returningId} onSelect={setSelectedId} />
+            {books.length === 0 && (
+              <div className="empty-shelf">
+                <p className="hint">
+                  {writing > 0 ? 'Quando você terminar um livro no ateliê, ele vem morar aqui.' : 'Sua estante está vazia. Que tal escrever o primeiro livro?'}
+                </p>
+                <Link to="/atelie" className="btn btn--primary">✏️ Ir para o ateliê</Link>
+              </div>
+            )}
             {books.length > 0 && shown.length === 0 && <p className="hint">Nenhum livro aqui ainda.</p>}
           </>
         )}
@@ -134,95 +172,13 @@ export function ShelfPage() {
               <button type="button" className="btn" aria-pressed={selected.favorite} onClick={() => toggleFavorite(selected)}>
                 {selected.favorite ? '★ Favorito' : '☆ Favoritar'}
               </button>
+              <button type="button" className="btn" onClick={() => unpublish(selected)}>↩️ Voltar para o ateliê</button>
               <button type="button" className="btn btn--ghost-light" onClick={putBack}>Guardar na estante</button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {creating && (
-          <NewBook
-            author={me.child.nickname}
-            gold={theme.gold}
-            onClose={() => setCreating(false)}
-            onCreated={(book) => navigate(`/livro/${book.id}/escrever`)}
-          />
-        )}
-      </AnimatePresence>
     </main>
-  );
-}
-
-function NewBook({ author, gold, onClose, onCreated }) {
-  const [title, setTitle] = useState('');
-  const [color, setColor] = useState(COVER_COLORS[0]);
-  const [sticker, setSticker] = useState(STICKERS[1]);
-  const [chaptered, setChaptered] = useState(false);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (event) => {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      const { book } = await api.post('/books', { title: title.trim(), cover: { color, sticker }, chaptered });
-      onCreated(book);
-    } catch (err) {
-      setError(messageFor(err));
-      setBusy(false);
-    }
-  };
-
-  return (
-    <motion.div className="overlay" role="dialog" aria-modal="true" aria-label="Livro novo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.form
-        className="paper new-book"
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        initial={{ y: 40, scale: 0.95 }}
-        animate={{ y: 0, scale: 1 }}
-        exit={{ y: 40, scale: 0.95 }}
-      >
-        <BookCover title={title || 'Meu livro'} author={author} color={color} sticker={sticker} gold={gold} size="md" />
-        <div className="stack">
-          <h2 className="form__title">Livro novo</h2>
-          <label className="field" htmlFor="book-title">
-            Título
-            <input id="book-title" maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-          </label>
-          <fieldset className="field">
-            <legend>Cor da capa</legend>
-            <div className="swatches">
-              {COVER_COLORS.map((c) => (
-                <button key={c} type="button" className="swatch" style={{ background: c }} aria-pressed={c === color} aria-label={`Cor ${c}`} onClick={() => setColor(c)} />
-              ))}
-            </div>
-          </fieldset>
-          <fieldset className="field">
-            <legend>Figurinha</legend>
-            <div className="stickers">
-              {STICKERS.map((s) => (
-                <button key={s || 'nenhuma'} type="button" className="sticker" aria-pressed={s === sticker} onClick={() => setSticker(s)} aria-label={s ? `Figurinha ${s}` : 'Sem figurinha'}>
-                  {s ? <Emoji char={s} /> : '∅'}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset className="field">
-            <legend>Como vai ser o livro?</legend>
-            <div className="tabs tabs--start" role="group">
-              <button type="button" className="tab" aria-pressed={!chaptered} onClick={() => setChaptered(false)}>📜 Texto corrido</button>
-              <button type="button" className="tab" aria-pressed={chaptered} onClick={() => setChaptered(true)}>📑 Com capítulos</button>
-            </div>
-          </fieldset>
-          {error && <p className="error" role="alert">{error}</p>}
-          <div className="row">
-            <button type="submit" className="btn btn--primary" disabled={!title.trim() || busy}>Começar a escrever</button>
-            <button type="button" className="btn btn--ghost" onClick={onClose}>Cancelar</button>
-          </div>
-        </div>
-      </motion.form>
-    </motion.div>
   );
 }

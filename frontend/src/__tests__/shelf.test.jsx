@@ -4,7 +4,7 @@ import { mockApi, renderAt } from './helpers';
 const ME = { role: 'child', parent: null, child: { id: 'c'.repeat(24), nickname: 'Lia', avatar: '🦉', theme: 'fadas' } };
 const BOOK = {
   id: 'b'.repeat(24), title: 'O Dragão Tímido', cover: { color: '#E8559A', sticker: '🐉' },
-  favorite: false, chapters: 1, progress: { chapter: 0, page: 2, updatedAt: '2026-09-25T20:00:00Z' },
+  favorite: false, published: true, chapters: 1, progress: { chapter: 0, page: 2, updatedAt: '2026-09-25T20:00:00Z' },
 };
 
 describe('estante', () => {
@@ -25,6 +25,65 @@ describe('estante', () => {
 
     expect(await screen.findByRole('button', { name: '★ Favorito' })).toBeInTheDocument();
     await waitFor(() => expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ favorite: true }));
+  });
+
+  it('deixa os livros sendo escritos no ateliê e publica', async () => {
+    const DRAFT = { ...BOOK, id: 'd'.repeat(24), title: 'A Fada Sonâmbula', published: false, progress: null };
+    const calls = mockApi({
+      'GET /auth/me': [200, ME],
+      'GET /books': [200, { books: [BOOK, DRAFT] }],
+      [`PATCH /books/${DRAFT.id}`]: [200, { book: { ...DRAFT, published: true } }],
+    });
+    renderAt('/estante');
+
+    await screen.findByRole('button', { name: 'O Dragão Tímido, lendo' });
+    expect(screen.queryByRole('button', { name: /A Fada Sonâmbula/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: /Ateliê, 1 livro sendo escrito/ }));
+    expect(await screen.findByRole('button', { name: 'Escrever A Fada Sonâmbula' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar A Fada Sonâmbula' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('A Fada Sonâmbula foi publicado');
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: true });
+  });
+
+  it('devolve um livro publicado para o ateliê', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [200, ME],
+      'GET /books': [200, { books: [BOOK] }],
+      [`PATCH /books/${BOOK.id}`]: [200, { book: { ...BOOK, published: false } }],
+    });
+    renderAt('/estante');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'O Dragão Tímido, lendo' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Voltar para o ateliê/ }));
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument());
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: false });
+    expect(screen.getByRole('link', { name: /Ateliê, 1 livro sendo escrito/ })).toBeInTheDocument();
+  });
+
+  it('apaga um rascunho do ateliê depois de confirmar', async () => {
+    const DRAFT = { ...BOOK, published: false, progress: null };
+    const calls = mockApi({
+      'GET /auth/me': [200, ME],
+      'GET /books': [200, { books: [DRAFT] }],
+      [`DELETE /books/${DRAFT.id}`]: [204, null],
+    });
+    const confirm = vi.spyOn(window, 'confirm');
+    renderAt('/atelie');
+    const trash = await screen.findByRole('button', { name: 'Apagar O Dragão Tímido' });
+
+    confirm.mockReturnValueOnce(false);
+    fireEvent.click(trash);
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+
+    confirm.mockReturnValueOnce(true);
+    fireEvent.click(trash);
+    await waitFor(() => expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument());
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(true);
+    confirm.mockRestore();
   });
 
   it('troca o tema e guarda a preferência', async () => {

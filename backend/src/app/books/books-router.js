@@ -33,6 +33,7 @@ function summary(book) {
     kind: book.kind,
     cover: { color: book.cover.color, sticker: book.cover.sticker },
     favorite: book.favorite,
+    published: book.published,
     visibility: book.visibility,
     chaptered: book.chaptered,
     chapters: book.chapters.length,
@@ -87,6 +88,7 @@ function createBooksRouter({ images }) {
         title: body.title,
         cover: body.cover,
         chaptered: body.chaptered,
+        published: false,
         chapters: [{ title: body.chaptered ? 'Capítulo 1' : '', html: '' }],
       });
       res.status(201).json({ book: full(book) });
@@ -109,6 +111,7 @@ function createBooksRouter({ images }) {
           title: z.string().trim().min(1).max(80).optional(),
           cover: coverSchema.optional(),
           favorite: z.boolean().optional(),
+          published: z.boolean().optional(),
           chaptered: z.boolean().optional(),
           chapters: z.array(chapterSchema).min(1).max(MAX_CHAPTERS).optional(),
         }),
@@ -117,6 +120,7 @@ function createBooksRouter({ images }) {
       if (body.title !== undefined) book.title = body.title;
       if (body.cover) book.cover = body.cover;
       if (body.favorite !== undefined) book.favorite = body.favorite;
+      if (body.published !== undefined) book.published = body.published;
       if (body.chaptered !== undefined) book.chaptered = body.chaptered;
       // Livro sem capítulos guarda o texto todo num capítulo só.
       if (!book.chaptered && (body.chapters || book.chapters).length > 1) throw badRequest('CHAPTERLESS_SINGLE_TEXT');
