@@ -96,8 +96,9 @@ describe('estante', () => {
     renderAt('/estante');
     fireEvent.click(await screen.findByRole('button', { name: 'O Dragão Tímido, lendo' }));
     fireEvent.click(await screen.findByRole('button', { name: /Só eu leio/ }));
-    expect(await screen.findByRole('button', { name: /A família pode ler/ })).toHaveAttribute('aria-pressed', 'true');
-    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ visibility: 'family' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Minha família/ }));
+    expect(await screen.findByRole('button', { name: /A família pode ler/ })).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ visibility: 'family' });
   });
 
   it('mostra a estante da família e abre o livro do irmão só para ler', async () => {

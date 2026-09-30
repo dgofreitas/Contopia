@@ -46,6 +46,7 @@ export function Family() {
 
       <FamilyName parent={me.parent} onSaved={(parent) => setMe((current) => ({ ...current, parent }))} />
       <FamilyCode parent={me.parent} onSaved={(parent) => setMe((current) => ({ ...current, parent }))} />
+      <FriendFamilies hasName={Boolean(me.parent.familyName)} />
 
       <section className="stack">
         <h2>Crianças</h2>
@@ -181,6 +182,112 @@ function FamilyCode({ parent, onSaved }) {
           <button type="button" className="btn btn--small" onClick={() => setEditing(true)}>Trocar</button>
         </div>
       )}
+    </section>
+  );
+}
+
+// Famílias amigas: só entre elas as crianças se enxergam e mandam livros umas
+// para as outras. O convite vai pelo nome público e o outro responsável aceita.
+function FriendFamilies({ hasName }) {
+  const [links, setLinks] = useState(null);
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = () => api.get('/connections').then(setLinks).catch((err) => setError(messageFor(err)));
+  useEffect(() => {
+    load();
+  }, []);
+
+  const run = async (action, done) => {
+    setBusy(true);
+    setError('');
+    setNote('');
+    try {
+      const result = await action();
+      if (done) setNote(done(result));
+      await load();
+    } catch (err) {
+      setError(messageFor(err));
+    }
+    setBusy(false);
+  };
+
+  const invite = (e) => {
+    e.preventDefault();
+    run(
+      () => api.post('/connections', { name: name.trim() }),
+      ({ link }) => {
+        setName('');
+        return link.status === 'accepted' ? `Pronto! Vocês e @${link.familyName} agora são famílias amigas.` : `Convite enviado para @${link.familyName}. Falta o outro responsável aceitar.`;
+      },
+    );
+  };
+
+  const label = (link) => (link.familyName ? `@${link.familyName}` : 'Família sem nome');
+
+  return (
+    <section className="card stack">
+      <div>
+        <h2>Famílias amigas</h2>
+        <p className="muted">As crianças só veem e mandam livros para crianças de famílias amigas. Convide pelo nome da outra família; o responsável de lá precisa aceitar.</p>
+      </div>
+
+      {links?.incoming.length > 0 && (
+        <ul className="links">
+          {links.incoming.map((link) => (
+            <li key={link.id} className="link link--incoming">
+              <span><strong>{label(link)}</strong> quer ser família amiga de vocês</span>
+              <span className="row">
+                <button type="button" className="btn btn--small btn--primary" disabled={busy} onClick={() => run(() => api.post(`/connections/${link.id}/accept`))}>Aceitar</button>
+                <button type="button" className="btn btn--small btn--ghost" disabled={busy} onClick={() => run(() => api.del(`/connections/${link.id}`))}>Recusar</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {links?.friends.length > 0 && (
+        <ul className="links" aria-label="Famílias amigas">
+          {links.friends.map((link) => (
+            <li key={link.id} className="link">
+              <strong>🤝 {label(link)}</strong>
+              <button
+                type="button"
+                className="btn btn--small btn--ghost"
+                disabled={busy}
+                onClick={() => window.confirm(`Deixar de ser família amiga de ${label(link)}? Os livros que as crianças mandaram umas para as outras deixam de aparecer.`) && run(() => api.del(`/connections/${link.id}`))}
+              >
+                Desfazer
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {links?.outgoing.length > 0 && (
+        <ul className="links" aria-label="Convites enviados">
+          {links.outgoing.map((link) => (
+            <li key={link.id} className="link">
+              <span>⏳ {label(link)} <span className="muted">ainda não aceitou</span></span>
+              <button type="button" className="btn btn--small btn--ghost" disabled={busy} onClick={() => run(() => api.del(`/connections/${link.id}`))}>Cancelar</button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {hasName ? (
+        <form className="row" onSubmit={invite}>
+          <label className="visually-hidden" htmlFor="friend-name">Nome da outra família</label>
+          <input id="friend-name" className="input" value={name} onChange={(e) => setName(e.target.value.toLowerCase())} placeholder="@nome da outra família" maxLength={31} autoComplete="off" />
+          <button type="submit" className="btn btn--primary" disabled={busy || name.replace(/^@/, '').trim().length < 3}>Convidar</button>
+        </form>
+      ) : (
+        <p className="note">Escolha primeiro o nome da sua família, lá em cima, para a outra família saber quem está convidando.</p>
+      )}
+      {note && <p className="note" role="status">{note}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
     </section>
   );
 }

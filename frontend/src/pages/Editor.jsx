@@ -206,11 +206,11 @@ export function Editor() {
   };
 
   // Terminou o livro: sai do ateliê e vai para a estante.
-  const publish = async (visibility) => {
+  const publish = async (audience) => {
     setPublishing(false);
     await save();
     try {
-      await api.patch(`/books/${id}`, { published: true, visibility });
+      await api.patch(`/books/${id}`, { published: true, ...audience });
       navigate('/estante', { state: { published: draft.current.title.trim() || 'Sem título' } });
     } catch (err) {
       window.alert(messageFor(err));

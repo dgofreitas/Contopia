@@ -354,6 +354,100 @@ describe('livros', () => {
   });
 });
 
+describe('famílias amigas e livros para pessoas escolhidas', () => {
+  // Responsável com nome público e uma criança, já usando o perfil dela.
+  async function family(email, name, nickname) {
+    const { agent } = await registerParent(email);
+    if (name) await agent.patch('/api/v1/auth/me/family-name').send({ name });
+    const { body } = await agent.post('/api/v1/children').send({ nickname, avatar: '🦊', picture: PICTURE });
+    await agent.post('/api/v1/auth/switch').send({ childId: body.child.id });
+    return { agent, child: body.child };
+  }
+
+  it('convida, aceita e desfaz a amizade entre famílias', async () => {
+    const silva = await family('silva@exemplo.com', 'silva', 'Lia');
+    const souza = await family('souza@exemplo.com', 'souza', 'Leo');
+    const semNome = await family('outra@exemplo.com', null, 'Bia');
+
+    expect((await semNome.agent.post('/api/v1/connections').send({ name: 'silva' })).body.error.code).toBe('FAMILY_NAME_REQUIRED');
+    expect((await silva.agent.post('/api/v1/connections').send({ name: 'ninguem' })).status).toBe(404);
+    expect((await silva.agent.post('/api/v1/connections').send({ name: 'silva' })).body.error.code).toBe('SELF_LINK');
+
+    const invite = await silva.agent.post('/api/v1/connections').send({ name: '@Souza' });
+    expect(invite.body.link).toMatchObject({ familyName: 'souza', status: 'pending' });
+    expect((await silva.agent.post('/api/v1/connections').send({ name: 'souza' })).status).toBe(409);
+    expect((await silva.agent.get('/api/v1/connections')).body.outgoing).toEqual([{ id: invite.body.link.id, familyName: 'souza' }]);
+
+    // Antes de aceitar, as crianças não se enxergam.
+    expect((await silva.agent.get('/api/v1/books/friends')).body.families).toEqual([]);
+    // Quem convidou não pode aceitar o próprio convite.
+    expect((await silva.agent.post(`/api/v1/connections/${invite.body.link.id}/accept`)).status).toBe(400);
+
+    const pending = await souza.agent.get('/api/v1/connections');
+    expect(pending.body.incoming).toEqual([{ id: invite.body.link.id, familyName: 'silva' }]);
+    expect((await souza.agent.post(`/api/v1/connections/${invite.body.link.id}/accept`)).status).toBe(200);
+
+    const friends = await silva.agent.get('/api/v1/books/friends');
+    expect(friends.body.families).toEqual([{ familyName: 'souza', children: [{ id: souza.child.id, nickname: 'Leo', avatar: '🦊' }] }]);
+    expect((await semNome.agent.post(`/api/v1/connections/${invite.body.link.id}/accept`)).status).toBe(404);
+
+    expect((await souza.agent.delete(`/api/v1/connections/${invite.body.link.id}`)).status).toBe(204);
+    expect((await silva.agent.get('/api/v1/books/friends')).body.families).toEqual([]);
+  });
+
+  it('convite cruzado vira amizade na hora', async () => {
+    const silva = await family('silva@exemplo.com', 'silva', 'Lia');
+    const souza = await family('souza@exemplo.com', 'souza', 'Leo');
+    await silva.agent.post('/api/v1/connections').send({ name: 'souza' });
+    const back = await souza.agent.post('/api/v1/connections').send({ name: 'silva' });
+    expect(back.body.link.status).toBe('accepted');
+  });
+
+  it('manda o livro só para as crianças escolhidas de famílias amigas', async () => {
+    const silva = await family('silva@exemplo.com', 'silva', 'Lia');
+    const souza = await family('souza@exemplo.com', 'souza', 'Leo');
+    const leo2 = await souza.agent.post('/api/v1/children').send({ nickname: 'Davi', avatar: '🐼', picture: PICTURE });
+    const estranho = await family('x@exemplo.com', 'estranhos', 'Zé');
+    const { body: invite } = await silva.agent.post('/api/v1/connections').send({ name: 'souza' });
+    await souza.agent.post(`/api/v1/connections/${invite.link.id}/accept`);
+
+    const { body } = await silva.agent.post('/api/v1/books').send({ title: 'Para o Leo', cover: { color: '#7C5CFF' } });
+    const id = body.book.id;
+    await silva.agent.patch(`/api/v1/books/${id}`).send({ chapters: [{ title: '', html: '<p>Oi!</p>' }] });
+
+    // Só crianças de família amiga, e pelo menos uma.
+    expect((await silva.agent.patch(`/api/v1/books/${id}`).send({ visibility: 'people', sharedWith: [estranho.child.id] })).body.error.code).toBe('INVALID_SHARE');
+    expect((await silva.agent.patch(`/api/v1/books/${id}`).send({ visibility: 'people', sharedWith: [] })).body.error.code).toBe('SHARE_NOBODY');
+
+    const published = await silva.agent.patch(`/api/v1/books/${id}`).send({ published: true, visibility: 'people', sharedWith: [souza.child.id] });
+    expect(published.body.book).toMatchObject({ visibility: 'people', sharedWith: [souza.child.id] });
+
+    // Leo lê; Davi, da mesma família, não foi escolhido.
+    const forLeo = await souza.agent.get('/api/v1/books/family');
+    expect(forLeo.body.friends).toEqual([
+      expect.objectContaining({ nickname: 'Lia', familyName: 'silva', books: [expect.objectContaining({ id, author: expect.objectContaining({ familyName: 'silva' }) })] }),
+    ]);
+    const read = await souza.agent.get(`/api/v1/books/${id}`);
+    expect(read.body.book).toMatchObject({ mine: false, chapters: [{ html: '<p>Oi!</p>' }] });
+    expect(read.body.book.sharedWith).toBeUndefined();
+    expect((await souza.agent.patch(`/api/v1/books/${id}`).send({ title: 'Meu!' })).status).toBe(404);
+
+    await souza.agent.post('/api/v1/auth/switch').send({ childId: leo2.body.child.id });
+    expect((await souza.agent.get(`/api/v1/books/${id}`)).status).toBe(404);
+    expect((await souza.agent.get('/api/v1/books/family')).body.friends).toEqual([]);
+    expect((await estranho.agent.get(`/api/v1/books/${id}`)).status).toBe(404);
+
+    // Desfeita a amizade, o livro deixa de ser do Leo também.
+    await souza.agent.post('/api/v1/auth/switch').send({ childId: souza.child.id });
+    await silva.agent.delete(`/api/v1/connections/${invite.link.id}`);
+    expect((await souza.agent.get(`/api/v1/books/${id}`)).status).toBe(404);
+    const after = await silva.agent.get(`/api/v1/books/${id}`);
+    expect(after.body.book).toMatchObject({ sharedWith: [], visibility: 'private' });
+    // E o autosave do editor continua funcionando.
+    expect((await silva.agent.patch(`/api/v1/books/${id}`).send({ chapters: [{ title: '', html: '<p>Oi de novo!</p>' }] })).status).toBe(200);
+  });
+});
+
 describe('imagens no texto', () => {
   async function bookAgent() {
     const { agent, child } = await withChild();

@@ -5,6 +5,7 @@ const { createHealthRouter } = require('./app/health/health-router');
 const { createAuthRouter } = require('./app/auth/auth-router');
 const { createChildrenRouter } = require('./app/children/children-router');
 const { createBooksRouter } = require('./app/books/books-router');
+const { createConnectionsRouter } = require('./app/connections/connections-router');
 const { createSessionStore } = require('./lib/sessions');
 const { HttpError } = require('./lib/errors');
 const { IMAGE_TYPES, createImageStore } = require('./lib/images');
@@ -46,6 +47,7 @@ function createApp({ mongoose, redis, config = {} }) {
   api.get('/', (req, res) => res.json({ name: 'contopia', status: 'ok' }));
   api.use('/auth', createAuthRouter({ sessions, redis }));
   api.use('/children', createChildrenRouter());
+  api.use('/connections', createConnectionsRouter());
   api.use('/books', createBooksRouter({ images: createImageStore(config.uploadsDir || '/data/uploads') }));
   app.use('/api/v1', api);
 

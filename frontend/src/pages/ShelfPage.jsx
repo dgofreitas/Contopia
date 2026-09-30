@@ -9,6 +9,7 @@ import { Shelf } from '../components/Shelf';
 import { FlyingBook } from '../components/FlyingBook';
 import { TopBar } from '../components/TopBar';
 import { Emoji } from '../components/Emoji';
+import { PublishDialog, audienceLabel } from '../components/PublishDialog';
 
 // Com muitos livros a estante ganha filtros, para achar os favoritos e os que está lendo.
 const MANY_BOOKS = 12;
@@ -26,12 +27,14 @@ export function ShelfPage() {
   const theme = themeFor(me.child.theme);
   const [books, setBooks] = useState(null);
   const [writing, setWriting] = useState(0);
-  // Quantos livros os irmãos publicaram para a família.
+  // Quantos livros os irmãos e os amigos mandaram para esta criança ler.
   const [familyBooks, setFamilyBooks] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   // Livro voltando para a estante: a lombada só reaparece quando ele chega.
   const [returningId, setReturningId] = useState(null);
   const [filter, setFilter] = useState('all');
+  // Livro cuja lista de quem pode ler está sendo trocada.
+  const [audienceFor, setAudienceFor] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -45,7 +48,7 @@ export function ShelfPage() {
       .catch((err) => setError(messageFor(err)));
     api
       .get('/books/family')
-      .then((data) => setFamilyBooks(data.children.reduce((sum, child) => sum + child.books.length, 0)))
+      .then((data) => setFamilyBooks([...data.children, ...(data.friends || [])].reduce((sum, child) => sum + child.books.length, 0)))
       .catch(() => {});
   }, []);
 
@@ -81,13 +84,12 @@ export function ShelfPage() {
     }
   };
 
-  const toggleFamily = async (book) => {
-    const visibility = book.visibility === 'family' ? 'private' : 'family';
-    setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, visibility } : b)));
+  const changeAudience = async (book, audience) => {
+    setAudienceFor(null);
     try {
-      await api.patch(`/books/${book.id}`, { visibility });
+      const { book: saved } = await api.patch(`/books/${book.id}`, audience);
+      setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, visibility: saved.visibility, sharedWith: saved.sharedWith } : b)));
     } catch (err) {
-      setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, visibility: book.visibility } : b)));
       setError(messageFor(err));
     }
   };
@@ -104,7 +106,7 @@ export function ShelfPage() {
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
       <TopBar>
-        {familyBooks > 0 && <Link to="/estante/familia" className="btn btn--small">👨‍👩‍👧 Família</Link>}
+        {familyBooks > 0 && <Link to="/estante/familia" className="btn btn--small">👨‍👩‍👧 Família e amigos</Link>}
         <Link
           to="/atelie"
           className="btn btn--small btn--primary"
@@ -190,13 +192,26 @@ export function ShelfPage() {
               <button type="button" className="btn" aria-pressed={selected.favorite} onClick={() => toggleFavorite(selected)}>
                 {selected.favorite ? '★ Favorito' : '☆ Favoritar'}
               </button>
-              <button type="button" className="btn" aria-pressed={selected.visibility === 'family'} onClick={() => toggleFamily(selected)}>
-                {selected.visibility === 'family' ? '👨‍👩‍👧 A família pode ler' : '🔒 Só eu leio'}
+              <button type="button" className="btn" onClick={() => setAudienceFor(selected)} aria-label={`Quem pode ler: ${audienceLabel(selected)}`}>
+                {audienceLabel(selected)}
               </button>
               <button type="button" className="btn" onClick={() => unpublish(selected)}>↩️ Voltar para o ateliê</button>
               <button type="button" className="btn btn--ghost-light" onClick={putBack}>Guardar na estante</button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {audienceFor && (
+          <PublishDialog
+            title={audienceFor.title}
+            heading={`Quem pode ler “${audienceFor.title}”?`}
+            initial={{ visibility: audienceFor.visibility, sharedWith: audienceFor.sharedWith }}
+            confirmLabel="Salvar"
+            onPublish={(audience) => changeAudience(audienceFor, audience)}
+            onClose={() => setAudienceFor(null)}
+          />
         )}
       </AnimatePresence>
 
