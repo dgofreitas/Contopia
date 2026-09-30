@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/dgofreitas/Contopia/compare/v1.8.0...v1.9.0) (2026-09-30)
+
+### Features
+
+* código de entrada personalizável e nome público da família ([2e4de81](https://github.com/dgofreitas/Contopia/commit/2e4de81544dcde517dba160e96de856c2cc13689))
+
 ## [1.8.0](https://github.com/dgofreitas/Contopia/compare/v1.7.0...v1.8.0) (2026-09-30)
 
 ### Features
