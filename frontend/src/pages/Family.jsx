@@ -9,7 +9,7 @@ import { Emoji } from '../components/Emoji';
 // Página do responsável: código da família e perfis das crianças.
 export function Family() {
   const navigate = useNavigate();
-  const { me, setChild, logout } = useAuth();
+  const { me, setMe, setChild, logout } = useAuth();
   const [children, setChildren] = useState(null);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
@@ -44,13 +44,8 @@ export function Family() {
         <button type="button" className="btn btn--ghost" onClick={logout}>Sair</button>
       </header>
 
-      <section className="card code-card">
-        <div>
-          <h2>Código da família</h2>
-          <p className="muted">As crianças digitam este código para entrar no próprio aparelho.</p>
-        </div>
-        <p className="code" aria-label={`Código ${me.parent.familyCode.split('').join(' ')}`}>{me.parent.familyCode}</p>
-      </section>
+      <FamilyName parent={me.parent} onSaved={(parent) => setMe((current) => ({ ...current, parent }))} />
+      <FamilyCode parent={me.parent} onSaved={(parent) => setMe((current) => ({ ...current, parent }))} />
 
       <section className="stack">
         <h2>Crianças</h2>
@@ -83,6 +78,110 @@ export function Family() {
         )}
       </section>
     </main>
+  );
+}
+
+// Nome público da família: é por ele que outras famílias vão achar a de vocês
+// para compartilhar livros e criar grupos. Não abre a entrada das crianças.
+function FamilyName({ parent, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(parent.familyName || '');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const save = async (value) => {
+    setBusy(true);
+    setError('');
+    try {
+      const { parent: saved } = await api.patch('/auth/me/family-name', { name: value });
+      onSaved(saved);
+      setName(saved.familyName || '');
+      setEditing(false);
+    } catch (err) {
+      setError(messageFor(err));
+    }
+    setBusy(false);
+  };
+
+  return (
+    <section className="card code-card">
+      <div>
+        <h2>Nome da família</h2>
+        <p className="muted">Público: é como outras famílias vão achar vocês para compartilhar livros. Não serve para entrar.</p>
+      </div>
+      {editing ? (
+        <form className="code-form" onSubmit={(e) => { e.preventDefault(); save(name); }}>
+          <label className="field" htmlFor="family-name">
+            Nome
+            <input id="family-name" value={name} onChange={(e) => setName(e.target.value.toLowerCase())} maxLength={30} placeholder="freitas" autoComplete="off" autoFocus />
+          </label>
+          <p className="muted small">De 3 a 30 letras sem acento, números, ponto, hífen ou sublinhado.</p>
+          {error && <p className="error" role="alert">{error}</p>}
+          <div className="row">
+            <button type="submit" className="btn btn--primary" disabled={busy || name.trim().length < 3}>Salvar</button>
+            {parent.familyName && <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => save(null)}>Tirar o nome</button>}
+            <button type="button" className="btn btn--ghost" onClick={() => { setEditing(false); setName(parent.familyName || ''); setError(''); }}>Cancelar</button>
+          </div>
+        </form>
+      ) : (
+        <div className="row">
+          {parent.familyName ? <p className="code code--name">@{parent.familyName}</p> : <p className="muted">Ainda sem nome</p>}
+          <button type="button" className="btn btn--small" onClick={() => setEditing(true)}>{parent.familyName ? 'Trocar' : 'Escolher nome'}</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Código secreto que as crianças digitam para entrar. Pode ser escolhido ou aleatório.
+function FamilyCode({ parent, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const valid = /^[A-Z0-9]{6,20}$/.test(code) && /[0-9]/.test(code) && /[A-Z]/.test(code);
+
+  const save = async (body) => {
+    setBusy(true);
+    setError('');
+    try {
+      const { parent: saved } = await api.patch('/auth/me/family-code', body);
+      onSaved(saved);
+      setCode('');
+      setEditing(false);
+    } catch (err) {
+      setError(messageFor(err));
+    }
+    setBusy(false);
+  };
+
+  return (
+    <section className="card code-card">
+      <div>
+        <h2>Código de entrada</h2>
+        <p className="muted">Segredo: as crianças digitam este código para entrar no próprio aparelho. Não passe para outras famílias.</p>
+      </div>
+      {editing ? (
+        <form className="code-form" onSubmit={(e) => { e.preventDefault(); save({ code }); }}>
+          <label className="field" htmlFor="new-code">
+            Código novo
+            <input id="new-code" className="input--code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} maxLength={20} placeholder="FREITAS123" autoComplete="off" autoFocus />
+          </label>
+          <p className="muted small">De 6 a 20 letras e números, com pelo menos um número. As crianças vão usar o código novo na próxima vez que entrarem.</p>
+          {error && <p className="error" role="alert">{error}</p>}
+          <div className="row">
+            <button type="submit" className="btn btn--primary" disabled={busy || !valid}>Usar este código</button>
+            <button type="button" className="btn" disabled={busy} onClick={() => save({})}>🎲 Gerar um aleatório</button>
+            <button type="button" className="btn btn--ghost" onClick={() => { setEditing(false); setCode(''); setError(''); }}>Cancelar</button>
+          </div>
+        </form>
+      ) : (
+        <div className="row">
+          <p className="code" aria-label={`Código ${parent.familyCode.split('').join(' ')}`}>{parent.familyCode}</p>
+          <button type="button" className="btn btn--small" onClick={() => setEditing(true)}>Trocar</button>
+        </div>
+      )}
+    </section>
   );
 }
 

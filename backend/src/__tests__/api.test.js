@@ -89,6 +89,59 @@ describe('cadastro e login do responsável', () => {
   });
 });
 
+describe('código e nome da família', () => {
+  it('troca o código por um escolhido ou aleatório', async () => {
+    const { agent, child } = await withChild();
+
+    expect((await agent.patch('/api/v1/auth/me/family-code').send({ code: 'Freitas' })).status).toBe(400);
+    expect((await agent.patch('/api/v1/auth/me/family-code').send({ code: '123456' })).status).toBe(400);
+    const custom = await agent.patch('/api/v1/auth/me/family-code').send({ code: 'Freitas123' });
+    expect(custom.body.parent.familyCode).toBe('FREITAS123');
+
+    const kid = request.agent(app);
+    const login = await kid.post('/api/v1/auth/child/login').send({ familyCode: 'freitas123', childId: child.id, picture: PICTURE });
+    expect(login.status).toBe(200);
+
+    const random = await agent.patch('/api/v1/auth/me/family-code').send({});
+    expect(random.body.parent.familyCode).toMatch(/^[A-Z2-9]{8}$/);
+    expect((await request(app).get('/api/v1/auth/family/FREITAS123')).status).toBe(404);
+
+    const other = await registerParent('pai@exemplo.com');
+    await agent.patch('/api/v1/auth/me/family-code').send({ code: 'Freitas123' });
+    const taken = await other.agent.patch('/api/v1/auth/me/family-code').send({ code: 'FREITAS123' });
+    expect(taken.status).toBe(409);
+    expect(taken.body.error.code).toBe('FAMILY_CODE_TAKEN');
+  });
+
+  it('dá um nome público que não abre a entrada das crianças', async () => {
+    const { agent } = await withChild();
+    const named = await agent.patch('/api/v1/auth/me/family-name').send({ name: 'Freitas' });
+    expect(named.body.parent.familyName).toBe('freitas');
+    expect((await request(app).get('/api/v1/auth/family/freitas')).status).toBe(404);
+
+    // Código e nome iguais deixariam o código público.
+    await agent.patch('/api/v1/auth/me/family-code').send({ code: 'Freitas1' });
+    const same = await agent.patch('/api/v1/auth/me/family-name').send({ name: 'freitas1' });
+    expect(same.body.error.code).toBe('FAMILY_CODE_IS_NAME');
+
+    const other = await registerParent('pai@exemplo.com');
+    const taken = await other.agent.patch('/api/v1/auth/me/family-name').send({ name: 'FREITAS' });
+    expect(taken.body.error.code).toBe('FAMILY_NAME_TAKEN');
+
+    const removed = await agent.patch('/api/v1/auth/me/family-name').send({ name: null });
+    expect(removed.body.parent.familyName).toBeNull();
+    expect((await other.agent.patch('/api/v1/auth/me/family-name').send({ name: 'freitas' })).body.parent.familyName).toBe('freitas');
+  });
+
+  it('só o responsável troca', async () => {
+    const { parent, child } = await withChild();
+    const kid = request.agent(app);
+    await kid.post('/api/v1/auth/child/login').send({ familyCode: parent.familyCode, childId: child.id, picture: PICTURE });
+    expect((await kid.patch('/api/v1/auth/me/family-code').send({})).status).toBe(403);
+    expect((await kid.patch('/api/v1/auth/me/family-name').send({ name: 'hacker' })).status).toBe(403);
+  });
+});
+
 describe('entrada da criança com senha de figuras', () => {
   it('encontra a família e entra com a sequência certa', async () => {
     const { parent, child } = await withChild();
@@ -108,6 +161,12 @@ describe('entrada da criança com senha de figuras', () => {
       request(app).post('/api/v1/auth/child/login').send({ familyCode: parent.familyCode, childId: child.id, picture });
     for (let i = 0; i < 5; i += 1) expect((await attempt([1, 1, 1, 1])).status).toBe(401);
     expect((await attempt(PICTURE)).status).toBe(429);
+  });
+
+  it('para de procurar famílias depois de muitos códigos errados', async () => {
+    const { parent } = await withChild();
+    for (let i = 0; i < 20; i += 1) expect((await request(app).get(`/api/v1/auth/family/CHUTE${i}`)).status).toBe(404);
+    expect((await request(app).get(`/api/v1/auth/family/${parent.familyCode}`)).status).toBe(429);
   });
 
   it('a criança não administra perfis', async () => {

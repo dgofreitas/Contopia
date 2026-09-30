@@ -108,7 +108,7 @@ export function ChildLogin() {
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 autoCapitalize="characters"
                 autoComplete="off"
-                maxLength={12}
+                maxLength={20}
               />
             </label>
             {error && <p className="error" role="alert">{error}</p>}

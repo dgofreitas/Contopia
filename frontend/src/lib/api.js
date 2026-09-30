@@ -39,6 +39,10 @@ export const api = {
 const MESSAGES = {
   INVALID_CREDENTIALS: 'E-mail ou senha não conferem.',
   EMAIL_TAKEN: 'Já existe uma conta com esse e-mail. Tente entrar.',
+  FAMILY_CODE_TAKEN: 'Outra família já usa esse código. Tente outro.',
+  FAMILY_NAME_TAKEN: 'Outra família já usa esse nome. Tente outro.',
+  FAMILY_CODE_IS_NAME: 'O código e o nome da família não podem ser iguais: o nome é público e o código é segredo.',
+  TOO_MANY_TRIES: 'Muitos códigos errados. Espere uns minutos e tente de novo.',
   INVALID_PICTURE_PASSWORD: 'Hmm, essas não são as suas figuras. Tente de novo!',
   INVALID_TEXT_PASSWORD: 'Hmm, essa não é a sua senha. Tente de novo!',
   LOGIN_METHOD_REQUIRED: 'A criança precisa de pelo menos um jeito de entrar: figuras ou senha.',
