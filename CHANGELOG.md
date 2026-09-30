@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/dgofreitas/Contopia/compare/v1.7.0...v1.8.0) (2026-09-30)
+
+### Features
+
+* publicar para a família e estante da família ([34a6a1c](https://github.com/dgofreitas/Contopia/commit/34a6a1c564b8df35f820e10f3197e585447a9526))
+
 ## [1.7.0](https://github.com/dgofreitas/Contopia/compare/v1.6.0...v1.7.0) (2026-09-29)
 
 ### Features
