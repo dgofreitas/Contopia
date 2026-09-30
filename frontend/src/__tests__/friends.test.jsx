@@ -13,6 +13,7 @@ describe('amigos escolhidos', () => {
       'GET /auth/me': [200, CHILD_ME],
       'GET /books': [200, { books: [DRAFT] }],
       'GET /books/friends': [200, { families: [{ familyName: 'souza', children: [LEO, { id: 'f'.repeat(24), nickname: 'Davi', avatar: '🦁' }] }] }],
+      'GET /groups': [200, { groups: [] }],
       [`PATCH /books/${DRAFT.id}`]: [200, { book: { ...DRAFT, published: true } }],
     });
     renderAt('/atelie');
@@ -25,7 +26,7 @@ describe('amigos escolhidos', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: /Leo/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Publicar para 1 amigo' }));
-    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: true, visibility: 'people', sharedWith: [LEO.id] }));
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: true, visibility: 'people', sharedWith: [LEO.id], sharedGroups: [] }));
   });
 
   it('sem famílias amigas, explica como conseguir', async () => {
@@ -33,6 +34,7 @@ describe('amigos escolhidos', () => {
       'GET /auth/me': [200, CHILD_ME],
       'GET /books': [200, { books: [DRAFT] }],
       'GET /books/friends': [200, { families: [] }],
+      'GET /groups': [200, { groups: [] }],
     });
     renderAt('/atelie');
     fireEvent.click(await screen.findByRole('button', { name: 'Publicar Para o Leo' }));
@@ -49,6 +51,65 @@ describe('amigos escolhidos', () => {
     expect(await screen.findByRole('heading', { name: /Dos amigos/ })).toBeInTheDocument();
     expect(screen.getByText('@souza')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ler Robôs, de Leo' })).toBeInTheDocument();
+  });
+});
+
+describe('grupos de amigos', () => {
+  const DAVI = { id: 'f'.repeat(24), nickname: 'Davi', avatar: '🦁' };
+  const TURMA = { id: 'a'.repeat(24), name: 'Turma', members: [LEO, DAVI], books: 3 };
+
+  it('publica para um grupo e conta os amigos sem repetir', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [200, CHILD_ME],
+      'GET /books': [200, { books: [DRAFT] }],
+      'GET /books/friends': [200, { families: [{ familyName: 'souza', children: [LEO, DAVI] }] }],
+      'GET /groups': [200, { groups: [TURMA] }],
+      [`PATCH /books/${DRAFT.id}`]: [200, { book: { ...DRAFT, published: true } }],
+    });
+    renderAt('/atelie');
+    fireEvent.click(await screen.findByRole('button', { name: 'Publicar Para o Leo' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Amigos escolhidos/ }));
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /Turma/ }));
+    // Leo já está na Turma: continuam 2 amigos.
+    fireEvent.click(screen.getByRole('checkbox', { name: /Leo/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar para 2 amigos' }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: true, visibility: 'people', sharedWith: [LEO.id], sharedGroups: [TURMA.id] }),
+    );
+  });
+
+  it('cria um grupo escolhendo os amigos', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [200, CHILD_ME],
+      'GET /groups': [200, { groups: [] }],
+      'GET /books/friends': [200, { families: [{ familyName: 'souza', children: [LEO, DAVI] }] }],
+      'POST /groups': (body) => [201, { group: { id: 'b'.repeat(24), name: body.name, members: [LEO, DAVI].filter((c) => body.members.includes(c.id)), books: 0 } }],
+    });
+    renderAt('/grupos');
+    fireEvent.click(await screen.findByRole('button', { name: '+ Novo grupo' }));
+    fireEvent.change(screen.getByLabelText('Nome do grupo'), { target: { value: 'Futebol' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Davi/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar grupo' }));
+
+    expect(await screen.findByRole('heading', { name: 'Futebol' })).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({ name: 'Futebol', members: [DAVI.id] });
+  });
+
+  it('mostra quantos amigos e livros cada grupo tem, e muda os membros', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [200, CHILD_ME],
+      'GET /groups': [200, { groups: [TURMA] }],
+      'GET /books/friends': [200, { families: [{ familyName: 'souza', children: [LEO, DAVI] }] }],
+      [`PATCH /groups/${TURMA.id}`]: (body) => [200, { group: { ...TURMA, members: [LEO, DAVI].filter((c) => body.members.includes(c.id)) } }],
+    });
+    renderAt('/grupos');
+    expect(await screen.findByText('2 amigos · 3 livros')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mudar o grupo Turma' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Davi/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar grupo' }));
+    expect(await screen.findByText('1 amigo · 3 livros')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ name: 'Turma', members: [LEO.id] });
   });
 });
 

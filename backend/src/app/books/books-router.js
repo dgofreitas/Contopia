@@ -8,7 +8,8 @@ const { IMAGE_TYPES, MAX_UPLOAD_BYTES, processImage } = require('../../lib/image
 const { COVER_COLORS } = require('../../lib/constants');
 const { wrap, parse, notFound, badRequest } = require('../../lib/errors');
 const { requireChild } = require('../../lib/guards');
-const { friendParentIds, areFriends } = require('../../lib/friends');
+const FriendGroup = require('../../models/friend-group');
+const { areFriends, friendChildren: friendsOf } = require('../../lib/friends');
 const { sanitizeChapterHtml, imageIdsIn } = require('../../lib/sanitize');
 
 const MAX_CHAPTERS = 60;
@@ -40,6 +41,7 @@ function summary(book) {
     published: book.published,
     visibility: book.visibility,
     sharedWith: (book.sharedWith || []).map(String),
+    sharedGroups: (book.sharedGroups || []).map(String),
     chaptered: book.chaptered,
     chapters: book.chapters.length,
     progress: book.progress?.updatedAt ? { chapter: book.progress.chapter, page: book.progress.page, updatedAt: book.progress.updatedAt } : null,
@@ -89,7 +91,7 @@ function createBooksRouter({ images }) {
       const author = await Child.findOne({ _id: book.childId, parentId: req.session.parentId });
       if (author) return { book, author };
     }
-    if (book?.published && book.visibility === 'people' && book.sharedWith.some((c) => String(c) === req.session.childId)) {
+    if (book?.published && book.visibility === 'people' && (await isReader(book, req.session.childId))) {
       const author = await Child.findById(book.childId);
       if (author && (await areFriends(author.parentId, req.session.parentId))) {
         const family = await Parent.findById(author.parentId);
@@ -100,14 +102,13 @@ function createBooksRouter({ images }) {
   };
 
   // Crianças das famílias amigas: para quem esta criança pode mandar livros.
-  const friendChildren = async (req) => {
-    const parentIds = await friendParentIds(req.session.parentId);
-    const [parents, children] = await Promise.all([
-      Parent.find({ _id: { $in: parentIds } }),
-      Child.find({ parentId: { $in: parentIds } }).sort({ createdAt: 1 }),
-    ]);
-    return { parents, children };
-  };
+  const friendChildren = (req) => friendsOf(req.session.parentId);
+
+  // A criança foi escolhida para ler: pelo nome ou por estar num grupo do autor
+  // para o qual o livro foi mandado.
+  const isReader = async (book, childId) =>
+    book.sharedWith.some((c) => String(c) === childId) ||
+    (book.sharedGroups.length > 0 && Boolean(await FriendGroup.exists({ _id: { $in: book.sharedGroups }, childId: book.childId, members: childId })));
 
   // Apaga as imagens que não aparecem mais em nenhum capítulo.
   const removeOrphanImages = async (book) => {
@@ -161,11 +162,13 @@ function createBooksRouter({ images }) {
         .filter((child) => child.books.length > 0);
 
       const { parents, children: friends } = await friendChildren(req);
+      const friendIds = friends.map((c) => c._id);
+      const myGroups = await FriendGroup.find({ childId: { $in: friendIds }, members: req.session.childId }, '_id');
       const sent = await Book.find({
-        childId: { $in: friends.map((c) => c._id) },
+        childId: { $in: friendIds },
         published: true,
         visibility: 'people',
-        sharedWith: req.session.childId,
+        $or: [{ sharedWith: req.session.childId }, { sharedGroups: { $in: myGroups.map((g) => g._id) } }],
       }).sort({ updatedAt: -1 });
       const nameOf = Object.fromEntries(parents.map((p) => [String(p._id), p.familyName || null]));
       const fromFriends = friends
@@ -223,6 +226,7 @@ function createBooksRouter({ images }) {
           published: z.boolean().optional(),
           visibility: z.enum(['private', 'family', 'people']).optional(),
           sharedWith: z.array(idParam).max(MAX_SHARED_WITH).optional(),
+          sharedGroups: z.array(idParam).max(MAX_SHARED_WITH).optional(),
           chaptered: z.boolean().optional(),
           chapters: z.array(chapterSchema).min(1).max(MAX_CHAPTERS).optional(),
         }),
@@ -240,8 +244,15 @@ function createBooksRouter({ images }) {
         if (!body.sharedWith.every((id) => allowed.has(id))) throw badRequest('INVALID_SHARE');
         book.sharedWith = [...new Set(body.sharedWith)];
       }
+      if (body.sharedGroups) {
+        // Só grupos da própria criança.
+        const ids = [...new Set(body.sharedGroups)];
+        if ((await FriendGroup.countDocuments({ _id: { $in: ids }, childId: req.session.childId })) !== ids.length) throw badRequest('INVALID_SHARE');
+        book.sharedGroups = ids;
+      }
       // Só confere quando a criança está escolhendo quem lê, para o autosave nunca travar.
-      if ((body.visibility || body.sharedWith) && book.visibility === 'people' && book.sharedWith.length === 0) throw badRequest('SHARE_NOBODY');
+      const choosing = body.visibility || body.sharedWith || body.sharedGroups;
+      if (choosing && book.visibility === 'people' && book.sharedWith.length + book.sharedGroups.length === 0) throw badRequest('SHARE_NOBODY');
       if (body.chaptered !== undefined) book.chaptered = body.chaptered;
       // Livro sem capítulos guarda o texto todo num capítulo só.
       if (!book.chaptered && (body.chapters || book.chapters).length > 1) throw badRequest('CHAPTERLESS_SINGLE_TEXT');
