@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/dgofreitas/Contopia/compare/v1.9.0...v1.10.0) (2026-09-30)
+
+### Features
+
+* famílias amigas e livros para amigos escolhidos ([f7c22db](https://github.com/dgofreitas/Contopia/commit/f7c22dbed2522eb34782eaafa31f3ddd54137669))
+
 ## [1.9.0](https://github.com/dgofreitas/Contopia/compare/v1.8.0...v1.9.0) (2026-09-30)
 
 ### Features
