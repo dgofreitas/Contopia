@@ -31,9 +31,11 @@ const bookSchema = new mongoose.Schema(
       page: { type: Number, default: 0 },
       updatedAt: { type: Date },
     },
-    // Quem pode ler o livro publicado: só a criança ('private') ou também os
-    // irmãos, as outras crianças da mesma família ('family'). Público vem depois.
-    visibility: { type: String, enum: ['private', 'family'], default: 'private' },
+    // Quem pode ler o livro publicado: só a criança ('private'), também os irmãos,
+    // as outras crianças da mesma família ('family'), ou crianças escolhidas de
+    // famílias amigas ('people', listadas em sharedWith). Público vem depois.
+    visibility: { type: String, enum: ['private', 'family', 'people'], default: 'private' },
+    sharedWith: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Child' }], default: [], index: true },
   },
   { timestamps: true },
 );

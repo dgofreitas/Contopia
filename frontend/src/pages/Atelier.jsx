@@ -28,11 +28,11 @@ export function Atelier() {
     api.get('/books').then((data) => setBooks(data.books.filter((b) => !b.published))).catch((err) => setError(messageFor(err)));
   }, []);
 
-  const publish = async (book, visibility) => {
+  const publish = async (book, audience) => {
     setError('');
     setPublishing(null);
     try {
-      await api.patch(`/books/${book.id}`, { published: true, visibility });
+      await api.patch(`/books/${book.id}`, { published: true, ...audience });
       navigate('/estante', { state: { published: book.title } });
     } catch (err) {
       setError(messageFor(err));
@@ -97,7 +97,7 @@ export function Atelier() {
       </section>
 
       <AnimatePresence>
-        {publishing && <PublishDialog title={publishing.title} onPublish={(visibility) => publish(publishing, visibility)} onClose={() => setPublishing(null)} />}
+        {publishing && <PublishDialog title={publishing.title} onPublish={(audience) => publish(publishing, audience)} onClose={() => setPublishing(null)} />}
       </AnimatePresence>
 
       <AnimatePresence>

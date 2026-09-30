@@ -360,8 +360,8 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .cover--sm .cover__title { overflow-wrap: break-word; hyphens: auto; }
 
 /* Publicar: quem pode ler */
-.publish { width: min(520px, 100%); display: flex; flex-direction: column; gap: 14px; }
-.audiences { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.publish { width: min(640px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.audiences { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
 .audience { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 14px; border-radius: 16px; border: 2px solid var(--paper-edge); background: #fff; text-align: center; font-size: 1.05rem; box-shadow: 0 4px 0 var(--paper-edge); }
 .audience:hover, .audience:focus-visible { border-color: var(--accent); }
 .audience__icon { font-size: 2.4rem; line-height: 1; }
@@ -370,3 +370,19 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 /* Estante da família */
 .family-shelf { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--paper-edge); padding-top: 14px; }
 .family-shelf__who { display: flex; align-items: center; gap: 8px; font-family: var(--font-story); font-size: 1.3rem; color: #5B2A86; }
+
+/* Famílias amigas */
+.input { flex: 1; min-width: 180px; border: 2px solid var(--paper-edge); border-radius: 10px; padding: 10px 12px; background: #fff; color: var(--text); font-weight: 600; }
+.input:focus { border-color: var(--accent); outline: none; }
+.note { background: #FFF6DA; border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; }
+.links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.link { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: #F7F2FB; }
+.link--incoming { background: #FFE8F0; }
+
+/* Escolher amigos para ler */
+.friends { border: 1px solid var(--paper-edge); border-radius: 12px; padding: 10px 14px; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.friends legend { font-weight: 800; color: #5B2A86; padding: 0 6px; }
+.friend { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 1.05rem; }
+.friend input { width: 20px; height: 20px; }
+.family-shelf__family { font-family: var(--font-body); font-size: 0.9rem; color: var(--text-soft); font-weight: 700; }
+.family-shelf__group { font-family: var(--font-story); font-size: 1.2rem; color: #5B2A86; margin-top: 8px; }

@@ -9,6 +9,7 @@ describe('código e nome da família', () => {
     const calls = mockApi({
       'GET /auth/me': [200, ME],
       'GET /children': [200, { children: [] }],
+      'GET /connections': [200, { friends: [], incoming: [], outgoing: [] }],
       'PATCH /auth/me/family-code': (body) => [200, { parent: { ...PARENT, familyCode: body.code ? body.code : 'XYZW7890' } }],
     });
     renderAt('/familia');
@@ -32,6 +33,7 @@ describe('código e nome da família', () => {
     mockApi({
       'GET /auth/me': [200, ME],
       'GET /children': [200, { children: [] }],
+      'GET /connections': [200, { friends: [], incoming: [], outgoing: [] }],
       'PATCH /auth/me/family-name': (body) =>
         taken ? [409, { error: { code: 'FAMILY_NAME_TAKEN' } }] : [200, { parent: { ...PARENT, familyName: body.name } }],
     });
