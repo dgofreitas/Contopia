@@ -1,3 +1,9 @@
+## [1.11.0](https://github.com/dgofreitas/Contopia/compare/v1.10.0...v1.11.0) (2026-09-30)
+
+### Features
+
+* grupos de amigos para mandar livros ([040ad5b](https://github.com/dgofreitas/Contopia/commit/040ad5b23740eaa0c530900c41d3eeb924461c14))
+
 ## [1.10.0](https://github.com/dgofreitas/Contopia/compare/v1.9.0...v1.10.0) (2026-09-30)
 
 ### Features
