@@ -139,7 +139,10 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .desk__header { display: flex; justify-content: space-between; align-items: center; }
 .card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 0 0 1px #E6DDF0; }
 .code-card { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
-.code { font-family: var(--font-story); font-size: 2rem; letter-spacing: 0.2em; color: #5B2A86; font-weight: 800; font-variant-numeric: tabular-nums; }
+.code { font-family: var(--font-story); font-size: clamp(1.4rem, 5vw, 2rem); letter-spacing: 0.2em; color: #5B2A86; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.code--name { letter-spacing: 0.02em; }
+.code-form { display: flex; flex-direction: column; gap: 10px; flex: 1 1 100%; }
+.small { font-size: 0.85rem; }
 .kids { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .kid { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .kid__avatar { font-size: 2.2rem; }
