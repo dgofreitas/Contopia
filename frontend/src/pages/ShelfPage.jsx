@@ -88,7 +88,7 @@ export function ShelfPage() {
     setAudienceFor(null);
     try {
       const { book: saved } = await api.patch(`/books/${book.id}`, audience);
-      setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, visibility: saved.visibility, sharedWith: saved.sharedWith } : b)));
+      setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, visibility: saved.visibility, sharedWith: saved.sharedWith, sharedGroups: saved.sharedGroups } : b)));
     } catch (err) {
       setError(messageFor(err));
     }
@@ -207,7 +207,7 @@ export function ShelfPage() {
           <PublishDialog
             title={audienceFor.title}
             heading={`Quem pode ler “${audienceFor.title}”?`}
-            initial={{ visibility: audienceFor.visibility, sharedWith: audienceFor.sharedWith }}
+            initial={{ visibility: audienceFor.visibility, sharedWith: audienceFor.sharedWith, sharedGroups: audienceFor.sharedGroups }}
             confirmLabel="Salvar"
             onPublish={(audience) => changeAudience(audienceFor, audience)}
             onClose={() => setAudienceFor(null)}

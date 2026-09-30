@@ -4,6 +4,7 @@ const Parent = require('../../models/parent');
 const Child = require('../../models/child');
 const Book = require('../../models/book');
 const FamilyLink = require('../../models/family-link');
+const FriendGroup = require('../../models/friend-group');
 const { wrap, parse, notFound, badRequest, conflict } = require('../../lib/errors');
 const { requireParent } = require('../../lib/guards');
 
@@ -88,8 +89,10 @@ function createConnectionsRouter() {
       const ids = (list) => list.map((c) => c._id);
       await Book.updateMany({ childId: { $in: ids(a) } }, { $pull: { sharedWith: { $in: ids(b) } } });
       await Book.updateMany({ childId: { $in: ids(b) } }, { $pull: { sharedWith: { $in: ids(a) } } });
+      await FriendGroup.updateMany({ childId: { $in: ids(a) } }, { $pull: { members: { $in: ids(b) } } });
+      await FriendGroup.updateMany({ childId: { $in: ids(b) } }, { $pull: { members: { $in: ids(a) } } });
       await Book.updateMany(
-        { childId: { $in: [...ids(a), ...ids(b)] }, visibility: 'people', sharedWith: { $size: 0 } },
+        { childId: { $in: [...ids(a), ...ids(b)] }, visibility: 'people', sharedWith: { $size: 0 }, sharedGroups: { $size: 0 } },
         { $set: { visibility: 'private' } },
       );
       res.status(204).end();

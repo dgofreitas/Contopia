@@ -6,6 +6,7 @@ const { createAuthRouter } = require('./app/auth/auth-router');
 const { createChildrenRouter } = require('./app/children/children-router');
 const { createBooksRouter } = require('./app/books/books-router');
 const { createConnectionsRouter } = require('./app/connections/connections-router');
+const { createGroupsRouter } = require('./app/groups/groups-router');
 const { createSessionStore } = require('./lib/sessions');
 const { HttpError } = require('./lib/errors');
 const { IMAGE_TYPES, createImageStore } = require('./lib/images');
@@ -48,6 +49,7 @@ function createApp({ mongoose, redis, config = {} }) {
   api.use('/auth', createAuthRouter({ sessions, redis }));
   api.use('/children', createChildrenRouter());
   api.use('/connections', createConnectionsRouter());
+  api.use('/groups', createGroupsRouter());
   api.use('/books', createBooksRouter({ images: createImageStore(config.uploadsDir || '/data/uploads') }));
   app.use('/api/v1', api);
 

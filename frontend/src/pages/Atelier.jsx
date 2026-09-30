@@ -54,6 +54,7 @@ export function Atelier() {
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
       <TopBar>
+        <Link to="/grupos" className="btn btn--small">👥 Grupos</Link>
         <Link to="/estante" className="btn btn--small">📚 Estante</Link>
       </TopBar>
 

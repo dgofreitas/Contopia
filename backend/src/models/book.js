@@ -33,9 +33,12 @@ const bookSchema = new mongoose.Schema(
     },
     // Quem pode ler o livro publicado: só a criança ('private'), também os irmãos,
     // as outras crianças da mesma família ('family'), ou crianças escolhidas de
-    // famílias amigas ('people', listadas em sharedWith). Público vem depois.
+    // famílias amigas ('people', em sharedWith ou nos grupos de sharedGroups).
+    // Público vem depois.
     visibility: { type: String, enum: ['private', 'family', 'people'], default: 'private' },
     sharedWith: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Child' }], default: [], index: true },
+    // Grupos de amigos da própria criança: quem estiver no grupo lê, mesmo quem entrar depois.
+    sharedGroups: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'FriendGroup' }], default: [], index: true },
   },
   { timestamps: true },
 );

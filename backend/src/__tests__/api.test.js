@@ -446,6 +446,69 @@ describe('famílias amigas e livros para pessoas escolhidas', () => {
     // E o autosave do editor continua funcionando.
     expect((await silva.agent.patch(`/api/v1/books/${id}`).send({ chapters: [{ title: '', html: '<p>Oi de novo!</p>' }] })).status).toBe(200);
   });
+
+  it('grupo de amigos: quem entra no grupo lê todos os livros mandados para ele', async () => {
+    const silva = await family('silva@exemplo.com', 'silva', 'Lia');
+    const souza = await family('souza@exemplo.com', 'souza', 'Leo');
+    const davi = await souza.agent.post('/api/v1/children').send({ nickname: 'Davi', avatar: '🐼', picture: PICTURE });
+    const estranho = await family('x@exemplo.com', 'estranhos', 'Zé');
+    const { body: invite } = await silva.agent.post('/api/v1/connections').send({ name: 'souza' });
+    await souza.agent.post(`/api/v1/connections/${invite.link.id}/accept`);
+
+    // Só amigos entram no grupo.
+    expect((await silva.agent.post('/api/v1/groups').send({ name: 'Turma', members: [estranho.child.id] })).body.error.code).toBe('INVALID_SHARE');
+    const created = await silva.agent.post('/api/v1/groups').send({ name: 'Turma', members: [souza.child.id] });
+    expect(created.status).toBe(201);
+    const groupId = created.body.group.id;
+    expect(created.body.group).toMatchObject({ name: 'Turma', members: [{ nickname: 'Leo', familyName: 'souza' }], books: 0 });
+
+    // Dois livros para o grupo.
+    const ids = [];
+    for (const title of ['Um', 'Dois']) {
+      const { body } = await silva.agent.post('/api/v1/books').send({ title, cover: { color: '#7C5CFF' } });
+      await silva.agent.patch(`/api/v1/books/${body.book.id}`).send({ published: true, visibility: 'people', sharedGroups: [groupId] });
+      ids.push(body.book.id);
+    }
+    expect((await silva.agent.get('/api/v1/groups')).body.groups[0].books).toBe(2);
+
+    // Grupo de outra criança não serve.
+    const alheio = await souza.agent.post('/api/v1/groups').send({ name: 'Deles', members: [] });
+    expect((await silva.agent.patch(`/api/v1/books/${ids[0]}`).send({ sharedGroups: [alheio.body.group.id] })).body.error.code).toBe('INVALID_SHARE');
+
+    expect((await souza.agent.get('/api/v1/books/family')).body.friends[0].books).toHaveLength(2);
+    await souza.agent.post('/api/v1/auth/switch').send({ childId: davi.body.child.id });
+    expect((await souza.agent.get(`/api/v1/books/${ids[0]}`)).status).toBe(404);
+
+    // Davi entra no grupo e passa a ler os dois livros na hora.
+    await silva.agent.patch(`/api/v1/groups/${groupId}`).send({ members: [souza.child.id, davi.body.child.id] });
+    expect((await souza.agent.get(`/api/v1/books/${ids[0]}`)).status).toBe(200);
+    expect((await souza.agent.get('/api/v1/books/family')).body.friends[0].books).toHaveLength(2);
+
+    // Sai do grupo, deixa de ler.
+    await silva.agent.patch(`/api/v1/groups/${groupId}`).send({ members: [souza.child.id] });
+    expect((await souza.agent.get(`/api/v1/books/${ids[1]}`)).status).toBe(404);
+
+    // Grupo apagado: os livros voltam a ser só de quem escreveu.
+    expect((await silva.agent.delete(`/api/v1/groups/${groupId}`)).status).toBe(204);
+    const after = await silva.agent.get(`/api/v1/books/${ids[0]}`);
+    expect(after.body.book).toMatchObject({ visibility: 'private', sharedGroups: [] });
+    await souza.agent.post('/api/v1/auth/switch').send({ childId: souza.child.id });
+    expect((await souza.agent.get(`/api/v1/books/${ids[0]}`)).status).toBe(404);
+  });
+
+  it('desfeita a amizade, os amigos saem dos grupos', async () => {
+    const silva = await family('silva@exemplo.com', 'silva', 'Lia');
+    const souza = await family('souza@exemplo.com', 'souza', 'Leo');
+    const { body: invite } = await silva.agent.post('/api/v1/connections').send({ name: 'souza' });
+    await souza.agent.post(`/api/v1/connections/${invite.link.id}/accept`);
+    const { body } = await silva.agent.post('/api/v1/groups').send({ name: 'Turma', members: [souza.child.id] });
+    const book = await silva.agent.post('/api/v1/books').send({ title: 'Um', cover: { color: '#7C5CFF' } });
+    await silva.agent.patch(`/api/v1/books/${book.body.book.id}`).send({ published: true, visibility: 'people', sharedGroups: [body.group.id] });
+
+    await souza.agent.delete(`/api/v1/connections/${invite.link.id}`);
+    expect((await silva.agent.get('/api/v1/groups')).body.groups[0].members).toEqual([]);
+    expect((await souza.agent.get(`/api/v1/books/${book.body.book.id}`)).status).toBe(404);
+  });
 });
 
 describe('imagens no texto', () => {

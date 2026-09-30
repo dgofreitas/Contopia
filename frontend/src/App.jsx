@@ -8,6 +8,7 @@ import { ChildLogin } from './pages/ChildLogin';
 import { ShelfPage } from './pages/ShelfPage';
 import { Atelier } from './pages/Atelier';
 import { FamilyShelf } from './pages/FamilyShelf';
+import { Groups } from './pages/Groups';
 
 // O editor traz o TipTap, que é pesado: só carrega quando a criança vai escrever.
 const Editor = lazy(() => import('./pages/Editor').then((m) => ({ default: m.Editor })));
@@ -32,6 +33,7 @@ export function AppRoutes() {
         <Route path="/familia" element={<RequireParent><Family /></RequireParent>} />
         <Route path="/estante" element={<RequireChild><ShelfPage /></RequireChild>} />
         <Route path="/estante/familia" element={<RequireChild><FamilyShelf /></RequireChild>} />
+        <Route path="/grupos" element={<RequireChild><Groups /></RequireChild>} />
         <Route path="/atelie" element={<RequireChild><Atelier /></RequireChild>} />
         <Route path="/livro/:id/escrever" element={<RequireChild><Editor /></RequireChild>} />
         <Route path="/livro/:id/ler" element={<RequireChild><Reader /></RequireChild>} />

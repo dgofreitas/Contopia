@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const Child = require('../../models/child');
 const Book = require('../../models/book');
+const FriendGroup = require('../../models/friend-group');
 const { AVATARS } = require('../../lib/constants');
 const { wrap, parse, notFound, badRequest } = require('../../lib/errors');
 const { requireParent } = require('../../lib/guards');
@@ -98,6 +99,9 @@ function createChildrenRouter() {
       const child = await Child.findOneAndDelete({ _id: id, parentId: req.session.parentId });
       if (!child) throw notFound('CHILD_NOT_FOUND');
       await Book.deleteMany({ childId: child._id });
+      // Os grupos dela somem, e ela sai dos grupos dos amigos.
+      await FriendGroup.deleteMany({ childId: child._id });
+      await FriendGroup.updateMany({ members: child._id }, { $pull: { members: child._id } });
       res.status(204).end();
     }),
   );
