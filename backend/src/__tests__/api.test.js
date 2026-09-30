@@ -245,6 +245,50 @@ describe('livros', () => {
     expect((await agent.get('/api/v1/books')).body.books).toEqual([]);
   });
 
+  it('irmãos leem os livros publicados para a família, sem poder mudar', async () => {
+    const { agent, child } = await childAgent();
+    const { body } = await agent.post('/api/v1/books').send({ title: 'Para o Leo', cover: { color: '#7C5CFF' } });
+    const id = body.book.id;
+    await agent.patch(`/api/v1/books/${id}`).send({ favorite: true, chapters: [{ title: '', html: '<p>Oi, Leo!</p>' }] });
+    const leo = await agent.post('/api/v1/children').send({ nickname: 'Leo', avatar: '🐼', picture: PICTURE });
+    const asLeo = () => agent.post('/api/v1/auth/switch').send({ childId: leo.body.child.id });
+    const asLia = () => agent.post('/api/v1/auth/switch').send({ childId: child.id });
+
+    // Rascunho e livro publicado só para a própria criança ficam escondidos.
+    await asLeo();
+    expect((await agent.get('/api/v1/books/family')).body.children).toEqual([]);
+    expect((await agent.get(`/api/v1/books/${id}`)).status).toBe(404);
+    await asLia();
+    await agent.patch(`/api/v1/books/${id}`).send({ published: true });
+    await asLeo();
+    expect((await agent.get(`/api/v1/books/${id}`)).status).toBe(404);
+
+    await asLia();
+    const shared = await agent.patch(`/api/v1/books/${id}`).send({ visibility: 'family' });
+    expect(shared.body.book.visibility).toBe('family');
+    await asLeo();
+    const family = await agent.get('/api/v1/books/family');
+    expect(family.body.children).toEqual([
+      expect.objectContaining({ nickname: 'Lia', books: [expect.objectContaining({ id, title: 'Para o Leo', author: expect.objectContaining({ nickname: 'Lia' }) })] }),
+    ]);
+    const read = await agent.get(`/api/v1/books/${id}`);
+    expect(read.body.book).toMatchObject({ mine: false, chapters: [{ html: '<p>Oi, Leo!</p>' }] });
+    expect(read.body.book.favorite).toBeUndefined();
+    expect(read.body.book.progress).toBeUndefined();
+
+    // Ler pode; escrever, apagar e marcar progresso não.
+    expect((await agent.patch(`/api/v1/books/${id}`).send({ title: 'Meu!' })).status).toBe(404);
+    expect((await agent.put(`/api/v1/books/${id}/progress`).send({ chapter: 0, page: 1 })).status).toBe(404);
+    expect((await agent.delete(`/api/v1/books/${id}`)).status).toBe(404);
+
+    // Outra família não enxerga.
+    const other = await registerParent('pai@exemplo.com');
+    const kid = await other.agent.post('/api/v1/children').send({ nickname: 'Bia', avatar: '🦊', picture: PICTURE });
+    await other.agent.post('/api/v1/auth/switch').send({ childId: kid.body.child.id });
+    expect((await other.agent.get(`/api/v1/books/${id}`)).status).toBe(404);
+    expect((await other.agent.get('/api/v1/books/family')).body.children).toEqual([]);
+  });
+
   it('exige um perfil de criança ativo', async () => {
     const { agent } = await registerParent();
     expect((await agent.get('/api/v1/books')).status).toBe(403);

@@ -7,6 +7,7 @@ import { Scene } from '../scene/Scene';
 import { themeFor } from '../scene/themes';
 import { BookCover } from '../components/BookCover';
 import { NewBook } from '../components/NewBook';
+import { PublishDialog } from '../components/PublishDialog';
 import { TopBar } from '../components/TopBar';
 
 /**
@@ -20,16 +21,18 @@ export function Atelier() {
   const theme = themeFor(me.child.theme);
   const [books, setBooks] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [publishing, setPublishing] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.get('/books').then((data) => setBooks(data.books.filter((b) => !b.published))).catch((err) => setError(messageFor(err)));
   }, []);
 
-  const publish = async (book) => {
+  const publish = async (book, visibility) => {
     setError('');
+    setPublishing(null);
     try {
-      await api.patch(`/books/${book.id}`, { published: true });
+      await api.patch(`/books/${book.id}`, { published: true, visibility });
       navigate('/estante', { state: { published: book.title } });
     } catch (err) {
       setError(messageFor(err));
@@ -83,7 +86,7 @@ export function Atelier() {
                 </button>
                 <div className="draft__actions">
                   <button type="button" className="btn btn--small" onClick={() => navigate(`/livro/${book.id}/escrever`)}>✏️ Escrever</button>
-                  <button type="button" className="btn btn--small btn--primary" onClick={() => publish(book)} aria-label={`Publicar ${book.title}`}>📚 Publicar</button>
+                  <button type="button" className="btn btn--small btn--primary" onClick={() => setPublishing(book)} aria-label={`Publicar ${book.title}`}>📚 Publicar</button>
                   <button type="button" className="btn btn--small btn--ghost" onClick={() => remove(book)} aria-label={`Apagar ${book.title}`}>🗑️ Apagar</button>
                 </div>
               </motion.li>
@@ -92,6 +95,10 @@ export function Atelier() {
         )}
         {books?.length === 0 && <p className="muted">Nenhum livro sendo escrito agora. Que tal começar um?</p>}
       </section>
+
+      <AnimatePresence>
+        {publishing && <PublishDialog title={publishing.title} onPublish={(visibility) => publish(publishing, visibility)} onClose={() => setPublishing(null)} />}
+      </AnimatePresence>
 
       <AnimatePresence>
         {creating && (

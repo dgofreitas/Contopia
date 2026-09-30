@@ -1,6 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const Book = require('../../models/book');
+const Child = require('../../models/child');
 const BookImage = require('../../models/book-image');
 const { IMAGE_TYPES, MAX_UPLOAD_BYTES, processImage } = require('../../lib/images');
 const { COVER_COLORS } = require('../../lib/constants');
@@ -43,7 +44,20 @@ function summary(book) {
 }
 
 function full(book) {
-  return { ...summary(book), chapters: book.chapters.map((c) => ({ title: c.title, html: c.html })) };
+  return { ...summary(book), mine: true, chapters: book.chapters.map((c) => ({ title: c.title, html: c.html })) };
+}
+
+// Livro de um irmão, visto por quem só pode ler: sem favorito nem progresso de quem escreveu.
+function shared(book, author) {
+  return {
+    id: String(book._id),
+    title: book.title,
+    cover: { color: book.cover.color, sticker: book.cover.sticker },
+    chaptered: book.chaptered,
+    chapters: book.chapters.length,
+    author: { id: String(author._id), nickname: author.nickname, avatar: author.avatar },
+    updatedAt: book.updatedAt,
+  };
 }
 
 // Livros da criança ativa. Cada consulta filtra por childId, então uma criança
@@ -57,6 +71,19 @@ function createBooksRouter({ images }) {
     const book = await Book.findOne({ _id: id, childId: req.session.childId });
     if (!book) throw notFound('BOOK_NOT_FOUND');
     return book;
+  };
+
+  // Para ler: o próprio livro ou o de um irmão, se ele publicou para a família.
+  // Livro que a criança não pode ler responde como se não existisse.
+  const findReadable = async (req) => {
+    const id = parse(idParam, req.params.id);
+    const book = await Book.findById(id);
+    if (book && String(book.childId) === req.session.childId) return { book, author: null };
+    if (book?.published && book.visibility === 'family') {
+      const author = await Child.findOne({ _id: book.childId, parentId: req.session.parentId });
+      if (author) return { book, author };
+    }
+    throw notFound('BOOK_NOT_FOUND');
   };
 
   // Apaga as imagens que não aparecem mais em nenhum capítulo.
@@ -73,6 +100,24 @@ function createBooksRouter({ images }) {
     wrap(async (req, res) => {
       const books = await Book.find({ childId: req.session.childId }).sort({ createdAt: 1 });
       res.json({ books: books.map(summary) });
+    }),
+  );
+
+  // Livros que os irmãos publicaram para a família, agrupados por quem escreveu.
+  router.get(
+    '/family',
+    wrap(async (req, res) => {
+      const siblings = await Child.find({ parentId: req.session.parentId, _id: { $ne: req.session.childId } }).sort({ createdAt: 1 });
+      const books = await Book.find({ childId: { $in: siblings.map((c) => c._id) }, published: true, visibility: 'family' }).sort({ updatedAt: -1 });
+      const children = siblings
+        .map((child) => ({
+          id: String(child._id),
+          nickname: child.nickname,
+          avatar: child.avatar,
+          books: books.filter((b) => String(b.childId) === String(child._id)).map((b) => shared(b, child)),
+        }))
+        .filter((child) => child.books.length > 0);
+      res.json({ children });
     }),
   );
 
@@ -98,7 +143,8 @@ function createBooksRouter({ images }) {
   router.get(
     '/:id',
     wrap(async (req, res) => {
-      res.json({ book: full(await findOwn(req)) });
+      const { book, author } = await findReadable(req);
+      res.json({ book: author ? { ...shared(book, author), mine: false, chapters: book.chapters.map((c) => ({ title: c.title, html: c.html })) } : full(book) });
     }),
   );
 
@@ -112,6 +158,7 @@ function createBooksRouter({ images }) {
           cover: coverSchema.optional(),
           favorite: z.boolean().optional(),
           published: z.boolean().optional(),
+          visibility: z.enum(['private', 'family']).optional(),
           chaptered: z.boolean().optional(),
           chapters: z.array(chapterSchema).min(1).max(MAX_CHAPTERS).optional(),
         }),
@@ -121,6 +168,7 @@ function createBooksRouter({ images }) {
       if (body.cover) book.cover = body.cover;
       if (body.favorite !== undefined) book.favorite = body.favorite;
       if (body.published !== undefined) book.published = body.published;
+      if (body.visibility) book.visibility = body.visibility;
       if (body.chaptered !== undefined) book.chaptered = body.chaptered;
       // Livro sem capítulos guarda o texto todo num capítulo só.
       if (!book.chaptered && (body.chapters || book.chapters).length > 1) throw badRequest('CHAPTERLESS_SINGLE_TEXT');
@@ -172,7 +220,7 @@ function createBooksRouter({ images }) {
   router.get(
     '/:id/images/:imageId',
     wrap(async (req, res) => {
-      const book = await findOwn(req);
+      const { book } = await findReadable(req);
       const imageId = parse(idParam, req.params.imageId);
       const image = await BookImage.findOne({ _id: imageId, bookId: book._id });
       if (!image) throw notFound('IMAGE_NOT_FOUND');

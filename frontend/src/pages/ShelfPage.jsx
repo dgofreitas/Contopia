@@ -26,6 +26,8 @@ export function ShelfPage() {
   const theme = themeFor(me.child.theme);
   const [books, setBooks] = useState(null);
   const [writing, setWriting] = useState(0);
+  // Quantos livros os irmãos publicaram para a família.
+  const [familyBooks, setFamilyBooks] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   // Livro voltando para a estante: a lombada só reaparece quando ele chega.
   const [returningId, setReturningId] = useState(null);
@@ -41,6 +43,10 @@ export function ShelfPage() {
         setWriting(data.books.length - data.books.filter((b) => b.published).length);
       })
       .catch((err) => setError(messageFor(err)));
+    api
+      .get('/books/family')
+      .then((data) => setFamilyBooks(data.children.reduce((sum, child) => sum + child.books.length, 0)))
+      .catch(() => {});
   }, []);
 
   const changeTheme = async (id) => {
@@ -75,6 +81,17 @@ export function ShelfPage() {
     }
   };
 
+  const toggleFamily = async (book) => {
+    const visibility = book.visibility === 'family' ? 'private' : 'family';
+    setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, visibility } : b)));
+    try {
+      await api.patch(`/books/${book.id}`, { visibility });
+    } catch (err) {
+      setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, visibility: book.visibility } : b)));
+      setError(messageFor(err));
+    }
+  };
+
   const selected = books?.find((b) => b.id === selectedId);
   const shown = books?.filter((b) => filter === 'all' || (filter === 'favorites' ? b.favorite : b.progress));
   const putBack = () => {
@@ -87,6 +104,7 @@ export function ShelfPage() {
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
       <TopBar>
+        {familyBooks > 0 && <Link to="/estante/familia" className="btn btn--small">👨‍👩‍👧 Família</Link>}
         <Link
           to="/atelie"
           className="btn btn--small btn--primary"
@@ -171,6 +189,9 @@ export function ShelfPage() {
               <button type="button" className="btn" onClick={() => navigate(`/livro/${selected.id}/escrever`)}>✏️ Escrever</button>
               <button type="button" className="btn" aria-pressed={selected.favorite} onClick={() => toggleFavorite(selected)}>
                 {selected.favorite ? '★ Favorito' : '☆ Favoritar'}
+              </button>
+              <button type="button" className="btn" aria-pressed={selected.visibility === 'family'} onClick={() => toggleFamily(selected)}>
+                {selected.visibility === 'family' ? '👨‍👩‍👧 A família pode ler' : '🔒 Só eu leio'}
               </button>
               <button type="button" className="btn" onClick={() => unpublish(selected)}>↩️ Voltar para o ateliê</button>
               <button type="button" className="btn btn--ghost-light" onClick={putBack}>Guardar na estante</button>

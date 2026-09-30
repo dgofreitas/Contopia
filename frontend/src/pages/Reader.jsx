@@ -94,7 +94,8 @@ export function Reader() {
   );
 
   useEffect(() => {
-    if (opened && book) saveProgress(chapter, page);
+    // O progresso é de quem escreveu; livro de irmão não marca.
+    if (opened && book?.mine) saveProgress(chapter, page);
   }, [opened, book, chapter, page, saveProgress]);
 
   useEffect(() => () => clearTimeout(saveTimer.current), []);
@@ -148,19 +149,21 @@ export function Reader() {
     <main className="room reading" style={{ '--ink': theme.ink, '--gold': theme.gold, '--c': book.cover.color }}>
       <Scene theme={theme} />
       <header className="topbar">
-        {book.published ? (
+        {!book.mine ? (
+          <Link to="/estante/familia" className="btn btn--small">← Família</Link>
+        ) : book.published ? (
           <Link to="/estante" className="btn btn--small">← Estante</Link>
         ) : (
           <Link to="/atelie" className="btn btn--small">← Ateliê</Link>
         )}
         <span className="reading__title">{book.title}</span>
-        <Link to={`/livro/${id}/escrever`} className="btn btn--small">✏️ Escrever</Link>
+        {book.mine && <Link to={`/livro/${id}/escrever`} className="btn btn--small">✏️ Escrever</Link>}
       </header>
 
       {!opened ? (
         <div className="reading__closed">
           <motion.div className="reading__cover" initial={{ rotateY: 0 }} exit={{ rotateY: -120 }}>
-            <BookCover title={book.title} author={me.child.nickname} color={book.cover.color} sticker={book.cover.sticker} gold={theme.gold} size="lg" />
+            <BookCover title={book.title} author={book.mine ? me.child.nickname : book.author.nickname} color={book.cover.color} sticker={book.cover.sticker} gold={theme.gold} size="lg" />
           </motion.div>
           <button type="button" className="btn btn--primary btn--big" onClick={() => setOpened(true)} autoFocus>📖 Abrir o livro</button>
         </div>
@@ -180,7 +183,7 @@ export function Reader() {
             >
               {book.chaptered && <h2 className="book-open__chapter">{current.title || `Capítulo ${chapter + 1}`}</h2>}
               {isEmpty ? (
-                <p className="muted">{book.chaptered ? 'Este capítulo ainda está em branco.' : 'Este livro ainda está em branco.'} Que tal escrever?</p>
+                <p className="muted">{book.chaptered ? 'Este capítulo ainda está em branco.' : 'Este livro ainda está em branco.'}{book.mine && ' Que tal escrever?'}</p>
               ) : (
                 // HTML limpo pelo servidor (sanitize-html) antes de ser salvo
                 <div className="book-open__text" dangerouslySetInnerHTML={{ __html: current.html }} />

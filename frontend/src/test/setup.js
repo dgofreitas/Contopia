@@ -11,3 +11,12 @@ if (!window.matchMedia) {
     removeListener: () => {},
   });
 }
+
+// jsdom também não tem ResizeObserver, que o leitor usa para medir as páginas
+if (!window.ResizeObserver) {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

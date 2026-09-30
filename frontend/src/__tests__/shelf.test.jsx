@@ -44,8 +44,9 @@ describe('estante', () => {
     expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Publicar A Fada Sonâmbula' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Minha família/ }));
     expect(await screen.findByRole('status')).toHaveTextContent('A Fada Sonâmbula foi publicado');
-    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: true });
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: true, visibility: 'family' });
   });
 
   it('devolve um livro publicado para o ateliê', async () => {
@@ -84,6 +85,43 @@ describe('estante', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument());
     expect(calls.some((c) => c.method === 'DELETE')).toBe(true);
     confirm.mockRestore();
+  });
+
+  it('deixa a família ler um livro da estante', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [200, ME],
+      'GET /books': [200, { books: [{ ...BOOK, visibility: 'private' }] }],
+      [`PATCH /books/${BOOK.id}`]: [200, { book: { ...BOOK, visibility: 'family' } }],
+    });
+    renderAt('/estante');
+    fireEvent.click(await screen.findByRole('button', { name: 'O Dragão Tímido, lendo' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Só eu leio/ }));
+    expect(await screen.findByRole('button', { name: /A família pode ler/ })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ visibility: 'family' }));
+  });
+
+  it('mostra a estante da família e abre o livro do irmão só para ler', async () => {
+    const LEO = { id: 'e'.repeat(24), nickname: 'Leo', avatar: '🐼' };
+    const SHARED = { id: 'f'.repeat(24), title: 'Robôs no Quintal', cover: { color: '#3A86FF', sticker: '🤖' }, chaptered: false, chapters: 1, author: LEO };
+    const calls = mockApi({
+      'GET /auth/me': [200, ME],
+      'GET /books': [200, { books: [BOOK] }],
+      'GET /books/family': [200, { children: [{ ...LEO, books: [SHARED] }] }],
+      [`GET /books/${SHARED.id}`]: [200, { book: { ...SHARED, mine: false, chapters: [{ title: '', html: '<p>Bip bop.</p>' }] } }],
+    });
+    renderAt('/estante');
+    fireEvent.click(await screen.findByRole('link', { name: /Família/ }));
+
+    expect(await screen.findByRole('heading', { name: /Leo/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ler Robôs no Quintal, de Leo' }));
+
+    expect(await screen.findByRole('link', { name: '← Família' })).toBeInTheDocument();
+    expect(screen.getByText('por Leo')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Escrever/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Abrir o livro/ }));
+    expect(await screen.findByText('Bip bop.')).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 700));
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
   });
 
   it('troca o tema e guarda a preferência', async () => {
