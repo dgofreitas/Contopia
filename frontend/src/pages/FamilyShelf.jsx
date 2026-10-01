@@ -1,80 +1,147 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Scene } from '../scene/Scene';
 import { themeFor } from '../scene/themes';
-import { BookCover } from '../components/BookCover';
 import { Emoji } from '../components/Emoji';
+import { Shelf } from '../components/Shelf';
+import { FlyingBook } from '../components/FlyingBook';
 import { TopBar } from '../components/TopBar';
 
+// Quem mandou livro por último aparece primeiro.
+const latest = (person) => Math.max(...person.books.map((b) => new Date(b.updatedAt || 0).getTime()));
+
 /**
- * Estante da família e dos amigos: os livros que os irmãos publicaram para a
- * família e os que crianças de famílias amigas mandaram para esta criança.
- * Aqui só se lê; quem escreveu continua sendo o único que muda o livro.
+ * Estante da família e dos amigos. Uma lista com quem mandou livros (lateral no
+ * computador, faixa de avatares no celular) e a estante de quem a criança
+ * escolher, com a plaquinha do nome. Abre na pessoa que mandou livro por último;
+ * a bolinha avisa quem tem livro que a criança ainda não abriu. Aqui só se lê.
  */
 export function FamilyShelf() {
   const navigate = useNavigate();
-  const reduce = useReducedMotion();
   const { me } = useAuth();
   const theme = themeFor(me.child.theme);
   const [shelves, setShelves] = useState(null);
+  const [personId, setPersonId] = useState(null);
+  const [selected, setSelected] = useState(null);
+  // Livro voltando para a prateleira: a lombada só reaparece quando ele chega.
+  const [returningId, setReturningId] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/books/family').then((data) => setShelves({ family: data.children, friends: data.friends || [] })).catch((err) => setError(messageFor(err)));
+    api
+      .get('/books/family')
+      .then((data) => {
+        const friends = data.friends || [];
+        setShelves({ family: data.children, friends });
+        const everyone = [...data.children, ...friends];
+        if (everyone.length > 0) setPersonId(everyone.reduce((a, b) => (latest(b) > latest(a) ? b : a)).id);
+      })
+      .catch((err) => setError(messageFor(err)));
   }, []);
+
+  const putBack = () => {
+    setReturningId(selected.book.id);
+    setSelected(null);
+  };
+  const hiddenId = selected?.book.id || returningId;
+  const empty = shelves && shelves.family.length + shelves.friends.length === 0;
+  const person = shelves && [...shelves.family, ...shelves.friends].find((p) => p.id === personId);
+
+  const personButton = (p) => (
+    <li key={p.id}>
+      <button type="button" className="person" aria-pressed={p.id === personId} onClick={() => setPersonId(p.id)} aria-label={`${p.nickname}${p.newBooks ? `, ${p.newBooks === 1 ? '1 livro novo' : `${p.newBooks} livros novos`}` : ''}`}>
+        <span className="person__avatar" aria-hidden="true">
+          <Emoji char={p.avatar} />
+          {p.newBooks > 0 && <span className="person__new" />}
+        </span>
+        <span className="person__name">
+          {p.nickname}
+          {p.familyName && <small>@{p.familyName}</small>}
+        </span>
+        <span className="person__count" aria-hidden="true">{p.books.length}</span>
+      </button>
+    </li>
+  );
+
+  const authorShelf = (author) => (
+    <div key={author.id} className="author-shelf" style={{ '--wood-l': theme.wood[1], '--wood-d': theme.wood[2] }}>
+      <p className="plaque">
+        <Emoji char={author.avatar} /> {author.nickname}
+        {author.familyName && <span className="plaque__family">@{author.familyName}</span>}
+      </p>
+      <Shelf
+        books={author.books}
+        theme={theme}
+        hiddenId={hiddenId}
+        label={`Livros de ${author.nickname}`}
+        onSelect={(id) => setSelected({ book: author.books.find((b) => b.id === id), author })}
+      />
+    </div>
+  );
 
   return (
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
       <TopBar />
 
-      <section className="paper atelier" aria-labelledby="family-title">
-        <h1 id="family-title" className="form__title">👨‍👩‍👧 Família e amigos</h1>
-        <p className="muted">Livros que seus irmãos e seus amigos escreveram e quiseram mostrar para você.</p>
+      <h1 className="room__title">👨‍👩‍👧 Família e amigos</h1>
+      {error && <p className="error error--floating" role="alert">{error}</p>}
 
-        {error && <p className="error" role="alert">{error}</p>}
-        {shelves === null && !error && <p className="muted">Arrumando os livros...</p>}
-        {shelves && shelves.family.length + shelves.friends.length === 0 && (
-          <p className="muted">Ninguém mandou um livro para você ainda.</p>
-        )}
-        {shelves?.family.map((child) => (
-          <AuthorShelf key={child.id} author={child} books={child.books} gold={theme.gold} reduce={reduce} onRead={(id) => navigate(`/livro/${id}/ler`)} />
-        ))}
-        {shelves?.friends.length > 0 && <h2 className="family-shelf__group">💌 Dos amigos</h2>}
-        {shelves?.friends.map((child) => (
-          <AuthorShelf key={child.id} author={child} books={child.books} gold={theme.gold} reduce={reduce} onRead={(id) => navigate(`/livro/${id}/ler`)} />
-        ))}
-      </section>
-    </main>
-  );
-}
+      {shelves === null && !error && <p className="hint">Arrumando os livros...</p>}
+      {empty && <p className="hint">Ninguém mandou um livro para você ainda.</p>}
+      {shelves && !empty && (
+        <div className="visit">
+          <nav className="people" aria-label="De quem é a estante">
+            {shelves.family.length > 0 && (
+              <>
+                <p className="people__group"><span className="people__icon" aria-hidden="true">👨‍👩‍👧 </span>Família</p>
+                <ul>{shelves.family.map(personButton)}</ul>
+              </>
+            )}
+            {shelves.friends.length > 0 && (
+              <>
+                <p className="people__group"><span className="people__icon" aria-hidden="true">💌 </span>Amigos</p>
+                <ul>{shelves.friends.map(personButton)}</ul>
+              </>
+            )}
+          </nav>
+          <section className="visit__shelf" aria-label={person ? `Estante de ${person.nickname}` : undefined}>
+            {person && authorShelf(person)}
+          </section>
+        </div>
+      )}
 
-// Os livros de uma criança; de família amiga, aparece também o @nome da família.
-function AuthorShelf({ author, books, gold, reduce, onRead }) {
-  return (
-    <section className="family-shelf" aria-label={`Livros de ${author.nickname}`}>
-      <h2 className="family-shelf__who">
-        <Emoji char={author.avatar} /> {author.nickname}
-        {author.familyName && <span className="family-shelf__family">@{author.familyName}</span>}
-      </h2>
-      <ul className="drafts">
-        {books.map((book, i) => (
-          <motion.li
-            key={book.id}
-            className="draft"
-            initial={reduce ? false : { y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: reduce ? 0 : Math.min(i, 10) * 0.05 }}
+      <AnimatePresence onExitComplete={() => setReturningId(null)}>
+        {selected && (
+          <motion.div
+            key={selected.book.id}
+            className="overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={selected.book.title}
+            onClick={putBack}
+            onKeyDown={(e) => e.key === 'Escape' && putBack()}
           >
-            <button type="button" className="draft__open" onClick={() => onRead(book.id)} aria-label={`Ler ${book.title}, de ${author.nickname}`}>
-              <BookCover title={book.title} author={author.nickname} color={book.cover.color} sticker={book.cover.sticker} gold={gold} size="sm" />
-            </button>
-          </motion.li>
-        ))}
-      </ul>
-    </section>
+            <motion.div className="overlay__backdrop" aria-hidden="true" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { delay: 0.35, duration: 0.5 } }} />
+            <div onClick={(e) => e.stopPropagation()}>
+              <FlyingBook book={selected.book} author={selected.author.nickname} gold={theme.gold} />
+            </div>
+            <motion.div
+              className="overlay__actions"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0, transition: { delay: 0.75 } }}
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            >
+              <button type="button" className="btn btn--primary" onClick={() => navigate(`/livro/${selected.book.id}/ler`)} autoFocus>📖 Ler</button>
+              <button type="button" className="btn btn--ghost-light" onClick={putBack}>Guardar na estante</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
   );
 }

@@ -40,7 +40,7 @@ function usePerShelf() {
  * novo se cria no ateliê. A lombada do livro que está fora da estante (hiddenId)
  * continua ocupando o lugar, invisível, para o livro saber para onde voltar.
  */
-export function Shelf({ books, theme, hiddenId, onSelect }) {
+export function Shelf({ books, theme, hiddenId, onSelect, label }) {
   const reduce = useReducedMotion();
   const [ref, { perShelf, size }] = usePerShelf();
 
@@ -57,7 +57,7 @@ export function Shelf({ books, theme, hiddenId, onSelect }) {
     >
       {shelves.map((row, r) => (
         <div key={r} className="shelf">
-          <ul className={`shelf__books${shelves.length > 1 ? ' shelf__books--full' : ''}`} aria-label={shelves.length > 1 ? `Prateleira ${r + 1}` : 'Livros na estante'}>
+          <ul className={`shelf__books${shelves.length > 1 ? ' shelf__books--full' : ''}`} aria-label={label ? `${label}${shelves.length > 1 ? `, prateleira ${r + 1}` : ''}` : shelves.length > 1 ? `Prateleira ${r + 1}` : 'Livros na estante'}>
             {row.map((book, i) => {
               const index = r * perShelf + i;
               const height = Math.round(heightFor(book.id) * size.scale);
@@ -72,7 +72,7 @@ export function Shelf({ books, theme, hiddenId, onSelect }) {
                     onClick={() => onSelect(book.id)}
                     aria-hidden={out || undefined}
                     tabIndex={out ? -1 : undefined}
-                    aria-label={`${book.title}${book.favorite ? ', favorito' : ''}${book.progress ? ', lendo' : ''}`}
+                    aria-label={`${book.title}${book.isNew ? ', novo' : ''}${book.favorite ? ', favorito' : ''}${book.progress ? ', lendo' : ''}`}
                     initial={reduce ? false : { y: -30, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: reduce ? 0 : Math.min(index, 16) * 0.04, type: 'spring', stiffness: 260, damping: 22 }}
@@ -83,6 +83,7 @@ export function Shelf({ books, theme, hiddenId, onSelect }) {
                     {book.cover.sticker && <span className="spine__sticker" aria-hidden="true"><Emoji char={book.cover.sticker} /></span>}
                     {book.progress && <i className="spine__ribbon" aria-hidden="true" />}
                     {book.favorite && <i className="spine__star" aria-hidden="true">★</i>}
+                    {book.isNew && <i className="spine__new" aria-hidden="true">novo</i>}
                   </motion.button>
                 </li>
               );

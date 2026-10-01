@@ -9,6 +9,7 @@ const { COVER_COLORS } = require('../../lib/constants');
 const { wrap, parse, notFound, badRequest } = require('../../lib/errors');
 const { requireChild } = require('../../lib/guards');
 const FriendGroup = require('../../models/friend-group');
+const BookRead = require('../../models/book-read');
 const { areFriends, friendChildren: friendsOf } = require('../../lib/friends');
 const { sanitizeChapterHtml, imageIdsIn } = require('../../lib/sanitize');
 
@@ -54,8 +55,9 @@ function full(book) {
 }
 
 // Livro de outra criança, visto por quem só pode ler: sem favorito, progresso nem
-// com quem mais foi compartilhado. familyName aparece para livro de família amiga.
-function shared(book, author, familyName) {
+// com quem mais foi compartilhado. familyName aparece para livro de família amiga;
+// isNew diz se esta criança ainda não abriu o livro.
+function shared(book, author, familyName, isNew) {
   return {
     id: String(book._id),
     title: book.title,
@@ -64,6 +66,7 @@ function shared(book, author, familyName) {
     chapters: book.chapters.length,
     author: { id: String(author._id), nickname: author.nickname, avatar: author.avatar, ...(familyName !== undefined && { familyName }) },
     updatedAt: book.updatedAt,
+    ...(isNew !== undefined && { isNew }),
   };
 }
 
@@ -183,6 +186,15 @@ function createBooksRouter({ images }) {
           };
         })
         .filter((child) => child.books.length > 0);
+
+      // Marca o que esta criança ainda não abriu.
+      const all = [...children, ...fromFriends];
+      const opened = await BookRead.find({ childId: req.session.childId, bookId: { $in: all.flatMap((c) => c.books.map((b) => b.id)) } }, 'bookId');
+      const read = new Set(opened.map((r) => String(r.bookId)));
+      for (const child of all) {
+        child.books = child.books.map((b) => ({ ...b, isNew: !read.has(b.id) }));
+        child.newBooks = child.books.filter((b) => b.isNew).length;
+      }
       res.json({ children, friends: fromFriends });
     }),
   );
@@ -210,6 +222,8 @@ function createBooksRouter({ images }) {
     '/:id',
     wrap(async (req, res) => {
       const { book, author, familyName } = await findReadable(req);
+      // Abriu o livro de outra criança: deixa de ser novidade.
+      if (author) await BookRead.updateOne({ childId: req.session.childId, bookId: book._id }, { $setOnInsert: { childId: req.session.childId, bookId: book._id } }, { upsert: true });
       res.json({ book: author ? { ...shared(book, author, familyName), mine: false, chapters: book.chapters.map((c) => ({ title: c.title, html: c.html })) } : full(book) });
     }),
   );
@@ -322,6 +336,7 @@ function createBooksRouter({ images }) {
       const book = await findOwn(req);
       await book.deleteOne();
       await BookImage.deleteMany({ bookId: book._id });
+      await BookRead.deleteMany({ bookId: book._id });
       await images.removeBook(book._id);
       res.status(204).end();
     }),

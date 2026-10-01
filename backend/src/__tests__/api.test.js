@@ -330,8 +330,11 @@ describe('livros', () => {
     expect(family.body.children).toEqual([
       expect.objectContaining({ nickname: 'Lia', books: [expect.objectContaining({ id, title: 'Para o Leo', author: expect.objectContaining({ nickname: 'Lia' }) })] }),
     ]);
+    expect(family.body.children[0]).toMatchObject({ newBooks: 1, books: [{ isNew: true }] });
     const read = await agent.get(`/api/v1/books/${id}`);
     expect(read.body.book).toMatchObject({ mine: false, chapters: [{ html: '<p>Oi, Leo!</p>' }] });
+    // Depois de aberto, deixa de ser novidade.
+    expect((await agent.get('/api/v1/books/family')).body.children[0]).toMatchObject({ newBooks: 0, books: [{ isNew: false }] });
     expect(read.body.book.favorite).toBeUndefined();
     expect(read.body.book.progress).toBeUndefined();
 

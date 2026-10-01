@@ -109,15 +109,18 @@ describe('estante', () => {
     const calls = mockApi({
       'GET /auth/me': [200, ME],
       'GET /books': [200, { books: [BOOK] }],
-      'GET /books/family': [200, { children: [{ ...LEO, books: [SHARED] }] }],
+      'GET /books/family': [200, { children: [{ ...LEO, newBooks: 1, books: [{ ...SHARED, isNew: true }] }] }],
       [`GET /books/${SHARED.id}`]: [200, { book: { ...SHARED, mine: false, chapters: [{ title: '', html: '<p>Bip bop.</p>' }] } }],
     });
     renderAt('/estante');
     fireEvent.click(await screen.findByRole('button', { name: 'Mapa' }));
-    fireEvent.click(await screen.findByRole('link', { name: 'Família e amigos, 1 livro para ler' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Família e amigos, 1 livro novo' }));
 
-    expect(await screen.findByRole('heading', { name: /Leo/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Ler Robôs no Quintal, de Leo' }));
+    // O livro do Leo fica na prateleira dele; tirado da prateleira, só dá para ler.
+    fireEvent.click(await screen.findByRole('button', { name: 'Robôs no Quintal, novo' }));
+    expect(await screen.findByRole('dialog', { name: 'Robôs no Quintal' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Escrever|Favoritar/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Ler/ }));
 
     expect(await screen.findByRole('link', { name: '← Família' })).toBeInTheDocument();
     expect(screen.getByText('por Leo')).toBeInTheDocument();

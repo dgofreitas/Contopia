@@ -7,7 +7,7 @@ import { Scene } from '../scene/Scene';
 import { themeFor } from '../scene/themes';
 import { Shelf } from '../components/Shelf';
 import { FlyingBook } from '../components/FlyingBook';
-import { TopBar } from '../components/TopBar';
+import { TopBar, newBooksIn } from '../components/TopBar';
 import { Emoji } from '../components/Emoji';
 import { PublishDialog, audienceLabel } from '../components/PublishDialog';
 
@@ -27,7 +27,7 @@ export function ShelfPage() {
   const theme = themeFor(me.child.theme);
   const [books, setBooks] = useState(null);
   const [writing, setWriting] = useState(0);
-  // Quantos livros os irmãos e os amigos mandaram para esta criança ler.
+  // Quantos livros os irmãos e os amigos mandaram que esta criança ainda não abriu.
   const [familyBooks, setFamilyBooks] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   // Livro voltando para a estante: a lombada só reaparece quando ele chega.
@@ -48,7 +48,7 @@ export function ShelfPage() {
       .catch((err) => setError(messageFor(err)));
     api
       .get('/books/family')
-      .then((data) => setFamilyBooks([...data.children, ...(data.friends || [])].reduce((sum, child) => sum + child.books.length, 0)))
+      .then((data) => setFamilyBooks(newBooksIn(data)))
       .catch(() => {});
   }, []);
 

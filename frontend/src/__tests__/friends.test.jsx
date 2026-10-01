@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { mockApi, renderAt } from './helpers';
 
 const CHILD_ME = { role: 'child', parent: null, child: { id: 'c'.repeat(24), nickname: 'Lia', avatar: '🦉', theme: 'fadas' } };
@@ -42,15 +42,29 @@ describe('amigos escolhidos', () => {
     expect(await screen.findByText(/Peça para um adulto convidar/)).toBeInTheDocument();
   });
 
-  it('mostra os livros que os amigos mandaram, com o nome da família', async () => {
+  it('escolhe de quem ver a estante, começando por quem mandou livro por último', async () => {
+    const BIA = { id: 'b'.repeat(24), nickname: 'Bia', avatar: '🐰' };
+    const book = (n, title, updatedAt, isNew) => ({ id: String(n).repeat(24), title, cover: { color: '#3A86FF', sticker: '' }, chapters: 1, updatedAt, isNew });
     mockApi({
       'GET /auth/me': [200, CHILD_ME],
-      'GET /books/family': [200, { children: [], friends: [{ ...LEO, familyName: 'souza', books: [{ id: '9'.repeat(24), title: 'Robôs', cover: { color: '#3A86FF', sticker: '' }, chapters: 1 }] }] }],
+      'GET /books/family': [200, {
+        children: [{ ...BIA, newBooks: 0, books: [book(1, 'A Unicórnia', '2026-09-01T10:00:00Z', false)] }],
+        friends: [{ ...LEO, familyName: 'souza', newBooks: 1, books: [book(9, 'Robôs', '2026-09-30T10:00:00Z', true)] }],
+      }],
     });
     renderAt('/estante/familia');
-    expect(await screen.findByRole('heading', { name: /Dos amigos/ })).toBeInTheDocument();
-    expect(screen.getByText('@souza')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ler Robôs, de Leo' })).toBeInTheDocument();
+
+    // O Leo mandou livro por último: a estante dele abre primeiro, com a bolinha de novidade.
+    const people = await screen.findByRole('navigation', { name: 'De quem é a estante' });
+    expect(within(people).getByRole('button', { name: 'Leo, 1 livro novo' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('@souza', { selector: '.plaque__family' })).toBeInTheDocument();
+    const shelf = screen.getByRole('list', { name: 'Livros de Leo' });
+    expect(within(shelf).getByRole('button', { name: 'Robôs, novo' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Livros de Bia' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(people).getByRole('button', { name: 'Bia' }));
+    expect(await screen.findByRole('list', { name: 'Livros de Bia' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Livros de Leo' })).not.toBeInTheDocument();
   });
 });
 
