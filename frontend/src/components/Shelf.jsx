@@ -72,7 +72,7 @@ export function Shelf({ books, theme, hiddenId, onSelect, label }) {
                     onClick={() => onSelect(book.id)}
                     aria-hidden={out || undefined}
                     tabIndex={out ? -1 : undefined}
-                    aria-label={`${book.title}${book.favorite ? ', favorito' : ''}${book.progress ? ', lendo' : ''}`}
+                    aria-label={`${book.title}${book.isNew ? ', novo' : ''}${book.favorite ? ', favorito' : ''}${book.progress ? ', lendo' : ''}`}
                     initial={reduce ? false : { y: -30, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: reduce ? 0 : Math.min(index, 16) * 0.04, type: 'spring', stiffness: 260, damping: 22 }}
@@ -83,6 +83,7 @@ export function Shelf({ books, theme, hiddenId, onSelect, label }) {
                     {book.cover.sticker && <span className="spine__sticker" aria-hidden="true"><Emoji char={book.cover.sticker} /></span>}
                     {book.progress && <i className="spine__ribbon" aria-hidden="true" />}
                     {book.favorite && <i className="spine__star" aria-hidden="true">★</i>}
+                    {book.isNew && <i className="spine__new" aria-hidden="true">novo</i>}
                   </motion.button>
                 </li>
               );

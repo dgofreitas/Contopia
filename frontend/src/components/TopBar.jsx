@@ -25,6 +25,9 @@ export function TopBar({ drafts, shared }) {
   );
 }
 
+// Livros de irmãos e amigos que a criança ainda não abriu.
+export const newBooksIn = (data) => [...data.children, ...(data.friends || [])].reduce((sum, child) => sum + (child.newBooks || 0), 0);
+
 function useNavCounts({ drafts, shared }) {
   const given = drafts !== undefined && shared !== undefined;
   const [fetched, setFetched] = useState({ drafts: 0, shared: 0 });
@@ -33,7 +36,7 @@ function useNavCounts({ drafts, shared }) {
     api.get('/books').then((data) => setFetched((c) => ({ ...c, drafts: data.books.filter((b) => !b.published).length }))).catch(() => {});
     api
       .get('/books/family')
-      .then((data) => setFetched((c) => ({ ...c, shared: [...data.children, ...(data.friends || [])].reduce((sum, child) => sum + child.books.length, 0) })))
+      .then((data) => setFetched((c) => ({ ...c, shared: newBooksIn(data) })))
       .catch(() => {});
   }, [given]);
   return { drafts: drafts ?? fetched.drafts, shared: shared ?? fetched.shared };
@@ -65,7 +68,7 @@ function MapMenu({ counts }) {
   const places = [
     { to: '/estante', icon: '📚', label: 'Minha estante', end: true },
     { to: '/atelie', icon: '✏️', label: 'Ateliê', count: counts.drafts, hint: plural(counts.drafts, 'livro sendo escrito', 'livros sendo escritos') },
-    { to: '/estante/familia', icon: '👨‍👩‍👧', label: 'Família e amigos', count: counts.shared, hint: plural(counts.shared, 'livro para ler', 'livros para ler') },
+    { to: '/estante/familia', icon: '👨‍👩‍👧', label: 'Família e amigos', count: counts.shared, hint: plural(counts.shared, 'livro novo', 'livros novos') },
     { to: '/grupos', icon: '👥', label: 'Grupos' },
   ];
   return (
