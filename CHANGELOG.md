@@ -1,3 +1,9 @@
+## [1.14.0](https://github.com/dgofreitas/Contopia/compare/v1.13.0...v1.14.0) (2026-10-01)
+
+### Features
+
+* visitar a estante no tema do amigo, fixar, esconder e ver por grupo ([fa032ab](https://github.com/dgofreitas/Contopia/commit/fa032abb4968800d00b0cde36ef552e6820f9889))
+
 ## [1.13.0](https://github.com/dgofreitas/Contopia/compare/v1.12.0...v1.13.0) (2026-10-01)
 
 ### Features
