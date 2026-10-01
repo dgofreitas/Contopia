@@ -116,8 +116,11 @@ describe('estante', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Mapa' }));
     fireEvent.click(await screen.findByRole('link', { name: 'Família e amigos, 1 livro para ler' }));
 
-    expect(await screen.findByRole('heading', { name: /Leo/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Ler Robôs no Quintal, de Leo' }));
+    // O livro do Leo fica na prateleira dele; tirado da prateleira, só dá para ler.
+    fireEvent.click(await screen.findByRole('button', { name: 'Robôs no Quintal' }));
+    expect(await screen.findByRole('dialog', { name: 'Robôs no Quintal' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Escrever|Favoritar/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Ler/ }));
 
     expect(await screen.findByRole('link', { name: '← Família' })).toBeInTheDocument();
     expect(screen.getByText('por Leo')).toBeInTheDocument();

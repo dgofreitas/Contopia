@@ -40,7 +40,7 @@ function usePerShelf() {
  * novo se cria no ateliê. A lombada do livro que está fora da estante (hiddenId)
  * continua ocupando o lugar, invisível, para o livro saber para onde voltar.
  */
-export function Shelf({ books, theme, hiddenId, onSelect }) {
+export function Shelf({ books, theme, hiddenId, onSelect, label }) {
   const reduce = useReducedMotion();
   const [ref, { perShelf, size }] = usePerShelf();
 
@@ -57,7 +57,7 @@ export function Shelf({ books, theme, hiddenId, onSelect }) {
     >
       {shelves.map((row, r) => (
         <div key={r} className="shelf">
-          <ul className={`shelf__books${shelves.length > 1 ? ' shelf__books--full' : ''}`} aria-label={shelves.length > 1 ? `Prateleira ${r + 1}` : 'Livros na estante'}>
+          <ul className={`shelf__books${shelves.length > 1 ? ' shelf__books--full' : ''}`} aria-label={label ? `${label}${shelves.length > 1 ? `, prateleira ${r + 1}` : ''}` : shelves.length > 1 ? `Prateleira ${r + 1}` : 'Livros na estante'}>
             {row.map((book, i) => {
               const index = r * perShelf + i;
               const height = Math.round(heightFor(book.id) * size.scale);

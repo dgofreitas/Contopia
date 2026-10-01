@@ -442,3 +442,17 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .group__name { font-family: var(--font-story); font-size: 1.2rem; color: #5B2A86; }
 .group__members { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; background: #F7F2FB; font-weight: 700; font-size: 0.9rem; }
+
+/* Família e amigos: uma prateleira por criança, com plaquinha de madeira */
+.room__title { font-family: var(--font-story); font-weight: 800; font-size: clamp(1.4rem, 4vw, 1.9rem); color: var(--ink); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.15); }
+.room__subtitle { font-family: var(--font-story); font-weight: 800; font-size: 1.2rem; color: var(--ink); text-align: center; margin-top: 8px; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.15); }
+.room__shelf--stack { margin-top: 0; display: flex; flex-direction: column; gap: 46px; }
+.author-shelf { position: relative; }
+.plaque {
+  position: relative; z-index: 1; width: fit-content; margin: 0 0 -26px 6%; padding: 6px 14px; border-radius: 8px;
+  display: flex; align-items: center; gap: 6px; font-family: var(--font-story); font-weight: 800; font-size: 1rem; color: #FFF8E7;
+  background: repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 17px), linear-gradient(180deg, var(--wood-l, #C08A5A), var(--wood-d, #8B5E3C));
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.2); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+.plaque .emoji { width: 1.3em; height: 1.3em; }
+.plaque__family { font-family: var(--font-body); font-size: 0.8rem; font-weight: 700; opacity: 0.85; }

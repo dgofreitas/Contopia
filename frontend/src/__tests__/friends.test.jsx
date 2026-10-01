@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { mockApi, renderAt } from './helpers';
 
 const CHILD_ME = { role: 'child', parent: null, child: { id: 'c'.repeat(24), nickname: 'Lia', avatar: '🦉', theme: 'fadas' } };
@@ -49,8 +49,10 @@ describe('amigos escolhidos', () => {
     });
     renderAt('/estante/familia');
     expect(await screen.findByRole('heading', { name: /Dos amigos/ })).toBeInTheDocument();
+    // Uma prateleira para o Leo, com a plaquinha do nome e da família.
     expect(screen.getByText('@souza')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ler Robôs, de Leo' })).toBeInTheDocument();
+    const shelf = screen.getByRole('list', { name: 'Livros de Leo' });
+    expect(within(shelf).getByRole('button', { name: 'Robôs' })).toBeInTheDocument();
   });
 });
 
