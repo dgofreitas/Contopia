@@ -160,6 +160,7 @@ function createBooksRouter({ images }) {
           id: String(child._id),
           nickname: child.nickname,
           avatar: child.avatar,
+          theme: child.theme,
           books: books.filter((b) => String(b.childId) === String(child._id)).map((b) => shared(b, child)),
         }))
         .filter((child) => child.books.length > 0);
@@ -181,21 +182,48 @@ function createBooksRouter({ images }) {
             id: String(child._id),
             nickname: child.nickname,
             avatar: child.avatar,
+            theme: child.theme,
             familyName,
             books: sent.filter((b) => String(b.childId) === String(child._id)).map((b) => shared(b, child, familyName)),
           };
         })
         .filter((child) => child.books.length > 0);
 
-      // Marca o que esta criança ainda não abriu.
+      // Marca o que esta criança ainda não abriu, e quem ela fixou ou escondeu.
       const all = [...children, ...fromFriends];
+      const me = await Child.findById(req.session.childId, 'pinnedPeople hiddenPeople');
+      const pinned = new Set((me?.pinnedPeople || []).map(String));
+      const hidden = new Set((me?.hiddenPeople || []).map(String));
       const opened = await BookRead.find({ childId: req.session.childId, bookId: { $in: all.flatMap((c) => c.books.map((b) => b.id)) } }, 'bookId');
       const read = new Set(opened.map((r) => String(r.bookId)));
       for (const child of all) {
         child.books = child.books.map((b) => ({ ...b, isNew: !read.has(b.id) }));
         child.newBooks = child.books.filter((b) => b.isNew).length;
+        child.pinned = pinned.has(child.id);
+        child.hidden = hidden.has(child.id);
       }
       res.json({ children, friends: fromFriends });
+    }),
+  );
+
+  // Fixa no topo ou esconde alguém na estante da família e dos amigos.
+  router.put(
+    '/people/:id',
+    wrap(async (req, res) => {
+      const id = parse(idParam, req.params.id);
+      const body = parse(z.object({ pinned: z.boolean().optional(), hidden: z.boolean().optional() }), req.body);
+      // Escondido não fica fixado.
+      if (body.hidden) body.pinned = false;
+      const ops = {};
+      const set = (field, on) => {
+        if (on === undefined) return;
+        const op = on ? '$addToSet' : '$pull';
+        ops[op] = { ...ops[op], [field]: id };
+      };
+      set('pinnedPeople', body.pinned);
+      set('hiddenPeople', body.hidden);
+      const me = Object.keys(ops).length > 0 ? await Child.findByIdAndUpdate(req.session.childId, ops, { new: true }) : await Child.findById(req.session.childId);
+      res.json({ pinned: me.pinnedPeople.some((c) => String(c) === id), hidden: me.hiddenPeople.some((c) => String(c) === id) });
     }),
   );
 

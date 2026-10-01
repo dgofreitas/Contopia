@@ -447,7 +447,7 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .room__title { font-family: var(--font-story); font-weight: 800; font-size: clamp(1.4rem, 4vw, 1.9rem); color: var(--ink); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.15); }
 .author-shelf { position: relative; }
 .plaque {
-  position: relative; z-index: 1; width: fit-content; margin: 0 0 -26px 6%; padding: 6px 14px; border-radius: 8px;
+  position: relative; z-index: 1; width: fit-content; margin: 0; padding: 6px 14px; border-radius: 8px;
   display: flex; align-items: center; gap: 6px; font-family: var(--font-story); font-weight: 800; font-size: 1rem; color: #FFF8E7;
   background: repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 17px), linear-gradient(180deg, var(--wood-l, #C08A5A), var(--wood-d, #8B5E3C));
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.2); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
@@ -457,7 +457,7 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 
 /* Escolher de quem ver a estante: lista lateral no computador, faixa de avatares no celular */
 .visit { width: min(1100px, 100%); display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 8px; }
-.visit__shelf { min-width: 0; padding-top: 8px; }
+.visit__shelf { min-width: 0; padding-top: 8px; display: flex; flex-direction: column; gap: 48px; }
 .people { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 18px; background: rgba(255, 248, 236, 0.92); box-shadow: 0 0 0 1px #EADFC8, 0 12px 26px rgba(30, 10, 50, 0.2); color: #2B1D3F; max-height: calc(100vh - 140px); overflow-y: auto; }
 .people ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .people__group { font-family: var(--font-story); font-weight: 800; color: #5B2A86; padding: 4px 6px 0; }
@@ -481,4 +481,14 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
   .person__name { align-items: center; font-size: 0.85rem; }
   .person__name small { font-size: 0.68rem; }
   .person__count, .people__icon { display: none; }
+}
+
+.author-shelf__head { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 6% -26px; }
+.shelf-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.shelf-tools .btn { background: rgba(255, 255, 255, 0.9); }
+.shelf-tools .btn[aria-pressed='true'] { background: #FFE8A3; }
+.people__toggle { border: 0; background: none; padding: 8px 6px 2px; text-align: left; font-family: var(--font-story); font-weight: 800; color: #5B2A86; }
+@media (max-width: 760px) {
+  .people__toggle { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 0.75rem; padding: 0; flex: none; }
+  .author-shelf__head { margin-bottom: -18px; }
 }

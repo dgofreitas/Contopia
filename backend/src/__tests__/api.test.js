@@ -335,6 +335,14 @@ describe('livros', () => {
     expect(read.body.book).toMatchObject({ mine: false, chapters: [{ html: '<p>Oi, Leo!</p>' }] });
     // Depois de aberto, deixa de ser novidade.
     expect((await agent.get('/api/v1/books/family')).body.children[0]).toMatchObject({ newBooks: 0, books: [{ isNew: false }] });
+
+    // A Lia aparece com o tema dela; o Leo pode fixá-la no topo ou escondê-la.
+    expect(family.body.children[0].theme).toBe('fadas');
+    const liaId = family.body.children[0].id;
+    expect((await agent.put(`/api/v1/books/people/${liaId}`).send({ pinned: true })).body).toEqual({ pinned: true, hidden: false });
+    expect((await agent.get('/api/v1/books/family')).body.children[0]).toMatchObject({ pinned: true, hidden: false });
+    expect((await agent.put(`/api/v1/books/people/${liaId}`).send({ hidden: true })).body).toEqual({ pinned: false, hidden: true });
+    expect((await agent.put(`/api/v1/books/people/${liaId}`).send({ hidden: false })).body).toEqual({ pinned: false, hidden: false });
     expect(read.body.book.favorite).toBeUndefined();
     expect(read.body.book.progress).toBeUndefined();
 

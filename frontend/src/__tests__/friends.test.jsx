@@ -68,6 +68,70 @@ describe('amigos escolhidos', () => {
   });
 });
 
+describe('visitar estantes', () => {
+  const BIA = { id: 'b'.repeat(24), nickname: 'Bia', avatar: '🐰', theme: 'fadas' };
+  const TOM = { id: '7'.repeat(24), nickname: 'Tom', avatar: '🐯', theme: 'misterio', familyName: 'costa' };
+  const book = (n, title, updatedAt) => ({ id: String(n).repeat(24), title, cover: { color: '#3A86FF', sticker: '' }, chapters: 1, updatedAt, isNew: false });
+  const family = (overrides = {}) => ({
+    children: [{ ...BIA, newBooks: 0, books: [book(1, 'A Unicórnia', '2026-09-01T10:00:00Z')], ...overrides.bia }],
+    friends: [
+      { ...LEO, theme: 'assombracao', familyName: 'souza', newBooks: 0, books: [book(9, 'Robôs', '2026-09-30T10:00:00Z')], ...overrides.leo },
+      { ...TOM, newBooks: 0, books: [book(5, 'O Foguete', '2026-09-10T10:00:00Z')], ...overrides.tom },
+    ],
+  });
+
+  it('abre a estante do amigo no tema dele', async () => {
+    mockApi({ 'GET /auth/me': [200, CHILD_ME], 'GET /books/family': [200, family()], 'GET /groups': [200, { groups: [] }] });
+    renderAt('/estante/familia');
+    expect(await screen.findByRole('heading', { name: '🏠 Estante de Leo' })).toBeInTheDocument();
+    // O cenário é o do tema do Leo (assombração), não o da Lia (fadas).
+    expect(document.querySelector('main.room').style.getPropertyValue('--ink')).toBe('#EFE6FF');
+  });
+
+  it('fixa no topo e esconde', async () => {
+    const calls = mockApi({
+      'GET /auth/me': [200, CHILD_ME],
+      'GET /books/family': [200, family()],
+      'GET /groups': [200, { groups: [] }],
+      [`PUT /books/people/${TOM.id}`]: (body) => [200, { pinned: Boolean(body.pinned), hidden: Boolean(body.hidden) }],
+    });
+    renderAt('/estante/familia');
+    const people = await screen.findByRole('navigation', { name: 'De quem é a estante' });
+
+    fireEvent.click(within(people).getByRole('button', { name: 'Tom' }));
+    fireEvent.click(await screen.findByRole('button', { name: '☆ Fixar no topo' }));
+    expect(await screen.findByText('Fixados')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PUT').body).toEqual({ pinned: true });
+
+    fireEvent.click(screen.getByRole('button', { name: '🙈 Esconder' }));
+    const toggle = await screen.findByRole('button', { name: /Escondidos \(1\)/ });
+    expect(within(people).queryByRole('button', { name: 'Tom' })).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(within(people).getByRole('button', { name: 'Tom' })).toBeInTheDocument();
+  });
+
+  it('abre um grupo com as prateleiras de todos', async () => {
+    mockApi({
+      'GET /auth/me': [200, CHILD_ME],
+      'GET /books/family': [200, family()],
+      'GET /groups': [200, { groups: [{ id: 'a'.repeat(24), name: 'Turma', members: [LEO, TOM], books: 0 }] }],
+    });
+    renderAt('/estante/familia');
+    const people = await screen.findByRole('navigation', { name: 'De quem é a estante' });
+    fireEvent.click(await within(people).findByRole('button', { name: 'Grupo Turma' }));
+    expect(await screen.findByRole('heading', { name: '👥 Turma' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Livros de Leo' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Livros de Tom' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Livros de Bia' })).not.toBeInTheDocument();
+  });
+
+  it('quem está escondido não abre primeiro', async () => {
+    mockApi({ 'GET /auth/me': [200, CHILD_ME], 'GET /books/family': [200, family({ leo: { hidden: true } })], 'GET /groups': [200, { groups: [] }] });
+    renderAt('/estante/familia');
+    expect(await screen.findByRole('heading', { name: '🏠 Estante de Tom' })).toBeInTheDocument();
+  });
+});
+
 describe('grupos de amigos', () => {
   const DAVI = { id: 'f'.repeat(24), nickname: 'Davi', avatar: '🦁' };
   const TURMA = { id: 'a'.repeat(24), name: 'Turma', members: [LEO, DAVI], books: 3 };
