@@ -1,3 +1,9 @@
+## [1.12.0](https://github.com/dgofreitas/Contopia/compare/v1.11.0...v1.12.0) (2026-10-01)
+
+### Features
+
+* mapa, paleta de temas e avatar na barra da criança ([6b179dc](https://github.com/dgofreitas/Contopia/commit/6b179dcd3bc24a821c74c490080de096d1843c0e))
+
 ## [1.11.0](https://github.com/dgofreitas/Contopia/compare/v1.10.0...v1.11.0) (2026-09-30)
 
 ### Features
