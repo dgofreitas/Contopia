@@ -9,6 +9,9 @@ const childSchema = new mongoose.Schema(
     picturePasswordHash: { type: String, default: null },
     textPasswordHash: { type: String, default: null },
     theme: { type: String, default: 'fadas' },
+    // Na estante da família e dos amigos: quem a criança fixou no topo e quem escondeu.
+    pinnedPeople: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Child' }], default: [] },
+    hiddenPeople: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Child' }], default: [] },
   },
   { timestamps: true },
 );

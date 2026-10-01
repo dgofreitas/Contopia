@@ -12,19 +12,25 @@ import { TopBar } from '../components/TopBar';
 
 // Quem mandou livro por último aparece primeiro.
 const latest = (person) => Math.max(...person.books.map((b) => new Date(b.updatedAt || 0).getTime()));
+const plural = (n, one, many) => (n === 1 ? `1 ${one}` : `${n} ${many}`);
 
 /**
  * Estante da família e dos amigos. Uma lista com quem mandou livros (lateral no
  * computador, faixa de avatares no celular) e a estante de quem a criança
- * escolher, com a plaquinha do nome. Abre na pessoa que mandou livro por último;
- * a bolinha avisa quem tem livro que a criança ainda não abriu. Aqui só se lê.
+ * escolher, no tema que aquela criança escolheu para a estante dela, como uma
+ * visita. Dá para fixar alguém no topo, esconder quem não quer ver e abrir os
+ * próprios grupos de amigos para ver as prateleiras de todos juntos.
+ * A bolinha avisa quem tem livro que a criança ainda não abriu. Aqui só se lê.
  */
 export function FamilyShelf() {
   const navigate = useNavigate();
   const { me } = useAuth();
-  const theme = themeFor(me.child.theme);
-  const [shelves, setShelves] = useState(null);
-  const [personId, setPersonId] = useState(null);
+  const myTheme = themeFor(me.child.theme);
+  const [people, setPeople] = useState(null);
+  const [groups, setGroups] = useState([]);
+  // O que está aberto: a estante de uma pessoa ou as prateleiras de um grupo.
+  const [view, setView] = useState(null);
+  const [showHidden, setShowHidden] = useState(false);
   const [selected, setSelected] = useState(null);
   // Livro voltando para a prateleira: a lombada só reaparece quando ele chega.
   const [returningId, setReturningId] = useState(null);
@@ -34,25 +40,58 @@ export function FamilyShelf() {
     api
       .get('/books/family')
       .then((data) => {
-        const friends = data.friends || [];
-        setShelves({ family: data.children, friends });
-        const everyone = [...data.children, ...friends];
-        if (everyone.length > 0) setPersonId(everyone.reduce((a, b) => (latest(b) > latest(a) ? b : a)).id);
+        const everyone = [...data.children.map((p) => ({ ...p, kind: 'family' })), ...(data.friends || []).map((p) => ({ ...p, kind: 'friend' }))];
+        setPeople(everyone);
+        const visible = everyone.filter((p) => !p.hidden);
+        const first = (visible.length > 0 ? visible : everyone).reduce((a, b) => (latest(b) > latest(a) ? b : a), everyone[0]);
+        if (first) setView({ kind: 'person', id: first.id });
       })
       .catch((err) => setError(messageFor(err)));
+    api.get('/groups').then((data) => setGroups(data.groups)).catch(() => {});
   }, []);
+
+  const mark = async (person, change) => {
+    try {
+      const flags = await api.put(`/books/people/${person.id}`, change);
+      setPeople((list) => list.map((p) => (p.id === person.id ? { ...p, ...flags } : p)));
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  };
 
   const putBack = () => {
     setReturningId(selected.book.id);
     setSelected(null);
   };
   const hiddenId = selected?.book.id || returningId;
-  const empty = shelves && shelves.family.length + shelves.friends.length === 0;
-  const person = shelves && [...shelves.family, ...shelves.friends].find((p) => p.id === personId);
+  const empty = people && people.length === 0;
+  const byId = Object.fromEntries((people || []).map((p) => [p.id, p]));
+
+  // Grupos com alguém que mandou livro para esta criança.
+  const groupShelves = groups
+    .map((g) => ({ ...g, people: g.members.map((m) => byId[m.id]).filter(Boolean) }))
+    .filter((g) => g.people.length > 0);
+
+  const person = view?.kind === 'person' ? byId[view.id] : null;
+  const group = view?.kind === 'group' ? groupShelves.find((g) => g.id === view.id) : null;
+  // Visitando alguém, a estante aparece no tema dele.
+  const theme = person ? themeFor(person.theme) : myTheme;
+
+  const visible = (people || []).filter((p) => !p.hidden);
+  const pinned = visible.filter((p) => p.pinned);
+  const family = visible.filter((p) => !p.pinned && p.kind === 'family');
+  const friends = visible.filter((p) => !p.pinned && p.kind === 'friend');
+  const hidden = (people || []).filter((p) => p.hidden);
 
   const personButton = (p) => (
     <li key={p.id}>
-      <button type="button" className="person" aria-pressed={p.id === personId} onClick={() => setPersonId(p.id)} aria-label={`${p.nickname}${p.newBooks ? `, ${p.newBooks === 1 ? '1 livro novo' : `${p.newBooks} livros novos`}` : ''}`}>
+      <button
+        type="button"
+        className="person"
+        aria-pressed={view?.kind === 'person' && view.id === p.id}
+        onClick={() => setView({ kind: 'person', id: p.id })}
+        aria-label={`${p.nickname}${p.newBooks ? `, ${plural(p.newBooks, 'livro novo', 'livros novos')}` : ''}`}
+      >
         <span className="person__avatar" aria-hidden="true">
           <Emoji char={p.avatar} />
           {p.newBooks > 0 && <span className="person__new" />}
@@ -66,12 +105,51 @@ export function FamilyShelf() {
     </li>
   );
 
-  const authorShelf = (author) => (
+  const groupButton = (g) => (
+    <li key={g.id}>
+      <button
+        type="button"
+        className="person"
+        aria-pressed={view?.kind === 'group' && view.id === g.id}
+        onClick={() => setView({ kind: 'group', id: g.id })}
+        aria-label={`Grupo ${g.name}`}
+      >
+        <span className="person__avatar" aria-hidden="true">
+          <Emoji char="👥" />
+          {g.people.some((p) => p.newBooks > 0) && <span className="person__new" />}
+        </span>
+        <span className="person__name">{g.name}</span>
+        <span className="person__count" aria-hidden="true">{g.people.length}</span>
+      </button>
+    </li>
+  );
+
+  const section = (title, icon, items, render) =>
+    items.length > 0 && (
+      <>
+        <p className="people__group"><span className="people__icon" aria-hidden="true">{icon} </span>{title}</p>
+        <ul>{items.map(render)}</ul>
+      </>
+    );
+
+  const authorShelf = (author, tools) => (
     <div key={author.id} className="author-shelf" style={{ '--wood-l': theme.wood[1], '--wood-d': theme.wood[2] }}>
-      <p className="plaque">
-        <Emoji char={author.avatar} /> {author.nickname}
-        {author.familyName && <span className="plaque__family">@{author.familyName}</span>}
-      </p>
+      <div className="author-shelf__head">
+        <p className="plaque">
+          <Emoji char={author.avatar} /> {author.nickname}
+          {author.familyName && <span className="plaque__family">@{author.familyName}</span>}
+        </p>
+        {tools && (
+          <div className="shelf-tools">
+            <button type="button" className="btn btn--small" aria-pressed={author.pinned} onClick={() => mark(author, { pinned: !author.pinned })}>
+              {author.pinned ? '⭐ Fixado no topo' : '☆ Fixar no topo'}
+            </button>
+            <button type="button" className="btn btn--small" onClick={() => mark(author, { hidden: !author.hidden })}>
+              {author.hidden ? '👀 Mostrar de novo' : '🙈 Esconder'}
+            </button>
+          </div>
+        )}
+      </div>
       <Shelf
         books={author.books}
         theme={theme}
@@ -87,29 +165,32 @@ export function FamilyShelf() {
       <Scene theme={theme} />
       <TopBar />
 
-      <h1 className="room__title">👨‍👩‍👧 Família e amigos</h1>
+      <h1 className="room__title">
+        {person ? `🏠 Estante de ${person.nickname}` : group ? `👥 ${group.name}` : '👨‍👩‍👧 Família e amigos'}
+      </h1>
       {error && <p className="error error--floating" role="alert">{error}</p>}
 
-      {shelves === null && !error && <p className="hint">Arrumando os livros...</p>}
+      {people === null && !error && <p className="hint">Arrumando os livros...</p>}
       {empty && <p className="hint">Ninguém mandou um livro para você ainda.</p>}
-      {shelves && !empty && (
+      {people && !empty && (
         <div className="visit">
           <nav className="people" aria-label="De quem é a estante">
-            {shelves.family.length > 0 && (
+            {section('Fixados', '⭐', pinned, personButton)}
+            {section('Família', '👨‍👩‍👧', family, personButton)}
+            {section('Amigos', '💌', friends, personButton)}
+            {section('Meus grupos', '👥', groupShelves, groupButton)}
+            {hidden.length > 0 && (
               <>
-                <p className="people__group"><span className="people__icon" aria-hidden="true">👨‍👩‍👧 </span>Família</p>
-                <ul>{shelves.family.map(personButton)}</ul>
-              </>
-            )}
-            {shelves.friends.length > 0 && (
-              <>
-                <p className="people__group"><span className="people__icon" aria-hidden="true">💌 </span>Amigos</p>
-                <ul>{shelves.friends.map(personButton)}</ul>
+                <button type="button" className="people__toggle" aria-expanded={showHidden} onClick={() => setShowHidden((v) => !v)}>
+                  🙈 Escondidos ({hidden.length})
+                </button>
+                {showHidden && <ul>{hidden.map(personButton)}</ul>}
               </>
             )}
           </nav>
-          <section className="visit__shelf" aria-label={person ? `Estante de ${person.nickname}` : undefined}>
-            {person && authorShelf(person)}
+          <section className="visit__shelf" aria-label={person ? `Estante de ${person.nickname}` : group ? `Grupo ${group.name}` : undefined}>
+            {person && authorShelf(person, true)}
+            {group && group.people.map((p) => authorShelf(p, false))}
           </section>
         </div>
       )}
