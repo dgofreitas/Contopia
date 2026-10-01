@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -56,10 +55,7 @@ export function Groups() {
   return (
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
-      <TopBar>
-        <Link to="/atelie" className="btn btn--small">✏️ Ateliê</Link>
-        <Link to="/estante" className="btn btn--small">📚 Estante</Link>
-      </TopBar>
+      <TopBar />
 
       <section className="paper atelier" aria-labelledby="groups-title">
         <h1 id="groups-title" className="form__title">👥 Meus grupos</h1>

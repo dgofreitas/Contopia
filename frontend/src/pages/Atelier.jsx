@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -53,10 +53,7 @@ export function Atelier() {
   return (
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
-      <TopBar>
-        <Link to="/grupos" className="btn btn--small">👥 Grupos</Link>
-        <Link to="/estante" className="btn btn--small">📚 Estante</Link>
-      </TopBar>
+      <TopBar drafts={books?.length} />
 
       <section className="paper atelier" aria-labelledby="atelier-title">
         <h1 id="atelier-title" className="form__title">✏️ Ateliê</h1>
