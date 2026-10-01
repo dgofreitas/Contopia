@@ -1,3 +1,10 @@
+## [1.13.0](https://github.com/dgofreitas/Contopia/compare/v1.12.0...v1.13.0) (2026-10-01)
+
+### Features
+
+* escolher de quem ver a estante e marcar livros novos ([25faf02](https://github.com/dgofreitas/Contopia/commit/25faf02fde5d3be9ff519161b8921cce2bfc1db1))
+* livros da família e dos amigos em prateleiras ([d181a38](https://github.com/dgofreitas/Contopia/commit/d181a38d3a8b5407d70886dbc0a4c6a0dbc2ed2b))
+
 ## [1.12.0](https://github.com/dgofreitas/Contopia/compare/v1.11.0...v1.12.0) (2026-10-01)
 
 ### Features
