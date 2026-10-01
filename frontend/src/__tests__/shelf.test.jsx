@@ -39,7 +39,9 @@ describe('estante', () => {
     await screen.findByRole('button', { name: 'O Dragão Tímido, lendo' });
     expect(screen.queryByRole('button', { name: /A Fada Sonâmbula/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('link', { name: /Ateliê, 1 livro sendo escrito/ }));
+    // O mapa avisa que há um livro esperando e leva ao ateliê.
+    fireEvent.click(await screen.findByRole('button', { name: 'Mapa, 1 livro sendo escrito' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Ateliê, 1 livro sendo escrito' }));
     expect(await screen.findByRole('button', { name: 'Escrever A Fada Sonâmbula' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument();
 
@@ -62,7 +64,7 @@ describe('estante', () => {
 
     await waitFor(() => expect(screen.queryByRole('button', { name: /O Dragão Tímido/ })).not.toBeInTheDocument());
     expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ published: false });
-    expect(screen.getByRole('link', { name: /Ateliê, 1 livro sendo escrito/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mapa, 1 livro sendo escrito' })).toBeInTheDocument();
   });
 
   it('apaga um rascunho do ateliê depois de confirmar', async () => {
@@ -111,7 +113,8 @@ describe('estante', () => {
       [`GET /books/${SHARED.id}`]: [200, { book: { ...SHARED, mine: false, chapters: [{ title: '', html: '<p>Bip bop.</p>' }] } }],
     });
     renderAt('/estante');
-    fireEvent.click(await screen.findByRole('link', { name: /Família/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mapa' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Família e amigos, 1 livro para ler' }));
 
     expect(await screen.findByRole('heading', { name: /Leo/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Ler Robôs no Quintal, de Leo' }));
@@ -132,9 +135,31 @@ describe('estante', () => {
       'PATCH /auth/me/theme': [200, { child: { ...ME.child, theme: 'assombracao' } }],
     });
     renderAt('/estante');
+    fireEvent.click(await screen.findByRole('button', { name: 'Temas' }));
+    // Escolher já troca o cenário, e a paleta fica aberta até o "Pronto".
     fireEvent.click(await screen.findByRole('button', { name: /Assombração/ }));
     expect(screen.getByRole('button', { name: /Assombração/ })).toHaveAttribute('aria-pressed', 'true');
     await waitFor(() => expect(calls.some((c) => c.path === '/auth/me/theme')).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: '✓ Pronto' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Assombração/ })).not.toBeInTheDocument());
+  });
+
+  it('o mapa leva aos lugares e o avatar guarda o "Sair"', async () => {
+    mockApi({ 'GET /auth/me': [200, ME], 'GET /books': [200, { books: [BOOK] }], 'POST /auth/logout': [204, null] });
+    renderAt('/estante');
+    fireEvent.click(await screen.findByRole('button', { name: 'Mapa' }));
+    const nav = screen.getByRole('navigation', { name: 'Para onde vamos?' });
+    expect(nav).toHaveTextContent('Minha estante');
+    expect(screen.getByRole('link', { name: 'Minha estante' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Grupos' })).toHaveAttribute('href', '/grupos');
+
+    // Tocar fora fecha o mapa.
+    fireEvent.pointerDown(document.body);
+    await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Para onde vamos?' })).not.toBeInTheDocument());
+
+    expect(screen.queryByRole('button', { name: /Sair/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Lia/ }));
+    expect(screen.getByRole('button', { name: /Sair/ })).toBeInTheDocument();
   });
 
   it('guarda o livro de volta na estante', async () => {

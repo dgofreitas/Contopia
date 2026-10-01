@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Scene } from '../scene/Scene';
-import { THEME_LIST, themeFor } from '../scene/themes';
+import { themeFor } from '../scene/themes';
 import { Shelf } from '../components/Shelf';
 import { FlyingBook } from '../components/FlyingBook';
 import { TopBar } from '../components/TopBar';
@@ -23,7 +23,7 @@ export function ShelfPage() {
   const navigate = useNavigate();
   // Título do livro que acabou de ser publicado no ateliê.
   const justPublished = useLocation().state?.published;
-  const { me, setChild } = useAuth();
+  const { me } = useAuth();
   const theme = themeFor(me.child.theme);
   const [books, setBooks] = useState(null);
   const [writing, setWriting] = useState(0);
@@ -51,15 +51,6 @@ export function ShelfPage() {
       .then((data) => setFamilyBooks([...data.children, ...(data.friends || [])].reduce((sum, child) => sum + child.books.length, 0)))
       .catch(() => {});
   }, []);
-
-  const changeTheme = async (id) => {
-    setChild({ ...me.child, theme: id });
-    try {
-      await api.patch('/auth/me/theme', { theme: id });
-    } catch {
-      // o tema é só preferência: se falhar, fica valendo nesta visita
-    }
-  };
 
   const toggleFavorite = async (book) => {
     const favorite = !book.favorite;
@@ -105,24 +96,7 @@ export function ShelfPage() {
   return (
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
-      <TopBar>
-        {familyBooks > 0 && <Link to="/estante/familia" className="btn btn--small">👨‍👩‍👧 Família e amigos</Link>}
-        <Link
-          to="/atelie"
-          className="btn btn--small btn--primary"
-          aria-label={writing > 0 ? `Ateliê, ${writing === 1 ? '1 livro sendo escrito' : `${writing} livros sendo escritos`}` : undefined}
-        >
-          ✏️ Ateliê{writing > 0 && <span className="badge" aria-hidden="true">{writing}</span>}
-        </Link>
-      </TopBar>
-
-      <nav className="themes" aria-label="Tema da estante">
-        {THEME_LIST.map((item) => (
-          <button key={item.id} type="button" className="theme-chip" aria-pressed={item.id === theme.id} onClick={() => changeTheme(item.id)}>
-            <Emoji char={item.icon} /> {item.name}
-          </button>
-        ))}
-      </nav>
+      <TopBar drafts={writing} shared={familyBooks} />
 
       {justPublished && !selectedId && (
         <p className="continue" role="status">🎉 <strong>{justPublished}</strong> foi publicado e já está na estante!</p>

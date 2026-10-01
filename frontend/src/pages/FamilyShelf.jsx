@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -29,9 +29,7 @@ export function FamilyShelf() {
   return (
     <main className="room" style={{ '--ink': theme.ink, '--ink-soft': theme.inkSoft }}>
       <Scene theme={theme} />
-      <TopBar>
-        <Link to="/estante" className="btn btn--small">📚 Minha estante</Link>
-      </TopBar>
+      <TopBar />
 
       <section className="paper atelier" aria-labelledby="family-title">
         <h1 id="family-title" className="form__title">👨‍👩‍👧 Família e amigos</h1>
