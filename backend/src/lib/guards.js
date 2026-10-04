@@ -1,4 +1,5 @@
-const { unauthorized, forbidden } = require('./errors');
+const { unauthorized, forbidden, notFound } = require('./errors');
+const Parent = require('../models/parent');
 
 // Exige um responsável logado (com ou sem uma criança ativa).
 function requireParent(req, res, next) {
@@ -14,4 +15,19 @@ function requireChild(req, res, next) {
   next();
 }
 
-module.exports = { requireParent, requireChild };
+// Painel do admin: só os responsáveis cujo e-mail está em ADMIN_EMAILS. Para os
+// outros a rota responde como se não existisse.
+function requireAdmin(adminEmails) {
+  return async (req, res, next) => {
+    try {
+      if (req.session?.role !== 'parent' || adminEmails.length === 0) return next(notFound());
+      const parent = await Parent.findById(req.session.parentId, { email: 1 }).lean();
+      if (!parent || !adminEmails.includes(parent.email)) return next(notFound());
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+module.exports = { requireParent, requireChild, requireAdmin };

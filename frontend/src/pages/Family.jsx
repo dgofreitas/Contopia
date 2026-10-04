@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, messageFor } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { AVATARS, PICTURES, PICTURE_PASSWORD_LENGTH } from '../lib/constants';
@@ -41,7 +41,10 @@ export function Family() {
     <main className="desk">
       <header className="desk__header">
         <h1 className="logo logo--small">Contopia</h1>
-        <button type="button" className="btn btn--ghost" onClick={logout}>Sair</button>
+        <div className="row">
+          {me.admin && <Link to="/admin" className="btn btn--small">Painel</Link>}
+          <button type="button" className="btn btn--ghost" onClick={logout}>Sair</button>
+        </div>
       </header>
 
       <FamilyName parent={me.parent} onSaved={(parent) => setMe((current) => ({ ...current, parent }))} />

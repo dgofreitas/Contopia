@@ -7,6 +7,7 @@ const Child = require('../../models/child');
 const { PICTURE_PASSWORD_LENGTH, PICTURES, THEMES } = require('../../lib/constants');
 const { wrap, parse, badRequest, unauthorized, notFound, conflict, tooMany, forbidden } = require('../../lib/errors');
 const { requireParent } = require('../../lib/guards');
+const stats = require('../../lib/stats');
 
 const BCRYPT_COST = 12;
 const CHILD_MAX_FAILURES = 5;
@@ -64,7 +65,7 @@ function publicChild(child) {
   return { id: String(child._id), nickname: child.nickname, avatar: child.avatar, theme: child.theme, methods: loginMethods(child) };
 }
 
-function createAuthRouter({ sessions, redis }) {
+function createAuthRouter({ sessions, redis, adminEmails = [] }) {
   const router = express.Router();
 
   const lookupKey = (req) => `lock:lookup:${req.ip}`;
@@ -120,6 +121,7 @@ function createAuthRouter({ sessions, redis }) {
       // Compara mesmo sem usuário para não revelar pelo tempo de resposta se o e-mail existe.
       const ok = await bcrypt.compare(body.password, parent?.passwordHash || '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinv');
       if (!parent || !ok) throw unauthorized('INVALID_CREDENTIALS');
+      stats.count('parent_login');
 
       await sessions.destroy(req, res);
       await sessions.create(res, { role: 'parent', parentId: String(parent._id), childId: null });
@@ -144,7 +146,12 @@ function createAuthRouter({ sessions, redis }) {
         req.session.childId ? Child.findById(req.session.childId) : null,
       ]);
       if (req.session.role === 'parent' && !parent) throw unauthorized();
-      res.json({ role: req.session.role, parent: parent ? publicParent(parent) : null, child: child ? publicChild(child) : null });
+      res.json({
+        role: req.session.role,
+        parent: parent ? publicParent(parent) : null,
+        child: child ? publicChild(child) : null,
+        ...(parent && adminEmails.includes(parent.email) && { admin: true }),
+      });
     }),
   );
 
@@ -183,7 +190,10 @@ function createAuthRouter({ sessions, redis }) {
 
       const lockKey = `lock:child:${body.childId}`;
       const failures = Number(await redis.get(lockKey)) || 0;
-      if (failures >= CHILD_MAX_FAILURES) throw tooMany('CHILD_LOCKED');
+      if (failures >= CHILD_MAX_FAILURES) {
+        stats.count('child_login_locked');
+        throw tooMany('CHILD_LOCKED');
+      }
 
       await checkLookups(req);
       const parent = await Parent.findOne({ familyCode: body.familyCode.toUpperCase() });
@@ -197,6 +207,8 @@ function createAuthRouter({ sessions, redis }) {
         ? [pictureKey(body.picture), child.picturePasswordHash, 'INVALID_PICTURE_PASSWORD']
         : [body.password, child.textPasswordHash, 'INVALID_TEXT_PASSWORD'];
       const ok = hash ? await bcrypt.compare(secret, hash) : false;
+      const method = body.picture ? 'picture' : 'text';
+      stats.count(`child_login_${method}_${ok ? 'ok' : 'fail'}`);
       if (!ok) {
         const count = await redis.incr(lockKey);
         if (count === 1) await redis.expire(lockKey, CHILD_LOCK_SECONDS);

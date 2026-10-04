@@ -16,6 +16,11 @@ function loadConfig(env = process.env) {
     refreshTokenExpiresIn: env.REFRESH_TOKEN_EXPIRES_IN || '7d',
     frontendUrl: env.FRONTEND_URL || 'http://localhost:8089',
     uploadsDir: env.UPLOADS_DIR || '/data/uploads',
+    // E-mails dos responsáveis que podem abrir o painel /admin, separados por vírgula.
+    adminEmails: (env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
   };
 
   const errors = [];

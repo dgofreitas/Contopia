@@ -7,9 +7,11 @@ const { createChildrenRouter } = require('./app/children/children-router');
 const { createBooksRouter } = require('./app/books/books-router');
 const { createConnectionsRouter } = require('./app/connections/connections-router');
 const { createGroupsRouter } = require('./app/groups/groups-router');
+const { createAdminRouter } = require('./app/admin/admin-router');
 const { createSessionStore } = require('./lib/sessions');
 const { HttpError } = require('./lib/errors');
 const { IMAGE_TYPES, createImageStore } = require('./lib/images');
+const stats = require('./lib/stats');
 
 /**
  * Monta o app Express sem abrir porta nem conexões, para os testes poderem
@@ -32,6 +34,7 @@ function createApp({ mongoose, redis, config = {} }) {
 
   const api = express.Router();
   api.use(sessions.middleware());
+  api.use(stats.activityMiddleware(redis));
 
   // Proteção contra CSRF: além do cookie SameSite=Lax, toda escrita precisa ser
   // JSON (ou o arquivo de uma imagem), o que um formulário de outro site não
@@ -46,11 +49,13 @@ function createApp({ mongoose, redis, config = {} }) {
   });
 
   api.get('/', (req, res) => res.json({ name: 'contopia', status: 'ok' }));
-  api.use('/auth', createAuthRouter({ sessions, redis }));
+  const adminEmails = config.adminEmails || [];
+  api.use('/auth', createAuthRouter({ sessions, redis, adminEmails }));
   api.use('/children', createChildrenRouter());
   api.use('/connections', createConnectionsRouter());
   api.use('/groups', createGroupsRouter());
   api.use('/books', createBooksRouter({ images: createImageStore(config.uploadsDir || '/data/uploads') }));
+  api.use('/admin', createAdminRouter({ mongoose, redis, adminEmails, uploadsDir: config.uploadsDir || '/data/uploads' }));
   app.use('/api/v1', api);
 
   app.use((req, res) => {
@@ -69,6 +74,7 @@ function createApp({ mongoose, redis, config = {} }) {
       return res.status(413).json({ error: { code: 'TOO_LARGE' } });
     }
     console.error(err);
+    stats.count('server_error');
     res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
   });
 
