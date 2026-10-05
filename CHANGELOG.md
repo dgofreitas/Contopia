@@ -1,3 +1,9 @@
+## [1.15.0](https://github.com/dgofreitas/Contopia/compare/v1.14.0...v1.15.0) (2026-10-05)
+
+### Features
+
+* painel do admin com métricas e gráficos em /admin ([dde2d9e](https://github.com/dgofreitas/Contopia/commit/dde2d9e390e3e7e0a1d1ab57408f82e99b1dbb09))
+
 ## [1.14.0](https://github.com/dgofreitas/Contopia/compare/v1.13.0...v1.14.0) (2026-10-01)
 
 ### Features
