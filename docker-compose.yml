@@ -78,6 +78,7 @@ services:
       - REFRESH_TOKEN_EXPIRES_IN=${REFRESH_TOKEN_EXPIRES_IN:-7d}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8089}
       - UPLOADS_DIR=/data/uploads
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
     volumes:
       # Capas e figuras dos livros
       - uploads_data:/data/uploads

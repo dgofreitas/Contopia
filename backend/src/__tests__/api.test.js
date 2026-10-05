@@ -22,7 +22,7 @@ beforeAll(async () => {
   await mongoose.connect(MONGODB_URI);
   redis = new Redis(REDIS_URL);
   uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'contopia-uploads-'));
-  app = createApp({ mongoose, redis, config: { uploadsDir } });
+  app = createApp({ mongoose, redis, config: { uploadsDir, adminEmails: ['admin@exemplo.com'] } });
 });
 
 beforeEach(async () => {
@@ -574,5 +574,62 @@ describe('imagens no texto', () => {
     expect(fs.readdirSync(path.join(uploadsDir, 'books', bookId))).toHaveLength(1);
     await agent.delete(`/api/v1/books/${bookId}`);
     expect(fs.existsSync(path.join(uploadsDir, 'books', bookId))).toBe(false);
+  });
+});
+
+describe('painel do admin', () => {
+  // Os contadores são gravados sem segurar a resposta: espera eles chegarem.
+  async function eventually(check) {
+    for (let i = 0; i < 50; i += 1) {
+      try {
+        return await check();
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
+    return check();
+  }
+
+  it('só abre para o e-mail de admin e responde 404 para os outros', async () => {
+    const { agent: other } = await registerParent('mae@exemplo.com');
+    expect((await other.get('/api/v1/admin/metrics')).status).toBe(404);
+    expect((await other.get('/api/v1/auth/me')).body.admin).toBeUndefined();
+    expect((await request(app).get('/api/v1/admin/metrics')).status).toBe(404);
+
+    const { agent: admin } = await registerParent('Admin@Exemplo.com');
+    expect((await admin.get('/api/v1/auth/me')).body.admin).toBe(true);
+    expect((await admin.get('/api/v1/admin/metrics')).status).toBe(200);
+  });
+
+  it('conta famílias, livros, palavras, entradas e ativos sem mostrar nomes', async () => {
+    const { agent, parent, child } = await withChild('Lia');
+    await agent.post('/api/v1/auth/switch').send({ childId: child.id });
+    const book = await agent.post('/api/v1/books').send({ title: 'O Dragão', cover: { color: '#E8559A' } });
+    await agent.patch(`/api/v1/books/${book.body.book.id}`).send({ chapters: [{ html: '<p>Era uma vez <strong>um dragão</strong></p>' }] });
+    await agent.post('/api/v1/books').send({ title: 'Rascunho', cover: { color: '#7C5CFF' } });
+
+    const kid = request.agent(app);
+    const login = (picture) => kid.post('/api/v1/auth/child/login').send({ familyCode: parent.familyCode, childId: child.id, picture });
+    expect((await login([1, 1, 1, 1])).status).toBe(401);
+    expect((await login(PICTURE)).status).toBe(200);
+
+    const { agent: admin } = await registerParent('admin@exemplo.com');
+    const metrics = await eventually(async () => {
+      const res = await admin.get('/api/v1/admin/metrics');
+      expect(res.body.logins.pictureOk.at(-1)).toBe(1);
+      expect(res.body.activity.dau).toBe(1);
+      return res.body;
+    });
+
+    expect(metrics.totals).toMatchObject({ families: 2, children: 1, booksPublished: 0, drafts: 2, words: 5 });
+    expect(metrics.logins.pictureFail.at(-1)).toBe(1);
+    expect(metrics.activity.parents.at(-1)).toBe(2);
+    expect(metrics.growth.families.at(-1)).toBe(2);
+    expect(metrics.growth.weeks).toHaveLength(26);
+    expect(metrics.themes.fadas).toBe(1);
+    expect(metrics.loginMethods.picture).toBe(1);
+    expect(metrics.writing.activeDrafts).toBe(2);
+    expect(metrics.health).toMatchObject({ mongo: 'ok', redis: 'ok' });
+    expect(JSON.stringify(metrics)).not.toMatch(/Lia|Dragão|exemplo\.com/);
   });
 });

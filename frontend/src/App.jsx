@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider, RequireChild, RequireParent, useAuth, Loading } from './lib/auth';
+import { AuthProvider, RequireAdmin, RequireChild, RequireParent, useAuth, Loading } from './lib/auth';
 import { Welcome } from './pages/Welcome';
 import { ParentAuth } from './pages/ParentAuth';
 import { Family } from './pages/Family';
@@ -12,6 +12,8 @@ import { Groups } from './pages/Groups';
 
 // O editor traz o TipTap, que é pesado: só carrega quando a criança vai escrever.
 const Editor = lazy(() => import('./pages/Editor').then((m) => ({ default: m.Editor })));
+// O painel traz os gráficos: só carrega para o admin.
+const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
 const Reader = lazy(() => import('./pages/Reader').then((m) => ({ default: m.Reader })));
 
 function Home() {
@@ -31,6 +33,7 @@ export function AppRoutes() {
         <Route path="/cadastro" element={<ParentAuth mode="register" />} />
         <Route path="/entrar" element={<ChildLogin />} />
         <Route path="/familia" element={<RequireParent><Family /></RequireParent>} />
+        <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
         <Route path="/estante" element={<RequireChild><ShelfPage /></RequireChild>} />
         <Route path="/estante/familia" element={<RequireChild><FamilyShelf /></RequireChild>} />
         <Route path="/grupos" element={<RequireChild><Groups /></RequireChild>} />

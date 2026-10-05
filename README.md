@@ -55,3 +55,8 @@ Commits `chore:`, `docs:` e afins não geram versão nem deploy.
 4. **HTTPS:** o Caddy do moneyTrackr já usa as portas 80 e 443. O nginx do
    Contopia entra na rede dele (`moneytrackr_frontend`) e o Caddyfile do
    moneyTrackr ganha um bloco para `contopia-app.duckdns.org`.
+5. **Painel do admin:** colocar no `~/contopia/.env` a linha
+   `ADMIN_EMAILS=seu-email@exemplo.com` com o e-mail da sua conta de responsável.
+   Depois do próximo deploy (ou de um `docker compose ... up -d`), o link
+   "Painel" aparece na página da família e leva a `/admin`. Para os outros,
+   `/admin` não existe.

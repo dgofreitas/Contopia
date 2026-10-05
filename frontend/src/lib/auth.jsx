@@ -47,6 +47,13 @@ export function RequireParent({ children }) {
   return children;
 }
 
+export function RequireAdmin({ children }) {
+  const { me } = useAuth();
+  if (me === undefined) return <Loading />;
+  if (!me?.admin) return <Navigate to="/" replace />;
+  return children;
+}
+
 export function RequireChild({ children }) {
   const { me } = useAuth();
   if (me === undefined) return <Loading />;
