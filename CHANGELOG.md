@@ -1,3 +1,9 @@
+## [1.16.0](https://github.com/dgofreitas/Contopia/compare/v1.15.0...v1.16.0) (2026-10-17)
+
+### Features
+
+* figurinhas e "quero o próximo capítulo" nos livros dos amigos ([94d3a23](https://github.com/dgofreitas/Contopia/commit/94d3a23e71b8a7768198a00820d9a4baf6043a9e))
+
 ## [1.15.0](https://github.com/dgofreitas/Contopia/compare/v1.14.0...v1.15.0) (2026-10-05)
 
 ### Features
