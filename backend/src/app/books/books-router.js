@@ -14,12 +14,16 @@ const { areFriends, friendChildren: friendsOf } = require('../../lib/friends');
 const { sanitizeChapterHtml, imageIdsIn } = require('../../lib/sanitize');
 const Reaction = require('../../models/reaction');
 const MoreWish = require('../../models/more-wish');
+const Comment = require('../../models/comment');
 const { cheersByBook, ownerCheers, readerCheers, removeCheersOfBooks } = require('../../lib/cheers');
 
 const MAX_CHAPTERS = 60;
 const MAX_CHAPTER_HTML = 200_000;
 const MAX_IMAGES_PER_BOOK = 100;
 const MAX_SHARED_WITH = 50;
+const MAX_COMMENT_LENGTH = 300;
+// Recados de um mesmo leitor num livro, para ninguém lotar o livro do amigo.
+const MAX_COMMENTS_PER_READER = 30;
 // Imagem que saiu do texto só é apagada depois de um tempo, para o "desfazer"
 // do editor ainda conseguir trazê-la de volta.
 const ORPHAN_GRACE_MS = 24 * 60 * 60 * 1000;
@@ -375,12 +379,47 @@ function createBooksRouter({ images }) {
     }),
   );
 
-  // O autor viu as figurinhas: deixam de ser novidade.
+  // Recado escrito. Texto puro: a tela mostra como texto, nunca como HTML.
+  router.post(
+    '/:id/comments',
+    wrap(async (req, res) => {
+      const body = parse(
+        z.object({
+          text: z
+            .string()
+            .max(MAX_COMMENT_LENGTH * 4)
+            // eslint-disable-next-line no-control-regex
+            .transform((t) => t.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, '').replace(/\n{3,}/g, '\n\n').trim())
+            .pipe(z.string().min(1).max(MAX_COMMENT_LENGTH)),
+        }),
+        req.body,
+      );
+      const { book, author, me } = await findCheerable(req);
+      if ((await Comment.countDocuments({ bookId: book._id, childId: me._id })) >= MAX_COMMENTS_PER_READER) throw badRequest('TOO_MANY_COMMENTS');
+      await Comment.create({ bookId: book._id, childId: me._id, text: body.text });
+      res.status(201).json({ cheers: await readerCheers(book, author, me) });
+    }),
+  );
+
+  // Apaga um recado: quem escreveu ou o autor do livro.
+  router.delete(
+    '/:id/comments/:commentId',
+    wrap(async (req, res) => {
+      const { book } = await findReadable(req);
+      const commentId = parse(idParam, req.params.commentId);
+      const isOwner = String(book.childId) === req.session.childId;
+      const removed = await Comment.findOneAndDelete({ _id: commentId, bookId: book._id, ...(!isOwner && { childId: req.session.childId }) });
+      if (!removed) throw notFound('COMMENT_NOT_FOUND');
+      res.status(204).end();
+    }),
+  );
+
+  // O autor viu as figurinhas e os recados: deixam de ser novidade.
   router.post(
     '/:id/cheers/seen',
     wrap(async (req, res) => {
       const book = await findOwn(req);
-      await Reaction.updateMany({ bookId: book._id, seen: false }, { seen: true });
+      await Promise.all([Reaction.updateMany({ bookId: book._id, seen: false }, { seen: true }), Comment.updateMany({ bookId: book._id, seen: false }, { seen: true })]);
       res.status(204).end();
     }),
   );

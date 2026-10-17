@@ -539,7 +539,7 @@ describe('figurinhas e pedidos de capítulo', () => {
   it('o leitor dá figurinhas e pede o próximo capítulo; o autor vê quem foi', async () => {
     const { agent, id, asLeo, asLia } = await siblings();
     await asLeo();
-    expect((await agent.get(`/api/v1/books/${id}/cheers`)).body.cheers).toEqual({ enabled: true, reactions: [], mine: [], canWantMore: true, wantsMore: false });
+    expect((await agent.get(`/api/v1/books/${id}/cheers`)).body.cheers).toEqual({ enabled: true, reactions: [], mine: [], canWantMore: true, wantsMore: false, comments: [] });
     expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '💩', on: true })).status).toBe(400);
     await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true });
     // Dar a mesma figurinha duas vezes não conta duas.
@@ -553,7 +553,7 @@ describe('figurinhas e pedidos de capítulo', () => {
     // A própria autora não dá figurinha para si mesma.
     expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true })).body.error.code).toBe('OWN_BOOK');
     const shelf = await agent.get('/api/v1/books');
-    expect(shelf.body.books[0].cheers).toEqual({ new: 1, wantMore: 1 });
+    expect(shelf.body.books[0].cheers).toEqual({ new: 1, newComments: 0, wantMore: 1 });
     const mine = await agent.get(`/api/v1/books/${id}/cheers`);
     expect(mine.body.cheers).toMatchObject({
       enabled: true,
@@ -562,7 +562,7 @@ describe('figurinhas e pedidos de capítulo', () => {
       wantMore: [{ nickname: 'Leo' }],
     });
     expect((await agent.post(`/api/v1/books/${id}/cheers/seen`)).status).toBe(204);
-    expect((await agent.get('/api/v1/books')).body.books[0].cheers).toEqual({ new: 0, wantMore: 1 });
+    expect((await agent.get('/api/v1/books')).body.books[0].cheers).toEqual({ new: 0, newComments: 0, wantMore: 1 });
 
     // Capítulo novo atende o pedido, e o Leo pode pedir de novo.
     await agent.patch(`/api/v1/books/${id}`).send({ chapters: [{ title: 'Um', html: '<p>Era uma vez</p>' }, { title: 'Dois', html: '<p>E depois</p>' }] });
@@ -582,6 +582,47 @@ describe('figurinhas e pedidos de capítulo', () => {
     await asLeo();
     expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true })).status).toBe(404);
     expect((await agent.get(`/api/v1/books/${id}/cheers`)).status).toBe(404);
+  });
+
+  it('recados escritos: o leitor escreve, os leitores leem e o autor pode apagar', async () => {
+    const { agent, id, lia, leo, asLeo, asLia } = await siblings();
+    await asLeo();
+    expect((await agent.post(`/api/v1/books/${id}/comments`).send({ text: '   ' })).status).toBe(400);
+    expect((await agent.post(`/api/v1/books/${id}/comments`).send({ text: 'x'.repeat(301) })).status).toBe(400);
+    const sent = await agent.post(`/api/v1/books/${id}/comments`).send({ text: '  Amei o dragão!\n\n\n\nEscreve mais!  ' });
+    expect(sent.status).toBe(201);
+    expect(sent.body.cheers.comments).toEqual([
+      expect.objectContaining({ text: 'Amei o dragão!\n\nEscreve mais!', by: { id: leo.id, nickname: 'Leo', avatar: '🐼' }, mine: true, canDelete: true }),
+    ]);
+    // HTML fica como texto.
+    await agent.post(`/api/v1/books/${id}/comments`).send({ text: '<b>oi</b>' });
+
+    await asLia();
+    expect((await agent.post(`/api/v1/books/${id}/comments`).send({ text: 'Obrigada!' })).body.error.code).toBe('OWN_BOOK');
+    expect((await agent.get('/api/v1/books')).body.books[0].cheers.newComments).toBe(2);
+    const mine = await agent.get(`/api/v1/books/${id}/cheers`);
+    expect(mine.body.cheers.comments.map((c) => [c.text, c.mine, c.canDelete, c.new])).toEqual([
+      ['Amei o dragão!\n\nEscreve mais!', false, true, true],
+      ['<b>oi</b>', false, true, true],
+    ]);
+    await agent.post(`/api/v1/books/${id}/cheers/seen`);
+    expect((await agent.get('/api/v1/books')).body.books[0].cheers.newComments).toBe(0);
+
+    // A autora apaga um recado; o responsável vê os que ficaram, dos dois lados.
+    expect((await agent.delete(`/api/v1/books/${id}/comments/${mine.body.cheers.comments[1].id}`)).status).toBe(204);
+    const panel = await agent.get(`/api/v1/children/${lia.id}/cheers`);
+    expect(panel.body.items).toEqual([expect.objectContaining({ kind: 'comment', text: 'Amei o dragão!\n\nEscreve mais!', reader: expect.objectContaining({ nickname: 'Leo' }) })]);
+    const leoPanel = await agent.get(`/api/v1/children/${leo.id}/cheers`);
+    expect(leoPanel.body.sent).toEqual([expect.objectContaining({ text: 'Amei o dragão!\n\nEscreve mais!', book: 'O dragão', author: expect.objectContaining({ nickname: 'Lia' }) })]);
+
+    // O leitor só apaga o próprio recado; o responsável apaga qualquer um dos filhos.
+    const other = await agent.post('/api/v1/children').send({ nickname: 'Bia', avatar: '🦊', picture: PICTURE });
+    await agent.post('/api/v1/auth/switch').send({ childId: other.body.child.id });
+    const commentId = panel.body.items[0].id;
+    expect((await agent.delete(`/api/v1/books/${id}/comments/${commentId}`)).status).toBe(404);
+    expect((await agent.delete(`/api/v1/children/${other.body.child.id}/comments/${commentId}`)).status).toBe(404);
+    expect((await agent.delete(`/api/v1/children/${leo.id}/comments/${commentId}`)).status).toBe(204);
+    expect((await agent.get(`/api/v1/children/${lia.id}/cheers`)).body.items).toEqual([]);
   });
 
   it('o responsável acompanha e pode desligar', async () => {

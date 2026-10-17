@@ -39,6 +39,7 @@ function cheersLabel(cheers) {
   if (!cheers) return '';
   const parts = [];
   if (cheers.new > 0) parts.push(cheers.new === 1 ? '1 figurinha nova' : `${cheers.new} figurinhas novas`);
+  if (cheers.newComments > 0) parts.push(cheers.newComments === 1 ? '1 recado novo' : `${cheers.newComments} recados novos`);
   if (cheers.wantMore > 0) parts.push('querem o próximo capítulo');
   return parts.map((p) => `, ${p}`).join('');
 }
@@ -71,6 +72,8 @@ export function Shelf({ books, theme, hiddenId, onSelect, label }) {
               const index = r * perShelf + i;
               const height = Math.round(heightFor(book.id) * size.scale);
               const out = hiddenId === book.id;
+              // Figurinhas e recados que o autor ainda não viu.
+              const fresh = (book.cheers?.new || 0) + (book.cheers?.newComments || 0);
               return (
                 <li key={book.id} className="shelf__slot" style={{ height }}>
                   <motion.button
@@ -93,7 +96,7 @@ export function Shelf({ books, theme, hiddenId, onSelect, label }) {
                     {book.progress && <i className="spine__ribbon" aria-hidden="true" />}
                     {book.favorite && <i className="spine__star" aria-hidden="true">★</i>}
                     {book.isNew && <i className="spine__new" aria-hidden="true">novo</i>}
-                    {book.cheers?.new > 0 && <i className="spine__cheers" aria-hidden="true">+{book.cheers.new}</i>}
+                    {fresh > 0 && <i className="spine__cheers" aria-hidden="true">+{fresh}</i>}
                     {book.cheers?.wantMore > 0 && <i className="spine__bell" aria-hidden="true"><Emoji char="🔔" /></i>}
                   </motion.button>
                 </li>

@@ -4,11 +4,14 @@ import { api, messageFor } from '../lib/api';
 import { REACTIONS } from '../lib/constants';
 import { Emoji } from './Emoji';
 
+const MAX_COMMENT = 300;
+
 const NAMES = { '😂': 'Engraçado', '🤩': 'Incrível', '😱': 'Que susto', '😢': 'Emocionante', '❤️': 'Amei', '👏': 'Parabéns' };
 
 /**
- * No fim do livro de outra criança: figurinhas para dar ao autor e o pedido
- * "quero o próximo capítulo". A figurinha escolhida pula e sai voando.
+ * No fim do livro de outra criança: figurinhas para dar ao autor, o pedido
+ * "quero o próximo capítulo" e os recados escritos. A figurinha escolhida pula
+ * e sai voando.
  */
 export function CheerBar({ bookId, author }) {
   const reduce = useReducedMotion();
@@ -47,6 +50,27 @@ export function CheerBar({ bookId, author }) {
   };
   const countOf = (emoji) => cheers.reactions.find((r) => r.emoji === emoji)?.count || 0;
 
+  const write = async (text) => {
+    setError('');
+    try {
+      const { cheers: saved } = await api.post(`/books/${bookId}/comments`, { text });
+      setCheers(saved);
+      return true;
+    } catch (err) {
+      setError(messageFor(err));
+      return false;
+    }
+  };
+  const removeComment = async (comment) => {
+    setError('');
+    try {
+      await api.del(`/books/${bookId}/comments/${comment.id}`);
+      setCheers((c) => ({ ...c, comments: c.comments.filter((x) => x.id !== comment.id) }));
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  };
+
   return (
     <section ref={bar} className="cheer-bar" aria-label={`Figurinhas para ${author}`}>
       <p className="cheer-bar__ask">Gostou? Dê uma figurinha para {author}!</p>
@@ -81,6 +105,8 @@ export function CheerBar({ bookId, author }) {
           <Emoji char="🔔" /> {cheers.wantsMore ? `${author} já sabe que você quer mais!` : 'Quero o próximo capítulo!'}
         </motion.button>
       )}
+      <CommentList comments={cheers.comments} onRemove={removeComment} />
+      <CommentBox author={author} onSend={write} />
       {error && <p className="error" role="alert">{error}</p>}
       <AnimatePresence>
         {flying.map((f) => (
@@ -102,9 +128,68 @@ export function CheerBar({ bookId, author }) {
   );
 }
 
+// Recados do livro. Texto puro: o React escapa tudo, nada vira HTML.
+function CommentList({ comments, onRemove }) {
+  const reduce = useReducedMotion();
+  if (comments.length === 0) return null;
+  return (
+    <ul className="comments" aria-label="Recados">
+      <AnimatePresence initial={false}>
+        {comments.map((c) => (
+          <motion.li
+            key={c.id}
+            className={`comment${c.mine ? ' comment--mine' : ''}${c.new ? ' comment--new' : ''}`}
+            initial={reduce ? false : { opacity: 0, y: 12, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <span className="comment__who"><Emoji char={c.by.avatar} /> {c.by.nickname}</span>
+            <p className="comment__text">{c.text}</p>
+            {c.canDelete && (
+              <button type="button" className="comment__remove" onClick={() => onRemove(c)} aria-label={`Apagar recado de ${c.by.nickname}`}>✕</button>
+            )}
+          </motion.li>
+        ))}
+      </AnimatePresence>
+    </ul>
+  );
+}
+
+function CommentBox({ author, onSend }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setBusy(true);
+    if (await onSend(text)) setText('');
+    setBusy(false);
+  };
+  return (
+    <form className="comment-box" onSubmit={submit}>
+      <label className="visually-hidden" htmlFor="comment-text">Recado para {author}</label>
+      <textarea
+        id="comment-text"
+        className="comment-box__text"
+        value={text}
+        maxLength={MAX_COMMENT}
+        rows={2}
+        placeholder={`Escreva um recado para ${author}...`}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="comment-box__row">
+        <span className="fine">{text.length}/{MAX_COMMENT}</span>
+        <button type="submit" className="btn btn--small btn--primary" disabled={busy || !text.trim()}>
+          <Emoji char="💬" /> Enviar recado
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /**
- * Para o autor, embaixo do livro tirado da estante: as figurinhas que ganhou e
- * quem quer o próximo capítulo. Ao abrir, as figurinhas deixam de ser novidade.
+ * Para o autor, embaixo do livro tirado da estante: as figurinhas e os recados
+ * que ganhou e quem quer o próximo capítulo. Ao abrir, deixam de ser novidade.
  */
 export function CheersPanel({ bookId, onSeen }) {
   const reduce = useReducedMotion();
@@ -115,14 +200,23 @@ export function CheersPanel({ bookId, onSeen }) {
       .get(`/books/${bookId}/cheers`)
       .then(({ cheers: loaded }) => {
         setCheers(loaded);
-        if (loaded.reactions.some((r) => r.new > 0)) api.post(`/books/${bookId}/cheers/seen`).then(onSeen, () => {});
+        if (loaded.reactions.some((r) => r.new > 0) || loaded.comments.some((c) => c.new)) api.post(`/books/${bookId}/cheers/seen`).then(onSeen, () => {});
       })
       .catch(() => {});
     // onSeen muda a cada render da estante; só carrega de novo se o livro mudar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId]);
 
-  if (!cheers || (cheers.reactions.length === 0 && cheers.wantMore.length === 0)) return null;
+  if (!cheers || (cheers.reactions.length === 0 && cheers.wantMore.length === 0 && cheers.comments.length === 0)) return null;
+
+  const removeComment = async (comment) => {
+    try {
+      await api.del(`/books/${bookId}/comments/${comment.id}`);
+      setCheers((c) => ({ ...c, comments: c.comments.filter((x) => x.id !== comment.id) }));
+    } catch {
+      // Fica na tela; tentar de novo resolve.
+    }
+  };
 
   return (
     <motion.div className="cheers-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.9 } }}>
@@ -164,6 +258,7 @@ export function CheersPanel({ bookId, onSeen }) {
           {wantMoreText(cheers.wantMore)}
         </p>
       )}
+      <CommentList comments={cheers.comments} onRemove={removeComment} />
     </motion.div>
   );
 }
