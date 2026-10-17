@@ -5,12 +5,17 @@ const Child = require('../../models/child');
 const Book = require('../../models/book');
 const FriendGroup = require('../../models/friend-group');
 const BookRead = require('../../models/book-read');
+const Reaction = require('../../models/reaction');
+const MoreWish = require('../../models/more-wish');
+const Parent = require('../../models/parent');
+const { removeCheersOfBooks, removeCheersBy, activeWish } = require('../../lib/cheers');
 const { AVATARS } = require('../../lib/constants');
 const { wrap, parse, notFound, badRequest } = require('../../lib/errors');
 const { requireParent } = require('../../lib/guards');
 const { pictureSchema, pictureKey, textPasswordSchema, publicChild, BCRYPT_COST } = require('../auth/auth-router');
 
 const MAX_CHILDREN = 6;
+const MAX_CHEERS_SHOWN = 30;
 const idParam = z.string().regex(/^[a-f0-9]{24}$/);
 
 // Perfis das crianças, administrados pelo responsável.
@@ -70,6 +75,7 @@ function createChildrenRouter() {
           // null tira esse jeito de entrar; a criança precisa ficar com pelo menos um.
           picture: pictureSchema.nullable().optional(),
           password: textPasswordSchema.nullable().optional(),
+          cheersOff: z.boolean().optional(),
         }),
         req.body,
       );
@@ -78,6 +84,7 @@ function createChildrenRouter() {
       const update = {};
       if (body.nickname) update.nickname = body.nickname;
       if (body.avatar) update.avatar = body.avatar;
+      if (body.cheersOff !== undefined) update.cheersOff = body.cheersOff;
       if (body.picture !== undefined) {
         update.picturePasswordHash = body.picture ? await bcrypt.hash(pictureKey(body.picture), BCRYPT_COST) : null;
       }
@@ -93,12 +100,54 @@ function createChildrenRouter() {
     }),
   );
 
+  // Para o responsável acompanhar: as figurinhas e os pedidos de capítulo que os
+  // livros da criança receberam, de quem e em qual livro.
+  router.get(
+    '/:id/cheers',
+    wrap(async (req, res) => {
+      const id = parse(idParam, req.params.id);
+      const child = await Child.findOne({ _id: id, parentId: req.session.parentId });
+      if (!child) throw notFound('CHILD_NOT_FOUND');
+      const books = await Book.find({ childId: child._id }, 'title chapters');
+      const ids = books.map((b) => b._id);
+      const [reactions, wishes] = await Promise.all([
+        Reaction.find({ bookId: { $in: ids } }).sort({ createdAt: -1 }).limit(MAX_CHEERS_SHOWN),
+        books.length > 0 ? MoreWish.find({ $or: books.map(activeWish) }).sort({ createdAt: -1 }).limit(MAX_CHEERS_SHOWN) : [],
+      ]);
+      const readers = await Child.find({ _id: { $in: [...reactions, ...wishes].map((r) => r.childId) } });
+      const families = await Parent.find({ _id: { $in: readers.map((r) => r.parentId) } }, 'familyName');
+      const familyOf = Object.fromEntries(families.map((p) => [String(p._id), p.familyName || null]));
+      const readerOf = Object.fromEntries(
+        readers.map((r) => [
+          String(r._id),
+          { nickname: r.nickname, avatar: r.avatar, familyName: String(r.parentId) === String(child.parentId) ? null : familyOf[String(r.parentId)] || null },
+        ]),
+      );
+      const titleOf = Object.fromEntries(books.map((b) => [String(b._id), b.title]));
+      const item = (kind) => (r) => ({
+        kind,
+        ...(kind === 'reaction' && { emoji: r.emoji }),
+        book: titleOf[String(r.bookId)],
+        reader: readerOf[String(r.childId)],
+        at: r.createdAt,
+      });
+      const items = [...reactions.map(item('reaction')), ...wishes.map(item('more'))]
+        .filter((i) => i.reader)
+        .sort((a, b) => new Date(b.at) - new Date(a.at))
+        .slice(0, MAX_CHEERS_SHOWN);
+      res.json({ cheersOff: child.cheersOff, items });
+    }),
+  );
+
   router.delete(
     '/:id',
     wrap(async (req, res) => {
       const id = parse(idParam, req.params.id);
       const child = await Child.findOneAndDelete({ _id: id, parentId: req.session.parentId });
       if (!child) throw notFound('CHILD_NOT_FOUND');
+      const books = await Book.find({ childId: child._id }, '_id');
+      await removeCheersOfBooks(books.map((b) => b._id));
+      await removeCheersBy(child._id);
       await Book.deleteMany({ childId: child._id });
       // Os grupos dela somem, e ela sai dos grupos dos amigos.
       await FriendGroup.deleteMany({ childId: child._id });

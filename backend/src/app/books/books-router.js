@@ -5,13 +5,16 @@ const Child = require('../../models/child');
 const Parent = require('../../models/parent');
 const BookImage = require('../../models/book-image');
 const { IMAGE_TYPES, MAX_UPLOAD_BYTES, processImage } = require('../../lib/images');
-const { COVER_COLORS } = require('../../lib/constants');
-const { wrap, parse, notFound, badRequest } = require('../../lib/errors');
+const { COVER_COLORS, REACTIONS } = require('../../lib/constants');
+const { wrap, parse, notFound, badRequest, forbidden } = require('../../lib/errors');
 const { requireChild } = require('../../lib/guards');
 const FriendGroup = require('../../models/friend-group');
 const BookRead = require('../../models/book-read');
 const { areFriends, friendChildren: friendsOf } = require('../../lib/friends');
 const { sanitizeChapterHtml, imageIdsIn } = require('../../lib/sanitize');
+const Reaction = require('../../models/reaction');
+const MoreWish = require('../../models/more-wish');
+const { cheersByBook, ownerCheers, readerCheers, removeCheersOfBooks } = require('../../lib/cheers');
 
 const MAX_CHAPTERS = 60;
 const MAX_CHAPTER_HTML = 200_000;
@@ -126,7 +129,8 @@ function createBooksRouter({ images }) {
     '/',
     wrap(async (req, res) => {
       const books = await Book.find({ childId: req.session.childId }).sort({ createdAt: 1 });
-      res.json({ books: books.map(summary) });
+      const cheers = await cheersByBook(books);
+      res.json({ books: books.map((b) => ({ ...summary(b), cheers: cheers[String(b._id)] })) });
     }),
   );
 
@@ -325,6 +329,62 @@ function createBooksRouter({ images }) {
     }),
   );
 
+  // Figurinhas e pedidos de capítulo. O autor vê quem deu; o leitor vê só os totais
+  // e o que ele mesmo deu.
+  router.get(
+    '/:id/cheers',
+    wrap(async (req, res) => {
+      const { book, author } = await findReadable(req);
+      const me = await Child.findById(req.session.childId);
+      res.json({ cheers: author ? await readerCheers(book, author, me) : await ownerCheers(book, me) });
+    }),
+  );
+
+  // Só quem lê o livro de outra criança dá figurinha ou pede capítulo, e só se o
+  // responsável de nenhuma das duas desligou.
+  const findCheerable = async (req) => {
+    const { book, author } = await findReadable(req);
+    if (!author) throw badRequest('OWN_BOOK');
+    const me = await Child.findById(req.session.childId);
+    if (author.cheersOff || me.cheersOff) throw forbidden('CHEERS_OFF');
+    return { book, author, me };
+  };
+
+  router.put(
+    '/:id/reactions',
+    wrap(async (req, res) => {
+      const body = parse(z.object({ emoji: z.enum(REACTIONS), on: z.boolean() }), req.body);
+      const { book, author, me } = await findCheerable(req);
+      const key = { bookId: book._id, childId: me._id, emoji: body.emoji };
+      if (body.on) await Reaction.updateOne(key, { $setOnInsert: key }, { upsert: true });
+      else await Reaction.deleteOne(key);
+      res.json({ cheers: await readerCheers(book, author, me) });
+    }),
+  );
+
+  router.put(
+    '/:id/more',
+    wrap(async (req, res) => {
+      const body = parse(z.object({ on: z.boolean() }), req.body);
+      const { book, author, me } = await findCheerable(req);
+      if (!book.chaptered) throw badRequest('NOT_CHAPTERED');
+      const key = { bookId: book._id, childId: me._id };
+      if (body.on) await MoreWish.updateOne(key, { $set: { chapters: book.chapters.length } }, { upsert: true });
+      else await MoreWish.deleteOne(key);
+      res.json({ cheers: await readerCheers(book, author, me) });
+    }),
+  );
+
+  // O autor viu as figurinhas: deixam de ser novidade.
+  router.post(
+    '/:id/cheers/seen',
+    wrap(async (req, res) => {
+      const book = await findOwn(req);
+      await Reaction.updateMany({ bookId: book._id, seen: false }, { seen: true });
+      res.status(204).end();
+    }),
+  );
+
   // Imagem para o texto do livro. O corpo é o próprio arquivo (image/png etc.).
   router.post(
     '/:id/images',
@@ -365,6 +425,7 @@ function createBooksRouter({ images }) {
       await book.deleteOne();
       await BookImage.deleteMany({ bookId: book._id });
       await BookRead.deleteMany({ bookId: book._id });
+      await removeCheersOfBooks([book._id]);
       await images.removeBook(book._id);
       res.status(204).end();
     }),

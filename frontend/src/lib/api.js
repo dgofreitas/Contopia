@@ -60,6 +60,9 @@ const MESSAGES = {
   IMAGE_TYPE: 'Essa imagem não dá. Use uma foto ou desenho em PNG, JPG, WebP ou GIF.',
   IMAGE_INVALID: 'Não consegui abrir essa imagem. Tente outra.',
   TOO_LARGE: 'Essa imagem é grande demais. O limite é 5 MB.',
+  CHEERS_OFF: 'As figurinhas estão desligadas para este livro.',
+  OWN_BOOK: 'Esse livro é seu! Figurinhas são para os livros dos amigos.',
+  NOT_CHAPTERED: 'Este livro não tem capítulos.',
   TOO_MANY_IMAGES: 'Este livro já tem 100 imagens. Tire alguma para colocar outra.',
 };
 

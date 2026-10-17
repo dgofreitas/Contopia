@@ -528,3 +528,40 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 .bars__fill { display: block; height: 100%; background: #2a78d6; border-radius: 0 4px 4px 0; }
 .bars__value { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 3.5em; text-align: right; }
 .bars__value small { font-weight: 600; color: var(--text-soft); }
+
+/* Figurinhas e pedidos de capítulo */
+.cheer-bar { position: relative; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 18px; background: rgba(255, 248, 236, 0.94); color: var(--text); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25); max-width: 100%; }
+.cheer-bar__ask { font-family: var(--font-story); font-weight: 800; color: var(--accent); text-align: center; }
+.cheer-bar__stickers { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.cheer { position: relative; width: 54px; height: 54px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px #EADBC2, 0 3px 0 rgba(0, 0, 0, 0.12); font-size: 1.8rem; display: grid; place-items: center; padding: 0; }
+.cheer[aria-pressed='true'] { background: #FFF1C2; box-shadow: 0 0 0 3px var(--sun), 0 3px 0 rgba(0, 0, 0, 0.12); }
+.cheer .emoji { width: 1em; height: 1em; }
+@media (max-width: 420px) { .cheer { width: 44px; height: 44px; font-size: 1.5rem; } .cheer-bar { padding: 12px; } }
+.cheer__count { position: absolute; bottom: -4px; right: -4px; min-width: 20px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 800; line-height: 20px; }
+.want-more .emoji { width: 1.1em; height: 1.1em; vertical-align: -0.2em; }
+.cheer-fly { position: absolute; top: 40%; margin-left: -0.5em; font-size: 2rem; pointer-events: none; z-index: 3; }
+.cheer-fly .emoji { width: 1em; height: 1em; }
+
+.cheers-panel { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 16px; background: rgba(255, 248, 236, 0.92); color: var(--text); max-width: min(520px, 100%); }
+.cheers-panel__stickers { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.cheers-panel__sticker { display: flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: #fff; font-weight: 800; box-shadow: 0 0 0 1px #EADBC2; }
+.cheers-panel__sticker .emoji { width: 1.6rem; height: 1.6rem; }
+.cheers-panel__sticker--new { box-shadow: 0 0 0 3px var(--sun), 0 0 14px rgba(255, 182, 39, 0.7); }
+.cheers-panel__fans { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; font-size: 0.9rem; color: var(--text-soft); }
+.fan .emoji { width: 1.1em; height: 1.1em; vertical-align: -0.2em; }
+.cheers-panel__more { display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--accent); text-align: center; }
+.bell { display: inline-block; transform-origin: 50% 10%; }
+.bell .emoji { width: 1.4rem; height: 1.4rem; }
+
+.spine__cheers { position: absolute; top: 26px; left: -10px; z-index: 1; padding: 1px 5px; border-radius: 999px; background: var(--accent); color: #fff; font-family: var(--font-body); font-size: 0.62rem; font-style: normal; font-weight: 800; text-shadow: none; box-shadow: 0 0 0 2px #fff, 0 2px 4px rgba(0, 0, 0, 0.25); }
+.spine__bell { position: absolute; bottom: 18px; right: -10px; z-index: 1; font-style: normal; animation: bell-ring 3s ease-in-out infinite; transform-origin: 50% 10%; }
+.spine__bell .emoji { width: 20px; height: 20px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)); }
+@keyframes bell-ring { 0%, 70%, 100% { transform: rotate(0); } 75% { transform: rotate(-18deg); } 82% { transform: rotate(14deg); } 89% { transform: rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .spine__bell { animation: none; } }
+
+.sticker-rain { position: fixed; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+.sticker-rain__drop { position: absolute; top: 0; font-size: 2.4rem; }
+.sticker-rain__drop .emoji { width: 1em; height: 1em; }
+
+.kid-cheers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem; }
+.kid-cheers .emoji { width: 1.2em; height: 1.2em; vertical-align: -0.25em; }

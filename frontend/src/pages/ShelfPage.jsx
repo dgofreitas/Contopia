@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { api, messageFor } from '../lib/api';
@@ -10,6 +10,7 @@ import { FlyingBook } from '../components/FlyingBook';
 import { TopBar, newBooksIn } from '../components/TopBar';
 import { Emoji } from '../components/Emoji';
 import { PublishDialog, audienceLabel } from '../components/PublishDialog';
+import { CheersPanel, StickerRain } from '../components/Cheers';
 
 // Com muitos livros a estante ganha filtros, para achar os favoritos e os que está lendo.
 const MANY_BOOKS = 12;
@@ -36,6 +37,9 @@ export function ShelfPage() {
   // Livro cuja lista de quem pode ler está sendo trocada.
   const [audienceFor, setAudienceFor] = useState(null);
   const [error, setError] = useState('');
+  // Chuva de figurinhas ao chegar, se ganhou figurinha nova.
+  const [raining, setRaining] = useState(false);
+  const stopRain = useCallback(() => setRaining(false), []);
 
   useEffect(() => {
     // Na estante só ficam os livros publicados; os que estão sendo escritos moram no ateliê.
@@ -43,6 +47,7 @@ export function ShelfPage() {
       .get('/books')
       .then((data) => {
         setBooks(data.books.filter((b) => b.published));
+        if (data.books.some((b) => b.cheers?.new > 0)) setRaining(true);
         setWriting(data.books.length - data.books.filter((b) => b.published).length);
       })
       .catch((err) => setError(messageFor(err)));
@@ -91,6 +96,9 @@ export function ShelfPage() {
     setReturningId(selectedId);
     setSelectedId(null);
   };
+  const newCheers = books?.reduce((n, b) => n + (b.cheers?.new || 0), 0) || 0;
+  // O autor viu as figurinhas do livro: o selinho de novidade some da lombada.
+  const cheersSeen = (book) => setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, cheers: { ...b.cheers, new: 0 } } : b)));
   const reading = books?.filter((b) => b.progress).sort((a, b) => new Date(b.progress.updatedAt) - new Date(a.progress.updatedAt))[0];
 
   return (
@@ -101,6 +109,14 @@ export function ShelfPage() {
       {justPublished && !selectedId && (
         <p className="continue" role="status">🎉 <strong>{justPublished}</strong> foi publicado e já está na estante!</p>
       )}
+
+      {newCheers > 0 && !selectedId && (
+        <p className="continue" role="status">
+          ✨ Você ganhou {newCheers === 1 ? '1 figurinha nova' : `${newCheers} figurinhas novas`}! Abra o livro para ver.
+        </p>
+      )}
+
+      {raining && <StickerRain onDone={stopRain} />}
 
       {reading && !selectedId && (
         <button type="button" className="continue" onClick={() => navigate(`/livro/${reading.id}/ler`)}>
@@ -151,6 +167,9 @@ export function ShelfPage() {
             <motion.div className="overlay__backdrop" aria-hidden="true" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { delay: 0.35, duration: 0.5 } }} />
             <div onClick={(e) => e.stopPropagation()}>
               <FlyingBook book={selected} author={me.child.nickname} gold={theme.gold} />
+            </div>
+            <div onClick={(e) => e.stopPropagation()}>
+              <CheersPanel bookId={selected.id} onSeen={() => cheersSeen(selected)} />
             </div>
             <motion.div
               className="overlay__actions"
