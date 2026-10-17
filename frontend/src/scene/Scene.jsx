@@ -28,37 +28,33 @@ export function Scene({ theme }) {
   }, [theme.id, guestCount]);
 
   const characters = charactersAt(theme, turn);
-  const official = Boolean(theme.backdrop) || characters.length > 0;
   return (
-    <>
-      <div className="scene" aria-hidden="true">
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={theme.id}
-            className="scene__layer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            {/* Gerado só a partir das constantes do tema, sem texto de usuário */}
-            <div className="scene__paint" dangerouslySetInnerHTML={{ __html: svg }} />
-            {theme.backdrop && <img className="scene__backdrop" src={theme.backdrop} alt="" />}
-            <AnimatePresence>
-              {characters.map((c, i) => (
-                <motion.img
-                  key={c.id}
-                  className={`scene__character scene__character--${c.side}`}
-                  src={c.src}
-                  alt=""
-                  {...enter(turn === 0 ? 0.3 + i * 0.25 : 0.4)}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-      {official && theme.credit && <p className="scene__credit">{theme.credit}</p>}
-    </>
+    <div className="scene" aria-hidden="true">
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={theme.id}
+          className="scene__layer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.7 }}
+        >
+          {/* Gerado só a partir das constantes do tema, sem texto de usuário */}
+          <div className="scene__paint" dangerouslySetInnerHTML={{ __html: svg }} />
+          {theme.backdrop && <img className="scene__backdrop" src={theme.backdrop} alt="" />}
+          <AnimatePresence>
+            {characters.map((c, i) => (
+              <motion.img
+                key={c.id}
+                className={`scene__character scene__character--${c.side}`}
+                src={c.src}
+                alt=""
+                {...enter(turn === 0 ? 0.3 + i * 0.25 : 0.4)}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }

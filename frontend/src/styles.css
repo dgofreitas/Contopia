@@ -63,10 +63,6 @@ p { margin: 0; }
 }
 .scene__character--left { left: max(-2vw, -24px); }
 .scene__character--right { right: max(-2vw, -24px); }
-.scene__credit {
-  position: fixed; right: 8px; bottom: 6px; z-index: 1; margin: 0; max-width: calc(100% - 16px); padding: 3px 10px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85); color: #4A1F3D; font-size: 0.7rem; line-height: 1.3; text-align: right; pointer-events: none;
-}
 /* No celular a estante ocupa a base da tela; os personagens ficam no meio, acima dela */
 @media (max-width: 640px) {
   .scene__character { bottom: 34vh; height: clamp(130px, 24vh, 210px); max-width: 52vw; }

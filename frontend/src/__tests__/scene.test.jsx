@@ -11,14 +11,11 @@ describe('cenário', () => {
     expect(charactersAt(THEMES.fadas)).toEqual([]);
   });
 
-  it('mostra o mapa, os personagens e o crédito só no tema Princesa Desastrada', () => {
-    const { container, rerender, getByText, queryByText } = render(<Scene theme={THEMES.princesa} />);
+  it('mostra o mapa e os personagens da Princesa Desastrada, sem aviso de direitos', () => {
+    const { container, queryByText } = render(<Scene theme={THEMES.princesa} />);
     expect(container.querySelector('.scene__backdrop')).toHaveAttribute('src', '/temas/princesa/mapa-florentia.webp');
     expect(container.querySelector('img[src$="scorpio.webp"]')).toBeInTheDocument();
-    expect(getByText(/Uso autorizado, não comercial/)).toBeInTheDocument();
-
-    rerender(<Scene theme={THEMES.fadas} />);
-    expect(queryByText(/Uso autorizado/)).not.toBeInTheDocument();
+    expect(queryByText(/direitos reservados/i)).not.toBeInTheDocument();
   });
 
   it('troca o amigo da vez depois de um tempo', () => {
