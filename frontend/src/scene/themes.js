@@ -33,7 +33,6 @@ export const THEMES = {
         { id: 'stena', src: '/temas/princesa/stena.webp', side: 'right' },
       ],
     },
-    credit: 'Personagens e mapa de O Diário de uma Princesa Desastrada®. Todos os direitos reservados. Uso autorizado, não comercial.',
   },
 };
 
