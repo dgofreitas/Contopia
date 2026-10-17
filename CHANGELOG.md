@@ -1,3 +1,9 @@
+## [1.16.1](https://github.com/dgofreitas/Contopia/compare/v1.16.0...v1.16.1) (2026-10-17)
+
+### Bug Fixes
+
+* **scene:** remove aviso de direitos reservados do tema Princesa Desastrada ([752ccd3](https://github.com/dgofreitas/Contopia/commit/752ccd36b53626e14a790226e60fb5366902b594))
+
 ## [1.16.0](https://github.com/dgofreitas/Contopia/compare/v1.15.0...v1.16.0) (2026-10-17)
 
 ### Features

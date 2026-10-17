@@ -1,6 +1,6 @@
 {
   "name": "contopia-backend",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "private": true,
   "description": "API do Contopia",
   "main": "src/main.js",
