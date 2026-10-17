@@ -7,6 +7,7 @@ import { themeFor } from '../scene/themes';
 import { Scene } from '../scene/Scene';
 import { BookCover } from '../components/BookCover';
 import { markColumnText } from '../editor/imageLayout';
+import { CheerBar } from '../components/Cheers';
 
 const GAP = 48;
 
@@ -214,6 +215,8 @@ export function Reader() {
             </span>
             <button type="button" className="page-btn" onClick={() => turn(1)} disabled={atEnd} aria-label="Próxima página">›</button>
           </nav>
+          {/* Chegou ao fim do livro de outra criança: hora de dar uma figurinha. */}
+          {atEnd && !book.mine && <CheerBar bookId={id} author={book.author.nickname} />}
         </div>
       )}
     </main>

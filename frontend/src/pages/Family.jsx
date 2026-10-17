@@ -422,6 +422,7 @@ function EditLogin({ child, onCancel, onSaved }) {
 function KidRow({ child, onOpen, onRemove, onChange }) {
   const [confirming, setConfirming] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [cheers, setCheers] = useState(false);
   return (
     <li className="kid card">
       <span className="kid__avatar" aria-hidden="true"><Emoji char={child.avatar} /></span>
@@ -439,6 +440,7 @@ function KidRow({ child, onOpen, onRemove, onChange }) {
         <div className="kid__actions">
           <button type="button" className="btn btn--primary" onClick={onOpen}>Abrir estante</button>
           <button type="button" className="btn btn--ghost" onClick={() => setEditing((v) => !v)} aria-expanded={editing}>Senha</button>
+          <button type="button" className="btn btn--ghost" onClick={() => setCheers((v) => !v)} aria-expanded={cheers}>Figurinhas</button>
           <button type="button" className="btn btn--ghost" onClick={() => setConfirming(true)}>Apagar</button>
         </div>
       )}
@@ -452,7 +454,64 @@ function KidRow({ child, onOpen, onRemove, onChange }) {
           }}
         />
       )}
+      {cheers && <KidCheers child={child} onChange={onChange} />}
     </li>
+  );
+}
+
+// O que os amigos mandaram para os livros da criança, e o botão de desligar.
+function KidCheers({ child, onChange }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get(`/children/${child.id}/cheers`).then(setData).catch((err) => setError(messageFor(err)));
+  }, [child.id]);
+
+  const toggle = async (cheersOff) => {
+    setError('');
+    try {
+      const { child: saved } = await api.patch(`/children/${child.id}`, { cheersOff });
+      onChange(saved);
+      setData((d) => ({ ...d, cheersOff: saved.cheersOff }));
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  };
+
+  const who = (reader) => `${reader.nickname}${reader.familyName ? ` (família ${reader.familyName})` : ''}`;
+
+  return (
+    <div className="kid__edit stack">
+      <p className="fine">
+        Quem lê os livros de {child.nickname} pode dar figurinhas prontas e pedir o próximo capítulo. Não existe texto livre, e só leem os irmãos e as crianças das famílias amigas que ela escolheu.
+      </p>
+      {error && <p className="error" role="alert">{error}</p>}
+      {data && (
+        <>
+          <label className="row">
+            <input type="checkbox" checked={!data.cheersOff} onChange={(e) => toggle(!e.target.checked)} />
+            Figurinhas e pedidos de capítulo ligados
+          </label>
+          {data.items.length === 0 ? (
+            <p className="muted">Nenhuma figurinha ainda.</p>
+          ) : (
+            <ul className="kid-cheers" aria-label={`Figurinhas de ${child.nickname}`}>
+              {data.items.map((item, i) => (
+                <li key={i}>
+                  <Emoji char={item.kind === 'more' ? '🔔' : item.emoji} />{' '}
+                  {item.kind === 'more' ? (
+                    <>{who(item.reader)} pediu o próximo capítulo de “{item.book}”</>
+                  ) : (
+                    <>{who(item.reader)} em “{item.book}”</>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

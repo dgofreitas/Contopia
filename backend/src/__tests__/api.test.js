@@ -522,6 +522,105 @@ describe('famílias amigas e livros para pessoas escolhidas', () => {
   });
 });
 
+describe('figurinhas e pedidos de capítulo', () => {
+  // Lia publica um livro de capítulos para a família; Leo, o irmão, lê.
+  async function siblings() {
+    const { agent, child } = await withChild('Lia');
+    await agent.post('/api/v1/auth/switch').send({ childId: child.id });
+    const { body } = await agent.post('/api/v1/books').send({ title: 'O dragão', cover: { color: '#7C5CFF' }, chaptered: true });
+    const id = body.book.id;
+    await agent.patch(`/api/v1/books/${id}`).send({ published: true, visibility: 'family', chapters: [{ title: 'Um', html: '<p>Era uma vez</p>' }] });
+    const leo = await agent.post('/api/v1/children').send({ nickname: 'Leo', avatar: '🐼', picture: PICTURE });
+    const asLeo = () => agent.post('/api/v1/auth/switch').send({ childId: leo.body.child.id });
+    const asLia = () => agent.post('/api/v1/auth/switch').send({ childId: child.id });
+    return { agent, id, lia: child, leo: leo.body.child, asLeo, asLia };
+  }
+
+  it('o leitor dá figurinhas e pede o próximo capítulo; o autor vê quem foi', async () => {
+    const { agent, id, asLeo, asLia } = await siblings();
+    await asLeo();
+    expect((await agent.get(`/api/v1/books/${id}/cheers`)).body.cheers).toEqual({ enabled: true, reactions: [], mine: [], canWantMore: true, wantsMore: false });
+    expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '💩', on: true })).status).toBe(400);
+    await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true });
+    // Dar a mesma figurinha duas vezes não conta duas.
+    await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true });
+    const given = await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '❤️', on: true });
+    expect(given.body.cheers).toMatchObject({ reactions: [{ emoji: '😂', count: 1 }, { emoji: '❤️', count: 1 }], mine: ['😂', '❤️'] });
+    expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '❤️', on: false })).body.cheers.mine).toEqual(['😂']);
+    expect((await agent.put(`/api/v1/books/${id}/more`).send({ on: true })).body.cheers.wantsMore).toBe(true);
+
+    await asLia();
+    // A própria autora não dá figurinha para si mesma.
+    expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true })).body.error.code).toBe('OWN_BOOK');
+    const shelf = await agent.get('/api/v1/books');
+    expect(shelf.body.books[0].cheers).toEqual({ new: 1, wantMore: 1 });
+    const mine = await agent.get(`/api/v1/books/${id}/cheers`);
+    expect(mine.body.cheers).toMatchObject({
+      enabled: true,
+      reactions: [{ emoji: '😂', count: 1, new: 1 }],
+      fans: [{ nickname: 'Leo', emojis: ['😂'] }],
+      wantMore: [{ nickname: 'Leo' }],
+    });
+    expect((await agent.post(`/api/v1/books/${id}/cheers/seen`)).status).toBe(204);
+    expect((await agent.get('/api/v1/books')).body.books[0].cheers).toEqual({ new: 0, wantMore: 1 });
+
+    // Capítulo novo atende o pedido, e o Leo pode pedir de novo.
+    await agent.patch(`/api/v1/books/${id}`).send({ chapters: [{ title: 'Um', html: '<p>Era uma vez</p>' }, { title: 'Dois', html: '<p>E depois</p>' }] });
+    expect((await agent.get('/api/v1/books')).body.books[0].cheers.wantMore).toBe(0);
+    await asLeo();
+    expect((await agent.get(`/api/v1/books/${id}/cheers`)).body.cheers.wantsMore).toBe(false);
+  });
+
+  it('livro sem capítulos só recebe figurinhas, e quem não lê não reage', async () => {
+    const { agent, id, asLeo, asLia } = await siblings();
+    const { body } = await agent.post('/api/v1/books').send({ title: 'Conto', cover: { color: '#7C5CFF' } });
+    await agent.patch(`/api/v1/books/${body.book.id}`).send({ published: true, visibility: 'family' });
+    await asLeo();
+    expect((await agent.put(`/api/v1/books/${body.book.id}/more`).send({ on: true })).body.error.code).toBe('NOT_CHAPTERED');
+    await asLia();
+    await agent.patch(`/api/v1/books/${id}`).send({ visibility: 'private' });
+    await asLeo();
+    expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true })).status).toBe(404);
+    expect((await agent.get(`/api/v1/books/${id}/cheers`)).status).toBe(404);
+  });
+
+  it('o responsável acompanha e pode desligar', async () => {
+    const { agent, id, lia, leo, asLeo } = await siblings();
+    await asLeo();
+    await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '🤩', on: true });
+    await agent.put(`/api/v1/books/${id}/more`).send({ on: true });
+
+    const panel = await agent.get(`/api/v1/children/${lia.id}/cheers`);
+    expect(panel.body.cheersOff).toBe(false);
+    expect(panel.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'reaction', emoji: '🤩', book: 'O dragão', reader: { nickname: 'Leo', avatar: '🐼', familyName: null } }),
+        expect.objectContaining({ kind: 'more', book: 'O dragão' }),
+      ]),
+    );
+    expect((await agent.get(`/api/v1/children/${leo.id}/cheers`)).body.items).toEqual([]);
+
+    // Desligado para a autora: ninguém dá figurinha nos livros dela.
+    expect((await agent.patch(`/api/v1/children/${lia.id}`).send({ cheersOff: true })).body.child.cheersOff).toBe(true);
+    expect((await agent.get(`/api/v1/books/${id}/cheers`)).body.cheers.enabled).toBe(false);
+    expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true })).body.error.code).toBe('CHEERS_OFF');
+    await agent.patch(`/api/v1/children/${lia.id}`).send({ cheersOff: false });
+    // Desligado para o leitor: ele não dá.
+    await agent.patch(`/api/v1/children/${leo.id}`).send({ cheersOff: true });
+    expect((await agent.put(`/api/v1/books/${id}/reactions`).send({ emoji: '😂', on: true })).status).toBe(403);
+
+    // Quem não é o responsável não abre o painel.
+    expect((await request(app).get(`/api/v1/children/${lia.id}/cheers`)).status).toBe(401);
+    const other = await registerParent('pai@exemplo.com');
+    expect((await other.agent.get(`/api/v1/children/${lia.id}/cheers`)).status).toBe(404);
+
+    // Apagar o livro leva as figurinhas junto.
+    await agent.post('/api/v1/auth/switch').send({ childId: lia.id });
+    await agent.delete(`/api/v1/books/${id}`);
+    expect((await agent.get(`/api/v1/children/${lia.id}/cheers`)).body.items).toEqual([]);
+  });
+});
+
 describe('imagens no texto', () => {
   async function bookAgent() {
     const { agent, child } = await withChild();

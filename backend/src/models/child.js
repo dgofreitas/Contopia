@@ -12,6 +12,9 @@ const childSchema = new mongoose.Schema(
     // Na estante da família e dos amigos: quem a criança fixou no topo e quem escondeu.
     pinnedPeople: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Child' }], default: [] },
     hiddenPeople: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Child' }], default: [] },
+    // O responsável pode desligar as figurinhas e os pedidos de capítulo: a criança
+    // não dá nem recebe.
+    cheersOff: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

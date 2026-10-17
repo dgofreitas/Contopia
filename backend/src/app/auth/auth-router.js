@@ -62,7 +62,7 @@ function publicParent(parent) {
 }
 
 function publicChild(child) {
-  return { id: String(child._id), nickname: child.nickname, avatar: child.avatar, theme: child.theme, methods: loginMethods(child) };
+  return { id: String(child._id), nickname: child.nickname, avatar: child.avatar, theme: child.theme, methods: loginMethods(child), cheersOff: Boolean(child.cheersOff) };
 }
 
 function createAuthRouter({ sessions, redis, adminEmails = [] }) {

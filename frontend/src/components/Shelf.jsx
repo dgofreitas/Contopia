@@ -34,6 +34,15 @@ function usePerShelf() {
   return [ref, layout];
 }
 
+// Figurinhas novas e pedidos de capítulo, para quem não vê os selinhos.
+function cheersLabel(cheers) {
+  if (!cheers) return '';
+  const parts = [];
+  if (cheers.new > 0) parts.push(cheers.new === 1 ? '1 figurinha nova' : `${cheers.new} figurinhas novas`);
+  if (cheers.wantMore > 0) parts.push('querem o próximo capítulo');
+  return parts.map((p) => `, ${p}`).join('');
+}
+
 /**
  * Estante com prateleiras de madeira empilhadas: quando os livros não cabem numa
  * prateleira, começa outra embaixo. Aqui só ficam os livros publicados: livro
@@ -72,7 +81,7 @@ export function Shelf({ books, theme, hiddenId, onSelect, label }) {
                     onClick={() => onSelect(book.id)}
                     aria-hidden={out || undefined}
                     tabIndex={out ? -1 : undefined}
-                    aria-label={`${book.title}${book.isNew ? ', novo' : ''}${book.favorite ? ', favorito' : ''}${book.progress ? ', lendo' : ''}`}
+                    aria-label={`${book.title}${book.isNew ? ', novo' : ''}${book.favorite ? ', favorito' : ''}${book.progress ? ', lendo' : ''}${cheersLabel(book.cheers)}`}
                     initial={reduce ? false : { y: -30, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: reduce ? 0 : Math.min(index, 16) * 0.04, type: 'spring', stiffness: 260, damping: 22 }}
@@ -84,6 +93,8 @@ export function Shelf({ books, theme, hiddenId, onSelect, label }) {
                     {book.progress && <i className="spine__ribbon" aria-hidden="true" />}
                     {book.favorite && <i className="spine__star" aria-hidden="true">★</i>}
                     {book.isNew && <i className="spine__new" aria-hidden="true">novo</i>}
+                    {book.cheers?.new > 0 && <i className="spine__cheers" aria-hidden="true">+{book.cheers.new}</i>}
+                    {book.cheers?.wantMore > 0 && <i className="spine__bell" aria-hidden="true"><Emoji char="🔔" /></i>}
                   </motion.button>
                 </li>
               );
