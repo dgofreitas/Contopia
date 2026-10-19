@@ -459,7 +459,8 @@ function KidRow({ child, onOpen, onRemove, onChange }) {
   );
 }
 
-// O que os amigos mandaram para os livros da criança, e o botão de desligar.
+// O que os amigos mandaram para os livros da criança, os recados que ela escreveu
+// e o botão de desligar.
 function KidCheers({ child, onChange }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -479,35 +480,62 @@ function KidCheers({ child, onChange }) {
     }
   };
 
+  const removeComment = async (comment) => {
+    setError('');
+    try {
+      await api.del(`/children/${child.id}/comments/${comment.id}`);
+      setData((d) => ({ ...d, items: d.items.filter((i) => i.id !== comment.id), sent: d.sent.filter((c) => c.id !== comment.id) }));
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  };
+  const removeButton = (comment) => (
+    <button type="button" className="btn btn--ghost btn--small" onClick={() => removeComment(comment)}>Apagar</button>
+  );
+
   const who = (reader) => `${reader.nickname}${reader.familyName ? ` (família ${reader.familyName})` : ''}`;
 
   return (
     <div className="kid__edit stack">
       <p className="fine">
-        Quem lê os livros de {child.nickname} pode dar figurinhas prontas e pedir o próximo capítulo. Não existe texto livre, e só leem os irmãos e as crianças das famílias amigas que ela escolheu.
+        Quem lê os livros de {child.nickname} pode dar figurinhas, escrever recados e pedir o próximo capítulo. Só leem os irmãos e as crianças das famílias amigas que ela escolheu. Todos os recados aparecem aqui, e você pode apagar qualquer um.
       </p>
       {error && <p className="error" role="alert">{error}</p>}
       {data && (
         <>
           <label className="row">
             <input type="checkbox" checked={!data.cheersOff} onChange={(e) => toggle(!e.target.checked)} />
-            Figurinhas e pedidos de capítulo ligados
+            Figurinhas, recados e pedidos de capítulo ligados
           </label>
           {data.items.length === 0 ? (
-            <p className="muted">Nenhuma figurinha ainda.</p>
+            <p className="muted">Nada recebido ainda.</p>
           ) : (
             <ul className="kid-cheers" aria-label={`Figurinhas de ${child.nickname}`}>
               {data.items.map((item, i) => (
-                <li key={i}>
-                  <Emoji char={item.kind === 'more' ? '🔔' : item.emoji} />{' '}
-                  {item.kind === 'more' ? (
-                    <>{who(item.reader)} pediu o próximo capítulo de “{item.book}”</>
-                  ) : (
-                    <>{who(item.reader)} em “{item.book}”</>
+                <li key={item.id || i}>
+                  <Emoji char={{ more: '🔔', comment: '💬' }[item.kind] || item.emoji} />{' '}
+                  {item.kind === 'more' && <>{who(item.reader)} pediu o próximo capítulo de “{item.book}”</>}
+                  {item.kind === 'reaction' && <>{who(item.reader)} em “{item.book}”</>}
+                  {item.kind === 'comment' && (
+                    <>
+                      {who(item.reader)} escreveu em “{item.book}”: <q className="kid-cheers__text">{item.text}</q> {removeButton(item)}
+                    </>
                   )}
                 </li>
               ))}
             </ul>
+          )}
+          {data.sent?.length > 0 && (
+            <>
+              <h3 className="kid-cheers__title">Recados que {child.nickname} escreveu</h3>
+              <ul className="kid-cheers" aria-label={`Recados que ${child.nickname} escreveu`}>
+                {data.sent.map((c) => (
+                  <li key={c.id}>
+                    <Emoji char="💬" /> Em “{c.book}”, de {who(c.author)}: <q className="kid-cheers__text">{c.text}</q> {removeButton(c)}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </>
       )}

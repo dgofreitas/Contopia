@@ -20,6 +20,14 @@ const FILTERS = [
   ['reading', <><Emoji char="📖" /> Lendo</>],
 ];
 
+// "2 figurinhas novas e 1 recado novo"
+function newsText(stickers, comments) {
+  const parts = [];
+  if (stickers > 0) parts.push(stickers === 1 ? '1 figurinha nova' : `${stickers} figurinhas novas`);
+  if (comments > 0) parts.push(comments === 1 ? '1 recado novo' : `${comments} recados novos`);
+  return parts.join(' e ');
+}
+
 export function ShelfPage() {
   const navigate = useNavigate();
   // Título do livro que acabou de ser publicado no ateliê.
@@ -47,7 +55,7 @@ export function ShelfPage() {
       .get('/books')
       .then((data) => {
         setBooks(data.books.filter((b) => b.published));
-        if (data.books.some((b) => b.cheers?.new > 0)) setRaining(true);
+        if (data.books.some((b) => b.cheers?.new > 0 || b.cheers?.newComments > 0)) setRaining(true);
         setWriting(data.books.length - data.books.filter((b) => b.published).length);
       })
       .catch((err) => setError(messageFor(err)));
@@ -97,8 +105,9 @@ export function ShelfPage() {
     setSelectedId(null);
   };
   const newCheers = books?.reduce((n, b) => n + (b.cheers?.new || 0), 0) || 0;
+  const newComments = books?.reduce((n, b) => n + (b.cheers?.newComments || 0), 0) || 0;
   // O autor viu as figurinhas do livro: o selinho de novidade some da lombada.
-  const cheersSeen = (book) => setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, cheers: { ...b.cheers, new: 0 } } : b)));
+  const cheersSeen = (book) => setBooks((list) => list.map((b) => (b.id === book.id ? { ...b, cheers: { ...b.cheers, new: 0, newComments: 0 } } : b)));
   const reading = books?.filter((b) => b.progress).sort((a, b) => new Date(b.progress.updatedAt) - new Date(a.progress.updatedAt))[0];
 
   return (
@@ -110,9 +119,9 @@ export function ShelfPage() {
         <p className="continue" role="status">🎉 <strong>{justPublished}</strong> foi publicado e já está na estante!</p>
       )}
 
-      {newCheers > 0 && !selectedId && (
+      {newCheers + newComments > 0 && !selectedId && (
         <p className="continue" role="status">
-          ✨ Você ganhou {newCheers === 1 ? '1 figurinha nova' : `${newCheers} figurinhas novas`}! Abra o livro para ver.
+          ✨ Você ganhou {newsText(newCheers, newComments)}! Abra o livro para ver.
         </p>
       )}
 

@@ -7,6 +7,7 @@ const FriendGroup = require('../../models/friend-group');
 const BookRead = require('../../models/book-read');
 const Reaction = require('../../models/reaction');
 const MoreWish = require('../../models/more-wish');
+const Comment = require('../../models/comment');
 const Parent = require('../../models/parent');
 const { removeCheersOfBooks, removeCheersBy, activeWish } = require('../../lib/cheers');
 const { AVATARS } = require('../../lib/constants');
@@ -100,8 +101,9 @@ function createChildrenRouter() {
     }),
   );
 
-  // Para o responsável acompanhar: as figurinhas e os pedidos de capítulo que os
-  // livros da criança receberam, de quem e em qual livro.
+  // Para o responsável acompanhar: as figurinhas, os recados e os pedidos de
+  // capítulo que os livros da criança receberam, de quem e em qual livro, e os
+  // recados que a própria criança escreveu nos livros dos amigos.
   router.get(
     '/:id/cheers',
     wrap(async (req, res) => {
@@ -110,11 +112,14 @@ function createChildrenRouter() {
       if (!child) throw notFound('CHILD_NOT_FOUND');
       const books = await Book.find({ childId: child._id }, 'title chapters');
       const ids = books.map((b) => b._id);
-      const [reactions, wishes] = await Promise.all([
+      const [reactions, wishes, comments, written] = await Promise.all([
         Reaction.find({ bookId: { $in: ids } }).sort({ createdAt: -1 }).limit(MAX_CHEERS_SHOWN),
         books.length > 0 ? MoreWish.find({ $or: books.map(activeWish) }).sort({ createdAt: -1 }).limit(MAX_CHEERS_SHOWN) : [],
+        Comment.find({ bookId: { $in: ids } }).sort({ createdAt: -1 }).limit(MAX_CHEERS_SHOWN),
+        Comment.find({ childId: child._id }).sort({ createdAt: -1 }).limit(MAX_CHEERS_SHOWN),
       ]);
-      const readers = await Child.find({ _id: { $in: [...reactions, ...wishes].map((r) => r.childId) } });
+      const writtenIn = await Book.find({ _id: { $in: written.map((c) => c.bookId) } }, 'title childId');
+      const readers = await Child.find({ _id: { $in: [...reactions, ...wishes, ...comments].map((r) => r.childId).concat(writtenIn.map((b) => b.childId)) } });
       const families = await Parent.find({ _id: { $in: readers.map((r) => r.parentId) } }, 'familyName');
       const familyOf = Object.fromEntries(families.map((p) => [String(p._id), p.familyName || null]));
       const readerOf = Object.fromEntries(
@@ -127,15 +132,35 @@ function createChildrenRouter() {
       const item = (kind) => (r) => ({
         kind,
         ...(kind === 'reaction' && { emoji: r.emoji }),
+        ...(kind === 'comment' && { id: String(r._id), text: r.text }),
         book: titleOf[String(r.bookId)],
         reader: readerOf[String(r.childId)],
         at: r.createdAt,
       });
-      const items = [...reactions.map(item('reaction')), ...wishes.map(item('more'))]
+      const items = [...reactions.map(item('reaction')), ...wishes.map(item('more')), ...comments.map(item('comment'))]
         .filter((i) => i.reader)
         .sort((a, b) => new Date(b.at) - new Date(a.at))
         .slice(0, MAX_CHEERS_SHOWN);
-      res.json({ cheersOff: child.cheersOff, items });
+      const bookOf = Object.fromEntries(writtenIn.map((b) => [String(b._id), b]));
+      const sent = written
+        .filter((c) => bookOf[String(c.bookId)] && readerOf[String(bookOf[String(c.bookId)].childId)])
+        .map((c) => ({ id: String(c._id), text: c.text, book: bookOf[String(c.bookId)].title, author: readerOf[String(bookOf[String(c.bookId)].childId)], at: c.createdAt }));
+      res.json({ cheersOff: child.cheersOff, items, sent });
+    }),
+  );
+
+  // O responsável apaga um recado que a criança recebeu num livro dela ou que ela escreveu.
+  router.delete(
+    '/:id/comments/:commentId',
+    wrap(async (req, res) => {
+      const id = parse(idParam, req.params.id);
+      const commentId = parse(idParam, req.params.commentId);
+      const child = await Child.findOne({ _id: id, parentId: req.session.parentId });
+      if (!child) throw notFound('CHILD_NOT_FOUND');
+      const books = await Book.find({ childId: child._id }, '_id');
+      const removed = await Comment.findOneAndDelete({ _id: commentId, $or: [{ childId: child._id }, { bookId: { $in: books.map((b) => b._id) } }] });
+      if (!removed) throw notFound('COMMENT_NOT_FOUND');
+      res.status(204).end();
     }),
   );
 

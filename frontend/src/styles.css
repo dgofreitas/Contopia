@@ -561,3 +561,20 @@ svg .twinkle, svg .float, svg .flap, svg .wave, svg .tumble { transform-box: fil
 
 .kid-cheers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem; }
 .kid-cheers .emoji { width: 1.2em; height: 1.2em; vertical-align: -0.25em; }
+
+/* Recados escritos */
+.comments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; width: min(440px, 100%); max-height: 260px; overflow-y: auto; }
+.comment { position: relative; padding: 8px 34px 8px 12px; border-radius: 14px 14px 14px 4px; background: #fff; box-shadow: 0 0 0 1px #EADBC2; text-align: left; }
+.comment--mine { background: #FFF1C2; border-radius: 14px 14px 4px 14px; }
+.comment--new { box-shadow: 0 0 0 3px var(--sun); }
+.comment__who { font-size: 0.8rem; font-weight: 800; color: var(--text-soft); }
+.comment__text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.98rem; }
+.comment__remove { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: var(--text-soft); font-size: 0.8rem; }
+.comment__remove:hover { background: #F3E9DA; }
+.comment-box { display: flex; flex-direction: column; gap: 6px; width: min(440px, 100%); }
+.comment-box__text { width: 100%; resize: vertical; min-height: 56px; border: 2px solid #EADBC2; border-radius: 12px; padding: 8px 10px; font: inherit; background: #fff; color: var(--text); }
+.comment-box__text:focus { outline: none; border-color: var(--sun); }
+.comment-box__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.comment-box .emoji { width: 1.1em; height: 1.1em; }
+.kid-cheers__text { white-space: pre-wrap; overflow-wrap: anywhere; font-style: italic; }
+.kid-cheers__title { font-size: 1rem; }
