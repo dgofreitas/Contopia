@@ -1,3 +1,9 @@
+## [1.17.0](https://github.com/dgofreitas/Contopia/compare/v1.16.1...v1.17.0) (2026-10-19)
+
+### Features
+
+* recados escritos entre amigos nos livros ([9d02825](https://github.com/dgofreitas/Contopia/commit/9d02825b3db1d5769bd46d007d081d646cbb23b2))
+
 ## [1.16.1](https://github.com/dgofreitas/Contopia/compare/v1.16.0...v1.16.1) (2026-10-17)
 
 ### Bug Fixes
